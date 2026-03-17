@@ -80,20 +80,16 @@ let sheetConfig = {
 
 // ========== FIREBASE INITIALIZATION ==========
 
-let firebaseApp, firebaseAuth, firebaseDb;
+let firebaseDb;
 let firebaseInitialized = false;
 
-async function initializeFirebase() {
+function initializeFirebase() {
   if (firebaseInitialized) return;
   
   try {
-    const { initializeApp } = window.firebase.app;
-    const { getFirestore } = window.firebase.firestore;
-    const { getAuth } = window.firebase.auth;
-    
-    firebaseApp = initializeApp(firebaseConfig);
-    firebaseAuth = getAuth(firebaseApp);
-    firebaseDb = getFirestore(firebaseApp);
+    // Firebase COMPAT API (global firebase object)
+    firebase.initializeApp(firebaseConfig);
+    firebaseDb = firebase.firestore();
     firebaseInitialized = true;
     
     console.log('✅ Firebase inicializado correctamente');
@@ -109,7 +105,7 @@ async function loadProductsFromFirebase() {
   try {
     // Inicializar Firebase si no está listo
     if (!firebaseInitialized) {
-      await initializeFirebase();
+      initializeFirebase();
     }
     
     if (!firebaseDb) {
@@ -117,19 +113,16 @@ async function loadProductsFromFirebase() {
       return false;
     }
     
-    const { collection, getDocs, query, where, orderBy } = window.firebase.firestore;
+    // Obtener productos visibles ordenados por 'orden' (COMPAT API)
+    const snapshot = await firebaseDb.collection('productos')
+      .where('visible', '==', true)
+      .orderBy('orden', 'asc')
+      .get();
     
-    // Obtener productos visibles ordenados por 'orden'
-    const q = query(
-      collection(firebaseDb, 'productos'),
-      where('visible', '==', true),
-      orderBy('orden', 'asc')
-    );
-    
-    const snapshot = await getDocs(q);
     const products = [];
     
-    snapshot.forEach(doc => {
+    
+    snapshot.docs.forEach(doc => {
       const data = doc.data();
       
       // Transformar datos de Firebase al formato esperado
@@ -160,17 +153,8 @@ async function loadProductsFromFirebase() {
   }
 }
 
-// ========== PARSEAR CSV (Mantenido para compatibilidad con fallback estático) ==========
-    
-    console.log(`✅ Cargados ${products.length} productos desde fallback estático`);
-    return products;
-  } catch (error) {
-    console.error('❌ Error en fallback estático:', error);
-    return null;
-  }
-}
-
-// Cargar configuración desde Google Sheets (REMOVIDO - ahora viene de Firestore)
+// ========== CARGAR CONFIGURACIÓN ==========
+// Cargar configuración desde Firestore (en lugar de Google Sheets)
 async function loadConfig() {
   // La configuración ahora se gestiona desde el panel de admin
   console.log('ℹ️ Configuración cargada desde valores por defecto');
@@ -180,28 +164,27 @@ async function loadConfig() {
 // ========== CARGAR TODOS LOS PRODUCTOS ==========
 
 async function loadProducts() {
-  let products = null;
-  
   // Intentar cargar desde Firebase si está habilitado
   if (USE_FIREBASE) {
-    products = await loadProductsFromFirebase();
+    const products = await loadProductsFromFirebase();
+    
+    if (products === false) {
+      if (USE_FIREBASE) {
+        console.log('📦 Firebase no disponible. Usando productos estáticos...');
+      }
+      return false; // Usar productos estáticos del HTML
+    }
+    
+    // Procesar y filtrar productos
+    allProducts = products
+      .filter(p => sheetConfig.mostrar_agotados === 'si' || (p.stock && p.stock.toLowerCase() !== 'agotado'))
+      .sort((a, b) => (a.order || 999) - (b.order || 999));
+
+    console.log(`✅ ${allProducts.length} productos cargados y filtrados`);
+    return true;
   }
   
-  // Si no hay Firebase o falla, intentar fallback o usar productos estáticos
-  if (!products) {
-    if (USE_FIREBASE) {
-      console.log('📦 Firebase no disponible. Intentando fallback a productos estáticos...');
-    }
-    return false; // Usar productos estáticos del HTML
-  }
-
-  // Procesar y filtrar productos
-  allProducts = products
-    .filter(p => sheetConfig.mostrar_agotados === 'si' || (p.stock && p.stock.toLowerCase() !== 'agotado'))
-    .sort((a, b) => (a.order || 999) - (b.order || 999));
-
-  console.log(`✅ ${allProducts.length} productos cargados y filtrados`);
-  return true;
+  return false; // Usar productos estáticos del HTML si Firebase no está habilitado
 }
 
 // Renderizar página de productos
