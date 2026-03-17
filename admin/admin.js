@@ -196,6 +196,7 @@ async function loadProducts() {
 function renderProductsTable() {
   const tbody = document.getElementById('productosTableBody');
   const noMessage = document.getElementById('noProductsMessage');
+  const emptyState = document.getElementById('emptyState');
   
   // Aplicar filtros
   const searchTerm = document.getElementById('searchProducts')?.value.toLowerCase() || '';
@@ -207,35 +208,71 @@ function renderProductsTable() {
     return matchSearch && matchCategory;
   });
   
-  if (filtered.length === 0) {
+  // Mostrar empty state si no hay productos
+  if (allProducts.length === 0) {
+    emptyState?.classList.remove('hidden');
     tbody.innerHTML = '';
-    noMessage.style.display = 'block';
+    noMessage?.classList.add('hidden');
     return;
   }
   
-  noMessage.style.display = 'none';
+  emptyState?.classList.add('hidden');
   
-  tbody.innerHTML = filtered.map(product => `
-    <tr>
-      <td>
-        ${product.imagen ? `<img src="${product.imagen}" alt="${product.nombre}" class="product-img" onerror="this.src='data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%3E%3Crect%20fill=%22%23DDD%22%20width=%22100%25%22%20height=%22100%25%22/%3E%3C/svg%3E">` : '<span style="color:#999">Sin imagen</span>'}
-      </td>
-      <td><strong>${product.nombre}</strong></td>
-      <td><span class="badge-text">${product.categoria}</span></td>
-      <td>$${product.precio.toLocaleString('es-AR')}</td>
-      <td>${product.stock}</td>
-      <td>${product.destacado ? '✨ Sí' : 'No'}</td>
-      <td>${product.visible ? '✅ Sí' : '❌ No'}</td>
-      <td class="table-actions">
-        <button onclick="openEditModal('${product.id}')" class="btn btn-secondary">
-          ✏️ Editar
-        </button>
-        <button onclick="openDeleteModal('${product.id}')" class="btn btn-danger">
-          🗑️ Eliminar
-        </button>
-      </td>
-    </tr>
-  `).join('');
+  if (filtered.length === 0) {
+    tbody.innerHTML = '';
+    noMessage?.classList.remove('hidden');
+    return;
+  }
+  
+  noMessage?.classList.add('hidden');
+  
+  // Generar filas mejoradas
+  tbody.innerHTML = filtered.map((product, index) => {
+    const categoryClass = `badge-${product.categoria.replace(/-/g, '')}`;
+    const stockStatus = getStockStatus(product.stock);
+    const isVisible = product.visible !== false;
+    
+    return `
+      <tr>
+        <td class="product-num">${index + 1}</td>
+        <td>
+          <img 
+            src="${product.imagen || 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22%3E%3Crect fill=%22%23E0E0E0%22 width=%22100%25%22 height=%22100%25%22/%3E%3C/svg%3E}" 
+            alt="${product.nombre}" 
+            class="product-thumbnail"
+            onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22%3E%3Crect fill=%22%23E0E0E0%22 width=%22100%25%22 height=%22100%25%22/%3E%3C/svg%3E'"
+          >
+        </td>
+        <td class="product-name">${product.nombre}</td>
+        <td>
+          <span class="category-badge ${categoryClass}">${product.categoria}</span>
+        </td>
+        <td style="text-align: right;">$${product.precio.toLocaleString('es-AR')}</td>
+        <td>${stockStatus}</td>
+        <td style="text-align: center;">
+          <span class="status-indicator ${isVisible ? 'status-visible' : 'status-hidden'}" title="${isVisible ? 'Visible' : 'Oculto'}"></span>
+        </td>
+        <td class="table-actions">
+          <button onclick="openEditModal('${product.id}')" class="btn btn-secondary btn-sm" title="Editar">
+            ✏️
+          </button>
+          <button onclick="openDeleteModal('${product.id}')" class="btn btn-danger btn-sm" title="Eliminar">
+            🗑️
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function getStockStatus(stock) {
+  if (!stock || stock.toLowerCase() === 'agotado') {
+    return '<span class="stock-status stock-out">🔴 Agotado</span>';
+  } else if (stock.toLowerCase() === 'pocas unidades' || (typeof stock === 'number' && stock < 5)) {
+    return '<span class="stock-status stock-low">🟡 Pocas</span>';
+  } else {
+    return '<span class="stock-status stock-in">🟢 En stock</span>';
+  }
 }
 
 // ========== GUARDAR PRODUCTO ==========
@@ -433,6 +470,14 @@ function openProductModal() {
   document.getElementById('productForm').reset();
   document.getElementById('imagePreview').innerHTML = '📷 Sin imagen';
   document.getElementById('productVisible').checked = true;
+  
+  // Reiniciar contador de caracteres
+  const charCount = document.getElementById('charCount');
+  if (charCount) {
+    charCount.textContent = '0/500';
+    charCount.style.color = '#999';
+  }
+  
   document.getElementById('productModal').classList.add('active');
 }
 
@@ -453,6 +498,14 @@ function openEditModal(productId) {
   document.getElementById('productOrden').value = product.orden || 0;
   document.getElementById('productDestacado').checked = product.destacado || false;
   document.getElementById('productVisible').checked = product.visible !== false;
+  
+  // Actualizar contador de caracteres
+  const charCount = document.getElementById('charCount');
+  const descLength = (product.descripcion || '').length;
+  if (charCount) {
+    charCount.textContent = `${descLength}/500`;
+    charCount.style.color = descLength > 400 ? '#e74c3c' : '#999';
+  }
   
   // Mostrar imagen
   if (product.imagen) {
@@ -493,13 +546,31 @@ function closeDeleteModal() {
 function updateDashboard() {
   const total = allProducts.length;
   const featured = allProducts.filter(p => p.destacado).length;
-  const visible = allProducts.filter(p => p.visible !== false).length;
+  
+  // Contar productos por categoría
+  const countTazas = allProducts.filter(p => p.categoria === 'tazas').length;
+  const countRegalos = allProducts.filter(p => p.categoria === 'regalos').length;
+  const countCalendarios = allProducts.filter(p => p.categoria === 'calendarios').length;
+  const countPersonalizados = allProducts.filter(p => p.categoria === 'personalizados').length;
+  
   const lastUpdate = new Date().toLocaleTimeString('es-AR');
   
+  // Actualizar elementos del dashboard
   document.getElementById('totalProducts').textContent = total;
   document.getElementById('featuredProducts').textContent = featured;
-  document.getElementById('visibleProducts').textContent = visible;
   document.getElementById('lastUpdate').textContent = lastUpdate;
+  
+  // Actualizar conteos por categoría
+  document.getElementById('countTazas').textContent = countTazas;
+  document.getElementById('countRegalos').textContent = countRegalos;
+  document.getElementById('countCalendarios').textContent = countCalendarios;
+  document.getElementById('countPersonalizados').textContent = countPersonalizados;
+  
+  // Actualizar badge en navegación
+  const badgeEl = document.getElementById('navProductBadge');
+  if (badgeEl) {
+    badgeEl.textContent = total;
+  }
 }
 
 // ========== NAVEGACIÓN DE SECCIONES ==========
@@ -568,9 +639,43 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
   
+  // Toggle del sidebar en móvil
+  document.getElementById('sidebarToggle')?.addEventListener('click', () => {
+    const sidebar = document.querySelector('.admin-sidebar');
+    if (sidebar) {
+      sidebar.classList.toggle('active');
+    }
+  });
+  
+  // Cerrar sidebar al hacer clic en un item de navegación
+  document.querySelectorAll('[data-section]').forEach(navItem => {
+    navItem.addEventListener('click', () => {
+      const sidebar = document.querySelector('.admin-sidebar');
+      if (sidebar && window.innerWidth <= 1024) {
+        sidebar.classList.remove('active');
+      }
+    });
+  });
+  
+  // Cerrar sidebar al hacer clic afuera en móvil
+  document.addEventListener('click', (e) => {
+    const sidebar = document.querySelector('.admin-sidebar');
+    const sidebarToggle = document.getElementById('sidebarToggle');
+    if (sidebar && sidebarToggle && window.innerWidth <= 1024) {
+      // Si el sidebar está activo y el clic no es en el sidebar o el botón toggle
+      if (sidebar.classList.contains('active') && 
+          !sidebar.contains(e.target) && 
+          e.target !== sidebarToggle && 
+          !sidebarToggle.contains(e.target)) {
+        sidebar.classList.remove('active');
+      }
+    }
+  });
+  
   // Modales
   document.getElementById('addProductBtn')?.addEventListener('click', openProductModal);
   document.getElementById('dashboardAddBtn')?.addEventListener('click', openProductModal);
+  document.getElementById('emptyStateAddBtn')?.addEventListener('click', openProductModal);
   document.getElementById('modalClose')?.addEventListener('click', closeProductModal);
   document.getElementById('modalCancelBtn')?.addEventListener('click', closeProductModal);
   document.getElementById('confirmDeleteBtn')?.addEventListener('click', deleteProduct);
@@ -632,6 +737,32 @@ document.addEventListener('DOMContentLoaded', () => {
           `<img src="${event.target.result}" alt="Preview">`;
       };
       reader.readAsDataURL(file);
+    }
+  });
+  
+  // Contador de caracteres para descripción
+  document.getElementById('productDescripcion')?.addEventListener('input', (e) => {
+    const length = e.target.value.length;
+    const maxLength = 500;
+    
+    // Actualizar contador visual
+    const charCount = document.getElementById('charCount');
+    if (charCount) {
+      charCount.textContent = `${length}/${maxLength}`;
+      
+      // Cambiar color si se acerca al límite
+      if (length > maxLength * 0.8) {
+        charCount.style.color = '#e74c3c'; // Rojo si está por encima del 80%
+      } else if (length > maxLength * 0.6) {
+        charCount.style.color = '#f39c12'; // Naranja si está entre 60-80%
+      } else {
+        charCount.style.color = '#999';
+      }
+    }
+    
+    // Enforcer límite máximo
+    if (length > maxLength) {
+      e.target.value = e.target.value.substring(0, maxLength);
     }
   });
   
