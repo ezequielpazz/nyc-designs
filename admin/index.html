@@ -1,538 +1,654 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Panel de Administración - NYC Designs</title>
-  <link rel="stylesheet" href="admin.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - NYC Designs</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="admin.css">
 </head>
 <body>
-  <!-- LOGIN SCREEN -->
-  <div id="loginScreen" class="login-screen">
-    <div class="login-container">
-      <div class="login-card">
-        <div class="login-logo">
-          <span>🏢</span>
-        </div>
-        <h1>Panel de Administración</h1>
-        <p>NYC Designs - Gestión de Productos</p>
-        
-        <div class="login-content">
-          <p class="info-text">
-            Accede con tu cuenta de administrador autorizado
-          </p>
-          
-          <button id="googleLoginBtn" class="btn btn-google">
-            <span class="google-icon">🔐</span>
-            Iniciar sesión con Google
-          </button>
-          
-          <p class="auth-email">
-            Email autorizado: <strong>newyorkcitydesings4@gmail.com</strong>
-          </p>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ADMIN PANEL -->
-  <div id="adminPanel" class="admin-panel hidden">
-    <!-- Header -->
-    <header class="admin-header">
-      <div class="admin-header-content">
-        <div class="admin-brand">
-          <button id="sidebarToggle" class="sidebar-toggle" aria-label="Menú">☰</button>
-          <h1>🏙️ NYC Designs</h1>
-          <p>Panel de Administración</p>
-        </div>
-        
-        <div class="admin-user">
-          <div class="user-info">
-            <span id="userName" class="user-name"></span>
-            <span id="userEmail" class="user-email"></span>
-          </div>
-          <button id="logoutBtn" class="btn btn-outline">
-            Cerrar Sesión
-          </button>
-        </div>
-      </div>
-    </header>
-
-    <!-- Main Content -->
-    <div class="admin-container">
-      <!-- Sidebar Navigation -->
-      <aside class="admin-sidebar" id="adminSidebar">
-        <nav class="admin-nav">
-          <a href="#dashboard" class="nav-item active" data-section="dashboard" title="Resumen de tu tienda">
-            <span class="nav-icon">📊</span>
-            <span class="nav-label">Dashboard</span>
-          </a>
-          <a href="#productos" class="nav-item" data-section="productos" title="Gestiona tus productos">
-            <span class="nav-icon">📦</span>
-            <span class="nav-label">Productos</span>
-            <span class="nav-badge" id="navProductBadge">0</span>
-          </a>
-          <a href="#configuracion" class="nav-item" data-section="configuracion" title="Ajustes de la tienda">
-            <span class="nav-icon">⚙️</span>
-            <span class="nav-label">Configuración</span>
-          </a>
-        </nav>
-      </aside>
-
-      <!-- Main Content Area -->
-      <main class="admin-main">
-        <!-- DASHBOARD SECTION -->
-        <section id="dashboard" class="section active">
-          <div class="section-header">
-            <div class="header-content">
-              <h2>Dashboard</h2>
-              <p>Resumen rápido de tu tienda</p>
-            </div>
-            <button id="dashboardAddBtn" class="btn btn-primary btn-lg">
-              ➕ Agregar Producto
-            </button>
-          </div>
-
-          <!-- Product Count Cards -->
-          <div class="cards-grid">
-            <div class="count-card">
-              <div class="card-icon">📦</div>
-              <div class="card-content">
-                <p class="card-label">Total de Productos</p>
-                <p class="card-value" id="totalProducts">0</p>
-                <p class="card-subtitle">en tu tienda</p>
-              </div>
-            </div>
-
-            <div class="count-card">
-              <div class="card-icon">☕</div>
-              <div class="card-content">
-                <p class="card-label">Tazas</p>
-                <p class="card-value" id="countTazas">0</p>
-                <p class="card-subtitle">productos</p>
-              </div>
-            </div>
-
-            <div class="count-card">
-              <div class="card-icon">🎁</div>
-              <div class="card-content">
-                <p class="card-label">Regalos</p>
-                <p class="card-value" id="countRegalos">0</p>
-                <p class="card-subtitle">productos</p>
-              </div>
-            </div>
-
-            <div class="count-card">
-              <div class="card-icon">📅</div>
-              <div class="card-content">
-                <p class="card-label">Calendarios</p>
-                <p class="card-value" id="countCalendarios">0</p>
-                <p class="card-subtitle">productos</p>
-              </div>
-            </div>
-
-            <div class="count-card">
-              <div class="card-icon">✨</div>
-              <div class="card-content">
-                <p class="card-label">Personalizados</p>
-                <p class="card-value" id="countPersonalizados">0</p>
-                <p class="card-subtitle">productos</p>
-              </div>
-            </div>
-
-            <div class="count-card">
-              <div class="card-icon">⭐</div>
-              <div class="card-content">
-                <p class="card-label">Destacados</p>
-                <p class="card-value" id="featuredProducts">0</p>
-                <p class="card-subtitle">en portada</p>
-              </div>
-            </div>
-          </div>
-
-          <!-- Last Update Info -->
-          <div class="info-banner">
-            <span>🔄 Última actualización:</span>
-            <strong id="lastUpdate">--:--</strong>
-          </div>
-        </section>
-
-        <!-- PRODUCTOS SECTION -->
-        <section id="productos" class="section">
-          <div class="section-header">
-            <div class="header-content">
-              <h2>Productos</h2>
-              <p>Gestiona todos tus productos</p>
-            </div>
-            <button id="addProductBtn" class="btn btn-primary btn-lg">
-              ➕ Agregar Producto
-            </button>
-          </div>
-
-          <!-- Toolbar -->
-          <div class="productos-toolbar">
-            <div class="search-box">
-              <input 
-                type="text" 
-                id="searchProducts" 
-                placeholder="🔍 Buscar productos..."
-                class="input-search"
-              >
-            </div>
-            <select id="filterCategory" class="input-select">
-              <option value="">📂 Todas las categorías</option>
-              <option value="tazas">☕ Tazas</option>
-              <option value="regalos">🎁 Regalos</option>
-              <option value="calendarios">📅 Calendarios</option>
-              <option value="personalizados">✨ Personalizados</option>
-              <option value="dia-de-la-madre">🌷 Día de la Madre</option>
-              <option value="navidad">🎄 Navidad</option>
-              <option value="empresas">🏢 Empresas</option>
-            </select>
-          </div>
-
-          <!-- Empty State -->
-          <div id="emptyState" class="empty-state hidden">
-            <div class="empty-state-content">
-              <div class="empty-icon">🎉</div>
-              <h3>¡Empecemos!</h3>
-              <p>No tienes productos todavía. Agrega tu primer producto para comenzar.</p>
-              <button id="emptyStateAddBtn" class="btn btn-primary btn-lg">
-                ➕ Agregar primer producto
-              </button>
-            </div>
-          </div>
-
-          <!-- Products Table -->
-          <div class="table-wrapper">
-            <div class="table-container">
-              <table class="productos-table">
-                <thead>
-                  <tr>
-                    <th class="col-num">#</th>
-                    <th class="col-img">Imagen</th>
-                    <th class="col-name">Nombre</th>
-                    <th class="col-category">Categoría</th>
-                    <th class="col-price">Precio</th>
-                    <th class="col-stock">Stock</th>
-                    <th class="col-status">Estado</th>
-                    <th class="col-actions">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody id="productosTableBody">
-                  <!-- Productos se cargarán aquí dinámicamente -->
-                </tbody>
-              </table>
-            </div>
-            <div id="noProductsMessage" class="no-data hidden">
-              <p>📭 No hay productos para mostrar</p>
-            </div>
-          </div>
-        </section>
-
-        <!-- CONFIGURACIÓN SECTION -->
-        <section id="configuracion" class="section">
-          <div class="section-header">
-            <div class="header-content">
-              <h2>Configuración</h2>
-              <p>Ajusta los parámetros de tu tienda</p>
-            </div>
-          </div>
-
-          <div class="config-card">
-            <div class="config-section">
-              <h3>⚙️ Configuración General</h3>
-              <div class="config-form">
-                <div class="form-group">
-                  <label for="configProductsPerPage">Productos por página</label>
-                  <input 
-                    type="number" 
-                    id="configProductsPerPage" 
-                    min="1" 
-                    max="50" 
-                    value="12"
-                    class="input-text"
-                  >
-                  <p class="form-help">Cuántos productos mostrar en cada página</p>
-                </div>
-
-                <div class="form-group">
-                  <label for="configCurrency">Moneda</label>
-                  <input 
-                    type="text" 
-                    id="configCurrency" 
-                    value="$"
-                    class="input-text"
-                    maxlength="5"
-                  >
-                  <p class="form-help">Símbolo de la moneda a mostrar</p>
-                </div>
-
-                <div class="form-group checkbox-group">
-                  <label class="checkbox-label">
-                    <input 
-                      type="checkbox" 
-                      id="configShowOutOfStock"
-                      checked
-                    >
-                    <span>Mostrar productos agotados</span>
-                  </label>
-                </div>
-
-                <button id="saveConfigBtn" class="btn btn-primary">
-                  💾 Guardar Configuración
+    <!-- Login Screen -->
+    <div id="loginScreen" class="login-screen">
+        <div class="login-container">
+            <div class="login-box">
+                <h1 class="login-title">NYC Designs</h1>
+                <p class="login-subtitle">Panel de Administración</p>
+                
+                <button id="googleLoginBtn" class="btn btn-primary btn-large">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <path d="M12 6v6m0 0v6"></path>
+                    </svg>
+                    Iniciar sesión con Google
                 </button>
-              </div>
+                
+                <p class="login-note">Usá tu cuenta de Google para acceder al panel.</p>
             </div>
-
-            <div class="config-section">
-              <h3>🔗 URLs Importantes</h3>
-              <div class="info-box">
-                <p><strong>Sitio Web:</strong> https://nyc-designs.vercel.app</p>
-                <p><strong>Panel Admin:</strong> https://nyc-designs.vercel.app/admin/</p>
-              </div>
-            </div>
-          </div>
-        </section>
-      </main>
+        </div>
     </div>
-  </div>
 
-  <!-- MODAL: Agregar/Editar Producto -->
-  <div id="productModal" class="modal">
-    <div class="modal-overlay"></div>
-    <div class="modal-content modal-product">
-      <div class="modal-header">
-        <h2 id="modalTitle">Agregar Producto</h2>
-        <button class="modal-close" id="modalClose" title="Cerrar">✕</button>
-      </div>
-
-      <form id="productForm" class="product-form">
-        <!-- Sección: Información Básica -->
-        <div class="form-section">
-          <h3>📦 Información Básica</h3>
-          <div class="form-row">
-            <div class="form-group">
-              <label for="productNombre">
-                Nombre del Producto <span class="required">*</span>
-              </label>
-              <input 
-                type="text" 
-                id="productNombre" 
-                required
-                placeholder="ej: Taza NYC Classic"
-                class="input-text"
-              >
-            </div>
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label for="productDescripcion">Descripción</label>
-              <textarea 
-                id="productDescripcion" 
-                rows="3"
-                placeholder="Describe el producto..."
-                class="input-textarea"
-              ></textarea>
-              <p class="form-help">
-                <span id="charCount">0</span> / 500 caracteres
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <!-- Sección: Precios -->
-        <div class="form-section">
-          <h3>💰 Precios</h3>
-          <div class="form-row">
-            <div class="form-group">
-              <label for="productPrecio">
-                Precio Actual (ARS) <span class="required">*</span>
-              </label>
-              <input 
-                type="number" 
-                id="productPrecio" 
-                min="0" 
-                step="100"
-                required
-                placeholder="0"
-                class="input-text"
-              >
+    <!-- Main Admin Panel -->
+    <div id="adminPanel" class="admin-panel" style="display: none;">
+        <!-- Sidebar -->
+        <aside class="admin-sidebar">
+            <div class="sidebar-brand">
+                <div class="brand-logo">NYC</div>
+                <div class="brand-name">Designs</div>
             </div>
 
-            <div class="form-group">
-              <label for="productPrecioAnterior">
-                Precio Anterior
-                <span class="tooltip" title="Mostrar descuento (ej: $5000 tachado)">?</span>
-              </label>
-              <input 
-                type="number" 
-                id="productPrecioAnterior" 
-                min="0" 
-                step="100"
-                placeholder="(opcional)"
-                class="input-text"
-              >
+            <nav class="sidebar-nav">
+                <a href="#" class="nav-item active" data-section="dashboard">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                        <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                    </svg>
+                    <span>Inicio</span>
+                </a>
+                
+                <a href="#" class="nav-item" data-section="products">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <polyline points="19 12 12 19 5 12"></polyline>
+                    </svg>
+                    <span>Productos</span>
+                    <span class="nav-badge" id="navProductBadge">0</span>
+                </a>
+                
+                <a href="#" class="nav-item disabled">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="9" cy="21" r="1"></circle>
+                        <circle cx="20" cy="21" r="1"></circle>
+                        <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+                    </svg>
+                    <span>Pedidos</span>
+                    <span class="nav-badge-coming">Próximos</span>
+                </a>
+                
+                <a href="#" class="nav-item" data-section="settings">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M12 1v6m0 6v6M4.22 4.22l4.24 4.24m5.08 5.08l4.24 4.24M1 12h6m6 0h6M4.22 19.78l4.24-4.24m5.08-5.08l4.24-4.24"></path>
+                    </svg>
+                    <span>Configuración</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="user-card">
+                    <div class="user-avatar">A</div>
+                    <div class="user-info">
+                        <div class="user-email" id="userEmail">usuario@example.com</div>
+                        <button id="logoutBtn" class="logout-btn">Salir</button>
+                    </div>
+                </div>
             </div>
-          </div>
-        </div>
+        </aside>
 
-        <!-- Sección: Categoría y Stock -->
-        <div class="form-section">
-          <h3>📁 Categoría y Stock</h3>
-          <div class="form-row">
-            <div class="form-group">
-              <label for="productCategoria">
-                Categoría <span class="required">*</span>
-              </label>
-              <select id="productCategoria" required class="input-select">
-                <option value="">-- Selecciona una categoría --</option>
-                <option value="tazas">☕ Tazas</option>
-                <option value="regalos">🎁 Regalos</option>
-                <option value="calendarios">📅 Calendarios</option>
-                <option value="personalizados">✨ Personalizados</option>
-                <option value="dia-de-la-madre">🌷 Día de la Madre</option>
-                <option value="navidad">🎄 Navidad</option>
-                <option value="empresas">🏢 Empresas</option>
-              </select>
+        <!-- Main Content -->
+        <main class="admin-main">
+            <!-- Header -->
+            <header class="admin-header">
+                <div class="header-container">
+                    <div class="header-breadcrumb">
+                        <span>Panel</span>
+                        <span class="breadcrumb-sep">/</span>
+                        <span class="page-title" id="pageTitle">Inicio</span>
+                    </div>
+                    <div class="header-actions">
+                        <div class="search-box">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="11" cy="11" r="8"></circle>
+                                <path d="m21 21-4.35-4.35"></path>
+                            </svg>
+                            <input type="text" id="searchProducts" placeholder="Buscar productos...">
+                        </div>
+                        <button id="addProductBtn" class="btn btn-primary">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                            + Nuevo producto
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Content Container -->
+            <div class="content-container">
+                <!-- Dashboard Section -->
+                <section id="dashboardSection" class="section active">
+                    <div class="section-header">
+                        <h1>Bienvenido a tu panel</h1>
+                        <p>Un vistazo rápido a tu tienda</p>
+                    </div>
+
+                    <!-- Stats Cards -->
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon stat-icon-blue">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                                    <polyline points="19 12 12 19 5 12"></polyline>
+                                </svg>
+                            </div>
+                            <div class="stat-content">
+                                <div class="stat-label">Total de productos</div>
+                                <div class="stat-value" id="statTotal">0</div>
+                            </div>
+                        </div>
+
+                        <div class="stat-card">
+                            <div class="stat-icon stat-icon-green">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"></path>
+                                    <polyline points="10 16 7 13 8.41 11.59 10 13.17 15.59 7.59 17 9"></polyline>
+                                </svg>
+                            </div>
+                            <div class="stat-content">
+                                <div class="stat-label">Visibles en tienda</div>
+                                <div class="stat-value" id="statVisible">0</div>
+                            </div>
+                        </div>
+
+                        <div class="stat-card">
+                            <div class="stat-icon stat-icon-red">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <line x1="12" y1="8" x2="12" y2="16"></line>
+                                    <line x1="8" y1="12" x2="16" y2="12"></line>
+                                </svg>
+                            </div>
+                            <div class="stat-content">
+                                <div class="stat-label">Sin stock</div>
+                                <div class="stat-value" id="statOutOfStock">0</div>
+                            </div>
+                        </div>
+
+                        <div class="stat-card">
+                            <div class="stat-icon stat-icon-purple">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                                </svg>
+                            </div>
+                            <div class="stat-content">
+                                <div class="stat-label">Destacados</div>
+                                <div class="stat-value" id="statFeatured">0</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Actions -->
+                    <div class="quick-actions">
+                        <h2>Acciones rápidas</h2>
+                        <div class="actions-grid">
+                            <button class="action-card" id="dashboardAddBtn">
+                                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                                </svg>
+                                <span>Agregar producto</span>
+                            </button>
+                            <button class="action-card">
+                                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                                </svg>
+                                <span>Leer documentación</span>
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Products Section -->
+                <section id="productsSection" class="section">
+                    <div class="section-header">
+                        <div>
+                            <h1>Productos</h1>
+                            <p>Gestiona todos tus productos</p>
+                        </div>
+                    </div>
+
+                    <!-- Filter Tabs -->
+                    <div class="filter-tabs">
+                        <button class="filter-tab active" data-filter="todos">
+                            Todos
+                            <span class="tab-badge" id="tabTodos">0</span>
+                        </button>
+                        <button class="filter-tab" data-filter="tazas">
+                            Tazas
+                            <span class="tab-badge" id="tabTazas">0</span>
+                        </button>
+                        <button class="filter-tab" data-filter="regalos">
+                            Regalos
+                            <span class="tab-badge" id="tabRegalos">0</span>
+                        </button>
+                        <button class="filter-tab" data-filter="calendarios">
+                            Calendarios
+                            <span class="tab-badge" id="tabCalendarios">0</span>
+                        </button>
+                        <button class="filter-tab" data-filter="personalizados">
+                            Personalizados
+                            <span class="tab-badge" id="tabPersonalizados">0</span>
+                        </button>
+                    </div>
+
+                    <!-- Products Grid or Empty State -->
+                    <div id="emptyState" class="empty-state" style="display: none;">
+                        <div class="empty-state-content">
+                            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="empty-icon">
+                                <rect x="1" y="3" width="15" height="13"></rect>
+                                <polygon points="16 8 20 4 23 7 20 10"></polygon>
+                                <line x1="9" y1="9" x2="2" y2="9" stroke-linecap="round"></line>
+                                <line x1="9" y1="13" x2="2" y2="13" stroke-linecap="round"></line>
+                            </svg>
+                            <h2>No hay productos aún</h2>
+                            <p>Comienza agregando tu primer producto a la tienda</p>
+                            <button id="emptyStateAddBtn" class="btn btn-primary">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                                </svg>
+                                Agregar mi primer producto
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="productsGrid" class="products-grid">
+                        <!-- Products will be inserted here -->
+                    </div>
+
+                    <!-- Loading state -->
+                    <div id="productsLoading" class="products-loading">
+                        <div class="skeleton-card"></div>
+                        <div class="skeleton-card"></div>
+                        <div class="skeleton-card"></div>
+                        <div class="skeleton-card"></div>
+                    </div>
+                </section>
+
+                <!-- Settings Section -->
+                <section id="settingsSection" class="section">
+                    <div class="section-header">
+                        <h1>Configuración</h1>
+                        <p>Configurar tu tienda</p>
+                    </div>
+
+                    <div class="settings-card">
+                        <h3>Sincronización de Firebase</h3>
+                        <p>Tu tienda está conectada a Firebase Firestore. Los datos se sincronizan automáticamente.</p>
+                        <button id="syncBtn" class="btn btn-secondary">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="23 4 23 10 17 10"></polyline>
+                                <path d="M20.49 15a9 9 0 1 1-2-8.83"></path>
+                            </svg>
+                            Sincronizar datos
+                        </button>
+                    </div>
+
+                    <div class="settings-card">
+                        <h3>URLs Importantes</h3>
+                        <div class="settings-list">
+                            <div class="settings-item">
+                                <span class="settings-label">Google Sheets (Importar productos):</span>
+                                <a href="./docs/MANUAL_GOOGLE_SHEETS.md" target="_blank">Ver documentación</a>
+                            </div>
+                            <div class="settings-item">
+                                <span class="settings-label">Firebase Setup:</span>
+                                <a href="./docs/FIREBASE_SETUP.md" target="_blank">Ver guía</a>
+                            </div>
+                            <div class="settings-item">
+                                <span class="settings-label">Plantilla de productos:</span>
+                                <a href="./docs/PLANTILLA_PRODUCTOS.md" target="_blank">Descargar</a>
+                            </div>
+                        </div>
+                    </div>
+                </section>
             </div>
-
-            <div class="form-group">
-              <label for="productStock">Stock</label>
-              <input 
-                type="text" 
-                id="productStock" 
-                placeholder="ej: 10, ilimitado, agotado"
-                class="input-text"
-              >
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label for="productOrden">Orden de Visualización</label>
-            <input 
-              type="number" 
-              id="productOrden" 
-              min="0" 
-              value="0"
-              placeholder="0"
-              class="input-text"
-            >
-            <p class="form-help">Números menores aparecen primero</p>
-          </div>
-        </div>
-
-        <!-- Sección: Imagen -->
-        <div class="form-section">
-          <h3>🖼️ Imagen del Producto</h3>
-          <div class="image-upload-wrapper">
-            <div id="imagePreview" class="image-preview">
-              <span>📷 Sin imagen</span>
-            </div>
-            <input 
-              type="file" 
-              id="productImagen" 
-              accept="image/*"
-              class="input-file"
-            >
-            <p class="form-help">
-              Tamaño máximo: 2MB. Se comprimirá automáticamente a 1200px
-            </p>
-          </div>
-        </div>
-
-        <!-- Sección: Opciones -->
-        <div class="form-section">
-          <h3>⚙️ Opciones</h3>
-          
-          <div class="form-group">
-            <label>Badges (Etiquetas)</label>
-            <div class="badges-grid">
-              <label class="checkbox-label">
-                <input type="checkbox" name="badge" value="Nuevo" class="badge-checkbox">
-                <span>🆕 Nuevo</span>
-              </label>
-              <label class="checkbox-label">
-                <input type="checkbox" name="badge" value="Popular" class="badge-checkbox">
-                <span>⭐ Popular</span>
-              </label>
-              <label class="checkbox-label">
-                <input type="checkbox" name="badge" value="Oferta" class="badge-checkbox">
-                <span>🏷️ Oferta</span>
-              </label>
-              <label class="checkbox-label">
-                <input type="checkbox" name="badge" value="Personalizable" class="badge-checkbox">
-                <span>✨ Personalizable</span>
-              </label>
-            </div>
-          </div>
-
-          <div class="form-group checkbox-group">
-            <label class="checkbox-label large">
-              <input type="checkbox" id="productDestacado">
-              <div class="checkbox-content">
-                <strong>✨ Marcar como Destacado</strong>
-                <span class="checkbox-help">Aparece en la sección principal</span>
-              </div>
-            </label>
-            <label class="checkbox-label large">
-              <input type="checkbox" id="productVisible" checked>
-              <div class="checkbox-content">
-                <strong>👁️ Visible en la tienda</strong>
-                <span class="checkbox-help">Si está desactivado, no se muestra público</span>
-              </div>
-            </label>
-          </div>
-        </div>
-
-        <!-- Form Actions -->
-        <div class="form-actions">
-          <button type="button" id="modalCancelBtn" class="btn btn-outline">
-            Cancelar
-          </button>
-          <button type="submit" class="btn btn-primary btn-lg">
-            💾 Guardar Producto
-          </button>
-        </div>
-      </form>
+        </main>
     </div>
-  </div>
 
-  <!-- MODAL: Confirmar Eliminación -->
-  <div id="confirmDeleteModal" class="modal">
-    <div class="modal-overlay"></div>
-    <div class="modal-content modal-confirm">
-      <div class="modal-header">
-        <h2>⚠️ Confirmar Eliminación</h2>
-      </div>
-      <p id="deleteConfirmText" class="confirm-text"></p>
-      <div class="form-actions">
-        <button id="cancelDeleteBtn" class="btn btn-outline">
-          Cancelar
-        </button>
-        <button id="confirmDeleteBtn" class="btn btn-danger">
-          🗑️ Eliminar Producto
-        </button>
-      </div>
+    <!-- Product Wizard Modal -->
+    <div id="productModal" class="wizard-modal">
+        <div class="wizard-overlay"></div>
+        <div class="wizard-container">
+            <!-- Progress Indicator -->
+            <div class="wizard-progress">
+                <div class="progress-bar" id="progressBar" style="width: 16.66%"></div>
+                <div class="progress-steps">
+                    <div class="progress-step active" data-step="1">
+                        <div class="step-number">1</div>
+                        <span class="step-label">Básica</span>
+                    </div>
+                    <div class="progress-step" data-step="2">
+                        <div class="step-number">2</div>
+                        <span class="step-label">Precio</span>
+                    </div>
+                    <div class="progress-step" data-step="3">
+                        <div class="step-number">3</div>
+                        <span class="step-label">Categoría</span>
+                    </div>
+                    <div class="progress-step" data-step="4">
+                        <div class="step-number">4</div>
+                        <span class="step-label">Imagen</span>
+                    </div>
+                    <div class="progress-step" data-step="5">
+                        <div class="step-number">5</div>
+                        <span class="step-label">Opciones</span>
+                    </div>
+                    <div class="progress-step" data-step="6">
+                        <div class="step-number">6</div>
+                        <span class="step-label">Revisar</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Wizard Content -->
+            <div class="wizard-content">
+                <!-- Step 1: Basic Info -->
+                <div class="wizard-step active" data-step="1">
+                    <h2>Información básica</h2>
+                    <p class="step-subtitle">Comenzá con los datos principales de tu producto</p>
+                    
+                    <div class="form-group">
+                        <label for="productNombre">Nombre del producto*</label>
+                        <input type="text" id="productNombre" placeholder="Ej: Taza NYC Classic" required>
+                        <small>Usa un nombre claro y atractivo</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="productDescripcion">Descripción*</label>
+                        <textarea id="productDescripcion" placeholder="Describí tu producto en pocas palabras" rows="5" required></textarea>
+                        <small>Máximo 500 caracteres • <span id="charCount">0</span>/500</small>
+                    </div>
+                </div>
+
+                <!-- Step 2: Pricing & Stock -->
+                <div class="wizard-step" data-step="2">
+                    <h2>Precio y stock</h2>
+                    <p class="step-subtitle">Fija el precio y disponibilidad</p>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="productPrecio">Precio*</label>
+                            <div class="input-prefix">
+                                <span>$</span>
+                                <input type="number" id="productPrecio" placeholder="4500" min="0" required>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="productPrecioAnterior">Precio anterior (opcional)</label>
+                            <div class="input-prefix">
+                                <span>$</span>
+                                <input type="number" id="productPrecioAnterior" placeholder="5000" min="0">
+                            </div>
+                            <small>Muestra el descuento al cliente</small>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Stock*</label>
+                        <div class="stock-selector">
+                            <label class="radio-card">
+                                <input type="radio" name="stockType" value="ilimitado" checked>
+                                <span class="card-content">
+                                    <span class="card-title">Ilimitado</span>
+                                    <span class="card-desc">Sin límite de stock</span>
+                                </span>
+                            </label>
+                            <label class="radio-card">
+                                <input type="radio" name="stockType" value="limitado">
+                                <span class="card-content">
+                                    <span class="card-title">Cantidad</span>
+                                    <span class="card-desc">Ingresar cantidad</span>
+                                </span>
+                            </label>
+                        </div>
+                        <input type="number" id="productStock" placeholder="Cantidad" min="0" style="display: none;">
+                    </div>
+                </div>
+
+                <!-- Step 3: Category -->
+                <div class="wizard-step" data-step="3">
+                    <h2>Categoría</h2>
+                    <p class="step-subtitle">Elige la categoría de tu producto</p>
+
+                    <div class="category-grid">
+                        <label class="category-card">
+                            <input type="radio" name="categoria" value="tazas" required>
+                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M9 3h6v10H9z"></path>
+                                <path d="M15 11a2 2 0 0 0 2-2 2 2 0 0 0-2-2"></path>
+                                <ellipse cx="12" cy="3" rx="6" ry="2"></ellipse>
+                                <path d="M3 13h18v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2z"></path>
+                            </svg>
+                            <span>Tazas</span>
+                        </label>
+
+                        <label class="category-card">
+                            <input type="radio" name="categoria" value="regalos">
+                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="20 12 20 22 4 22 4 12"></polyline>
+                                <rect x="2" y="7" width="20" height="5"></rect>
+                                <path d="M12 7V3"></path>
+                                <path d="M9 11v6"></path>
+                                <path d="M15 11v6"></path>
+                            </svg>
+                            <span>Regalos</span>
+                        </label>
+
+                        <label class="category-card">
+                            <input type="radio" name="categoria" value="calendarios">
+                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                <path d="M16 2v4"></path>
+                                <path d="M8 2v4"></path>
+                                <line x1="3" y1="10" x2="21" y2="10"></line>
+                                <circle cx="9" cy="15" r="1"></circle>
+                                <circle cx="12" cy="15" r="1"></circle>
+                                <circle cx="15" cy="15" r="1"></circle>
+                            </svg>
+                            <span>Calendarios</span>
+                        </label>
+
+                        <label class="category-card">
+                            <input type="radio" name="categoria" value="personalizados">
+                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"></path>
+                                <path d="M12 7v5m0 0l-3-3m3 3l3-3"></path>
+                            </svg>
+                            <span>Personalizados</span>
+                        </label>
+
+                        <label class="category-card">
+                            <input type="radio" name="categoria" value="dia-de-la-madre">
+                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"></path>
+                            </svg>
+                            <span>Día de la Madre</span>
+                        </label>
+
+                        <label class="category-card">
+                            <input type="radio" name="categoria" value="empresas">
+                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+                                <path d="M16 7v-2a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"></path>
+                                <line x1="9" y1="12" x2="9" y2="17"></line>
+                                <line x1="15" y1="12" x2="15" y2="17"></line>
+                            </svg>
+                            <span>Empresas</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Step 4: Image -->
+                <div class="wizard-step" data-step="4">
+                    <h2>Imagen</h2>
+                    <p class="step-subtitle">Sube una foto del producto</p>
+
+                    <div class="image-upload">
+                        <div class="dropzone" id="dropzone">
+                            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="17 8 12 3 7 8"></polyline>
+                                <line x1="12" y1="3" x2="12" y2="15"></line>
+                            </svg>
+                            <h3>Arrastrá una imagen</h3>
+                            <p>o hacé click para buscar</p>
+                        </div>
+                        <input type="file" id="productImagen" accept="image/*" style="display: none;">
+                        <div id="imagePreview" class="image-preview" style="display: none;">
+                            <img id="previewImg" src="" alt="Preview">
+                            <button type="button" class="btn-remove-image">✕</button>
+                        </div>
+                        <small>Recomendado: 800x800px, JPG o PNG</small>
+                    </div>
+                </div>
+
+                <!-- Step 5: Options -->
+                <div class="wizard-step" data-step="5">
+                    <h2>Opciones adicionales</h2>
+                    <p class="step-subtitle">Personaliza cómo se muestra tu producto</p>
+
+                    <div class="options-group">
+                        <label class="toggle-option">
+                            <span>
+                                <span class="option-title">Mostrar en tienda</span>
+                                <span class="option-desc">El producto será visible para los clientes</span>
+                            </span>
+                            <div class="toggle-switch">
+                                <input type="checkbox" id="productVisible" checked>
+                                <span class="toggle-slider"></span>
+                            </div>
+                        </label>
+
+                        <label class="toggle-option">
+                            <span>
+                                <span class="option-title">Destacar producto</span>
+                                <span class="option-desc">Aparece en la sección principal</span>
+                            </span>
+                            <div class="toggle-switch">
+                                <input type="checkbox" id="productDestacado">
+                                <span class="toggle-slider"></span>
+                            </div>
+                        </label>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Badges</label>
+                        <div class="badge-selector">
+                            <label class="badge-button">
+                                <input type="checkbox" class="badge-checkbox" value="nuevo">
+                                <span>Nuevo</span>
+                            </label>
+                            <label class="badge-button">
+                                <input type="checkbox" class="badge-checkbox" value="popular">
+                                <span>Popular</span>
+                            </label>
+                            <label class="badge-button">
+                                <input type="checkbox" class="badge-checkbox" value="oferta">
+                                <span>Oferta</span>
+                            </label>
+                            <label class="badge-button">
+                                <input type="checkbox" class="badge-checkbox" value="personalizable">
+                                <span>Personalizable</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 6: Review -->
+                <div class="wizard-step" data-step="6">
+                    <h2>Revisar producto</h2>
+                    <p class="step-subtitle">Verifica todos los datos antes de guardar</p>
+
+                    <div class="preview-card">
+                        <div class="preview-image">
+                            <div id="previewProductImage" style="width: 100%; height: 200px; background: #f5f5f5; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #999;">
+                                Sin imagen
+                            </div>
+                        </div>
+                        <div class="preview-details">
+                            <h3 id="previewProductName">Nombre del producto</h3>
+                            <p id="previewProductDesc" class="preview-desc"></p>
+                            <div class="preview-meta">
+                                <span class="preview-price">
+                                    $<span id="previewPrice">0</span>
+                                    <span id="previewOldPrice" class="old-price" style="display: none;"></span>
+                                </span>
+                                <span class="preview-category" id="previewCategory">Categoría</span>
+                            </div>
+                            <div class="preview-stock">
+                                Stock: <span id="previewStock">Ilimitado</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="review-summary">
+                        <h4>Resumen</h4>
+                        <div id="summarySections"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Navigation Buttons -->
+            <div class="wizard-footer">
+                <button id="prevBtn" class="btn btn-secondary" style="display: none;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="19" y1="12" x2="5" y2="12"></line>
+                        <polyline points="12 19 5 12 12 5"></polyline>
+                    </svg>
+                    Atrás
+                </button>
+                <div class="wizard-status">
+                    <span id="stepIndicator">1 de 6</span>
+                </div>
+                <button id="nextBtn" class="btn btn-primary">
+                    Siguiente
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                        <polyline points="12 5 19 12 12 19"></polyline>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Close Button -->
+            <button id="modalClose" class="modal-close">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
     </div>
-  </div>
 
-  <!-- LOADING SPINNER -->
-  <div id="loadingSpinner" class="loading-spinner hidden">
-    <div class="spinner"></div>
-    <p>Cargando...</p>
-  </div>
+    <!-- Delete Confirmation Modal -->
+    <div id="confirmDeleteModal" class="modal-confirm">
+        <div class="modal-overlay"></div>
+        <div class="modal-box">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="modal-icon modal-icon-warning">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+            <h2>¿Eliminar producto?</h2>
+            <p>Esta acción no se puede deshacer</p>
+            <div class="modal-buttons">
+                <button id="cancelDeleteBtn" class="btn btn-secondary">Cancelar</button>
+                <button id="confirmDeleteBtn" class="btn btn-danger">Eliminar producto</button>
+            </div>
+        </div>
+    </div>
 
-  <!-- TOAST NOTIFICATIONS -->
-  <div id="toast" class="toast"></div>
+    <!-- Toast Notifications -->
+    <div id="toastContainer" class="toast-container"></div>
 
-  <!-- Firebase SDK (COMPAT versions) -->
-  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+    <!-- Firebase Scripts -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
 
-  <!-- Admin JS -->
-  <script src="admin.js"></script>
+    <!-- App Scripts -->
+    <script src="admin.js"></script>
 </body>
 </html>
