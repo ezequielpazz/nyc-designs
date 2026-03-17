@@ -1796,6 +1796,715 @@ select:focus {
     width: 20px;
     height: 20px;
     flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.toast-icon svg {
+    width: 100%;
+    height: 100%;
+}
+
+.toast-close {
+    width: 20px;
+    height: 20px;
+    margin-left: auto;
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition);
+}
+
+.toast-close:hover {
+    color: var(--text-primary);
+}
+
+.toast-message {
+    flex: 1;
+    font-size: 14px;
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+/* ============================================
+   MOBILE RESPONSIVENESS
+   ============================================ */
+
+/* Hamburger menu button - hidden on desktop */
+.hamburger-btn {
+    display: none;
+    background: none;
+    border: none;
+    color: var(--text-primary);
+    cursor: pointer;
+    padding: var(--spacing-md);
+    transition: var(--transition);
+    min-width: 44px;
+    min-height: 44px;
+    align-items: center;
+    justify-content: center;
+}
+
+.hamburger-btn svg {
+    width: 24px;
+    height: 24px;
+}
+
+/* Mobile menu overlay */
+.sidebar-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+}
+
+.sidebar-overlay.active {
+    display: block;
+    animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+/* Tablet and Mobile (max-width: 1024px) */
+@media (max-width: 1024px) {
+    .admin-sidebar {
+        width: 240px;
+    }
+
+    .admin-main {
+        margin-left: 240px;
+    }
+
+    .content-container {
+        padding: var(--spacing-lg);
+    }
+
+    .header-container {
+        gap: var(--spacing-lg);
+        flex-wrap: wrap;
+    }
+
+    .header-actions {
+        flex-wrap: wrap;
+        gap: var(--spacing-sm);
+    }
+
+    .search-box {
+        min-width: 200px;
+    }
+
+    .stats-grid {
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: var(--spacing-lg);
+    }
+
+    .section-header h1 {
+        font-size: 24px;
+    }
+}
+
+/* Mobile (max-width: 768px) */
+@media (max-width: 768px) {
+    /* Hide sidebar by default, show as overlay */
+    .admin-sidebar {
+        position: fixed;
+        left: -260px;
+        width: 260px;
+        transition: left 0.3s ease;
+        z-index: 1001;
+        top: 0;
+        bottom: 0;
+    }
+
+    .admin-sidebar.mobile-open {
+        left: 0;
+    }
+
+    .admin-main {
+        margin-left: 0;
+    }
+
+    /* Show hamburger menu on mobile */
+    .hamburger-btn {
+        display: flex;
+    }
+
+    /* Content adjustments */
+    .content-container {
+        padding: var(--spacing-md);
+    }
+
+    .admin-header {
+        padding: var(--spacing-md);
+    }
+
+    .header-container {
+        flex-direction: column;
+        align-items: stretch;
+        gap: var(--spacing-md);
+    }
+
+    .header-breadcrumb {
+        font-size: 12px;
+    }
+
+    .header-actions {
+        flex-direction: column;
+        gap: var(--spacing-sm);
+    }
+
+    .search-box {
+        min-width: 100%;
+        padding: var(--spacing-sm) var(--spacing-md);
+    }
+
+    .search-box input {
+        font-size: 16px; /* Important for mobile to not trigger zoom */
+    }
+
+    /* Section styling */
+    .section-header {
+        margin-bottom: var(--spacing-lg);
+    }
+
+    .section-header h1 {
+        font-size: 22px;
+        margin-bottom: var(--spacing-sm);
+    }
+
+    .section-header p {
+        font-size: 13px;
+    }
+
+    /* Stats grid - stack on mobile */
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: var(--spacing-md);
+    }
+
+    .stat-card {
+        padding: var(--spacing-lg);
+    }
+
+    .stat-icon {
+        width: 36px;
+        height: 36px;
+    }
+
+    .stat-icon svg {
+        width: 18px;
+        height: 18px;
+    }
+
+    .stat-value {
+        font-size: 20px;
+    }
+
+    /* Filter tabs - horizontal scroll */
+    .filter-tabs {
+        overflow-x: auto;
+        gap: var(--spacing-sm);
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: var(--spacing-sm);
+        margin-bottom: var(--spacing-lg);
+    }
+
+    .filter-tab {
+        padding: var(--spacing-md) var(--spacing-lg);
+        white-space: nowrap;
+        min-height: 44px;
+    }
+
+    /* Products grid - single column */
+    .products-grid {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-lg);
+    }
+
+    /* Product card adjustments */
+    .product-card {
+        padding: var(--spacing-lg);
+    }
+
+    /* Buttons - full width and larger tap targets */
+    .btn {
+        min-height: 44px;
+        font-size: 16px;
+        padding: var(--spacing-md) var(--spacing-lg);
+    }
+
+    .btn-large {
+        height: 44px;
+        font-size: 16px;
+    }
+
+    #emptyStateAddBtn,
+    #newProductBtn,
+    #dashboardAddBtn {
+        min-height: 44px;
+        width: 100%;
+        justify-content: center;
+    }
+
+    /* Modal - full screen on mobile */
+    .wizard-modal {
+        padding: 0;
+    }
+
+    .wizard-container {
+        width: 100%;
+        height: 100vh;
+        max-width: 100%;
+        border-radius: 0;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .wizard-content {
+        flex: 1;
+        overflow-y: auto;
+        padding: var(--spacing-lg);
+    }
+
+    .wizard-step {
+        padding-bottom: var(--spacing-lg);
+    }
+
+    /* Form fields - larger on mobile */
+    .form-group {
+        margin-bottom: var(--spacing-lg);
+    }
+
+    .form-group input,
+    .form-group textarea,
+    .form-group select {
+        font-size: 16px; /* Prevents zoom on iOS */
+        min-height: 44px;
+        padding: var(--spacing-md);
+    }
+
+    .form-group label {
+        font-size: 14px;
+        margin-bottom: var(--spacing-sm);
+    }
+
+    .form-group small {
+        font-size: 12px;
+    }
+
+    /* Form rows - stack vertically */
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+
+    .input-prefix {
+        min-height: 44px;
+        padding: var(--spacing-sm);
+    }
+
+    .input-prefix input {
+        font-size: 16px;
+        min-height: 36px;
+        padding: var(--spacing-sm);
+    }
+
+    .input-prefix span {
+        min-width: 32px;
+    }
+
+    /* Stock selector */
+    .stock-selector {
+        gap: var(--spacing-md);
+    }
+
+    .radio-card {
+        padding: var(--spacing-lg);
+        min-height: 60px;
+    }
+
+    /* Category grid - 2 columns */
+    .category-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: var(--spacing-md);
+    }
+
+    .category-card {
+        padding: var(--spacing-lg);
+        min-height: 100px;
+    }
+
+    .category-card svg {
+        width: 28px;
+        height: 28px;
+    }
+
+    /* Toggle options */
+    .toggle-option {
+        padding: var(--spacing-lg);
+        gap: var(--spacing-md);
+    }
+
+    /* Badge selector */
+    .badge-selector {
+        gap: var(--spacing-sm);
+    }
+
+    .badge-button {
+        padding: var(--spacing-md) var(--spacing-lg);
+        min-height: 44px;
+        font-size: 14px;
+    }
+
+    /* Wizard footer - stack buttons */
+    .wizard-footer {
+        flex-direction: column;
+        padding: var(--spacing-lg);
+        gap: var(--spacing-md);
+        margin-top: auto;
+    }
+
+    .wizard-footer .btn {
+        width: 100%;
+        min-height: 44px;
+    }
+
+    #prevBtn,
+    #nextBtn {
+        width: 100%;
+    }
+
+    .wizard-status {
+        order: -1;
+        width: 100%;
+    }
+
+    /* Modal close button */
+    .modal-close {
+        min-width: 44px;
+        min-height: 44px;
+        width: 44px;
+        height: 44px;
+    }
+
+    /* Confirm modal */
+    .modal-box {
+        max-width: 90vw;
+        padding: var(--spacing-lg);
+    }
+
+    .modal-box h2 {
+        font-size: 18px;
+    }
+
+    .modal-buttons {
+        flex-direction: column;
+        gap: var(--spacing-sm);
+    }
+
+    .modal-buttons .btn {
+        width: 100%;
+        min-height: 44px;
+    }
+
+    /* Toast notifications - adjust position and width */
+    .toast-container {
+        top: var(--spacing-md);
+        right: var(--spacing-md);
+        left: var(--spacing-md);
+        max-width: calc(100% - var(--spacing-lg));
+    }
+
+    .toast {
+        min-width: unset;
+        width: 100%;
+        font-size: 14px;
+        padding: var(--spacing-md);
+    }
+
+    /* Login - adjust padding */
+    .login-box {
+        padding: var(--spacing-2xl) var(--spacing-lg);
+    }
+
+    .login-title {
+        font-size: 28px;
+    }
+
+    .login-subtitle {
+        font-size: 13px;
+    }
+
+    /* Settings cards */
+    .settings-card {
+        padding: var(--spacing-lg);
+    }
+
+    .settings-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--spacing-sm);
+        padding: var(--spacing-md);
+    }
+
+    .settings-item a {
+        width: 100%;
+        padding: var(--spacing-md);
+        background-color: var(--bg-primary);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        text-align: center;
+        color: var(--primary);
+        text-decoration: none;
+    }
+
+    /* Quick actions */
+    .actions-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: var(--spacing-md);
+    }
+
+    .action-card {
+        padding: var(--spacing-lg);
+        min-height: 100px;
+    }
+
+    /* Preview card */
+    .preview-card {
+        flex-direction: column;
+        padding: var(--spacing-lg);
+    }
+
+    .preview-image {
+        width: 100%;
+    }
+
+    .preview-details {
+        padding: var(--spacing-lg) 0;
+    }
+
+    /* Review summary */
+    .review-summary {
+        padding: var(--spacing-lg) 0;
+    }
+}
+
+/* Extra small (max-width: 480px) */
+@media (max-width: 480px) {
+    .admin-sidebar {
+        width: 100%;
+    }
+
+    .brand-logo {
+        width: 36px;
+        height: 36px;
+        font-size: 16px;
+    }
+
+    .brand-name {
+        font-size: 14px;
+    }
+
+    .admin-header {
+        padding: var(--spacing-sm);
+    }
+
+    .header-container {
+        gap: var(--spacing-sm);
+    }
+
+    .header-breadcrumb {
+        font-size: 11px;
+    }
+
+    .page-title {
+        font-size: 12px;
+    }
+
+    .content-container {
+        padding: var(--spacing-sm);
+    }
+
+    /* Section headers */
+    .section-header h1 {
+        font-size: 20px;
+    }
+
+    /* Stats - single column */
+    .stats-grid {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-sm);
+    }
+
+    .stat-card {
+        padding: var(--spacing-md);
+    }
+
+    .stat-label {
+        font-size: 12px;
+    }
+
+    .stat-value {
+        font-size: 18px;
+    }
+
+    /* Filter tabs - smaller */
+    .filter-tab {
+        padding: var(--spacing-sm) var(--spacing-md);
+        font-size: 13px;
+    }
+
+    .tab-badge {
+        font-size: 10px;
+        padding: 1px 4px;
+    }
+
+    /* Category grid - single column, horizontal scroll */
+    .category-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: var(--spacing-sm);
+    }
+
+    .category-card {
+        padding: var(--spacing-md);
+        min-height: 90px;
+        font-size: 12px;
+    }
+
+    .category-card span {
+        font-size: 12px;
+    }
+
+    .category-card svg {
+        width: 24px;
+        height: 24px;
+    }
+
+    /* Modal */
+    .wizard-container {
+        height: 100%;
+    }
+
+    .wizard-content {
+        padding: var(--spacing-md);
+    }
+
+    .wizard-step h2 {
+        font-size: 18px;
+    }
+
+    .step-subtitle {
+        font-size: 12px;
+    }
+
+    /* Forms - extra large */
+    .form-group input,
+    .form-group textarea,
+    .form-group select {
+        width: 100%;
+        font-size: 16px;
+        padding: var(--spacing-sm);
+        min-height: 44px;
+    }
+
+    .form-group label {
+        font-size: 13px;
+    }
+
+    .input-prefix {
+        padding: var(--spacing-sm);
+    }
+
+    /* Buttons - full width */
+    .btn {
+        width: 100%;
+        min-height: 44px;
+        font-size: 14px;
+    }
+
+    #newProductBtn {
+        width: 100%;
+    }
+
+    /* Action cards */
+    .action-card {
+        padding: var(--spacing-md);
+        min-height: 80px;
+        font-size: 12px;
+    }
+
+    .action-card svg {
+        width: 24px;
+        height: 24px;
+    }
+
+    /* Toast - better visibility */
+    .toast-container {
+        top: auto;
+        bottom: var(--spacing-md);
+        left: var(--spacing-sm);
+        right: var(--spacing-sm);
+    }
+
+    .toast {
+        min-width: unset;
+        width: 100%;
+        font-size: 13px;
+        padding: var(--spacing-sm);
+    }
+
+    .toast-icon {
+        width: 18px;
+        height: 18px;
+    }
+
+    /* Product cards */
+    .product-card {
+        padding: var(--spacing-md);
+    }
+
+    /* Login */
+    body {
+        font-size: 14px;
+    }
+
+    .login-container {
+        max-width: 90vw;
+    }
+
+    .login-title {
+        font-size: 24px;
+    }
+
+    .login-subtitle {
+        font-size: 12px;
+    }
+
+    .login-box {
+        padding: var(--spacing-xl) var(--spacing-md);
+    }
+
+    .btn-large {
+        height: 44px;
+        font-size: 14px;
+    }
+}
     margin-top: 2px;
 }
 
