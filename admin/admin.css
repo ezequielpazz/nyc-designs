@@ -1925,7 +1925,7 @@ select:focus {
     /* Hide sidebar by default, show as overlay */
     .admin-sidebar {
         position: fixed;
-        left: -260px;
+        left: -100%;
         width: 260px;
         transition: left 0.3s ease;
         z-index: 1001;
@@ -1939,14 +1939,19 @@ select:focus {
 
     .admin-main {
         margin-left: 0;
+        width: 100%;
     }
 
     /* Show hamburger menu on mobile */
     .hamburger-btn {
         display: flex;
-        order: -1;
+        align-items: center;
+        justify-content: center;
+        width: 44px;
+        height: 44px;
+        background: var(--bg-tertiary);
+        border-radius: var(--radius-md);
         flex-shrink: 0;
-        margin-right: auto;
     }
 
     /* Content adjustments */
@@ -1955,14 +1960,19 @@ select:focus {
     }
 
     .admin-header {
+        position: sticky;
+        top: 0;
+        z-index: 100;
         padding: var(--spacing-md);
+        background: var(--bg-secondary);
     }
 
     .header-container {
         display: flex;
         flex-direction: row;
         align-items: center;
-        gap: var(--spacing-md);
+        justify-content: space-between;
+        padding: var(--spacing-md);
     }
 
     .header-breadcrumb {
@@ -1979,10 +1989,17 @@ select:focus {
         display: none;
     }
 
+    #newProductBtn span {
+        display: none;
+    }
+
     #newProductBtn {
-        width: auto;
-        padding: var(--spacing-sm) var(--spacing-md);
-        min-height: 44px;
+        width: 44px;
+        height: 44px;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
 
     /* Section styling */
