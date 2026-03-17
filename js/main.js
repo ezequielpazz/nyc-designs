@@ -14,9 +14,8 @@
 // ========== CONFIGURACIÓN ==========
 // ⚠️ CAMBIAR ESTOS VALORES POR LOS REALES
 const CONFIG = {
-  WHATSAPP_NUMBER: '5491123199122',  // ← Tu número de WhatsApp
+  WHATSAPP_NUMBER: '5491112345678',  // ← Tu número de WhatsApp
   INSTAGRAM_USER: 'newyorkcitydesingns',  // ← Tu usuario de Instagram
-  EMAIL: 'newyorkcitydesings4@gmail.com',  // ← Tu email
   STORE_NAME: 'NYC Designs'
 };
 

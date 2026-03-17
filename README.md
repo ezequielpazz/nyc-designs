@@ -74,9 +74,8 @@ Abrir `js/main.js` y cambiar las líneas 8-11:
 
 ```javascript
 const CONFIG = {
-  WHATSAPP_NUMBER: '5491123199122',     // ← TU NÚMERO
+  WHATSAPP_NUMBER: '5491112345678',     // ← TU NÚMERO
   INSTAGRAM_USER: 'newyorkcitydesingns', // ← TU USUARIO
-  EMAIL: 'newyorkcitydesings4@gmail.com', // ← TU EMAIL
   STORE_NAME: 'NYC Designs'
 };
 ```
