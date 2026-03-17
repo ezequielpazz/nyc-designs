@@ -1944,6 +1944,9 @@ select:focus {
     /* Show hamburger menu on mobile */
     .hamburger-btn {
         display: flex;
+        order: -1;
+        flex-shrink: 0;
+        margin-right: auto;
     }
 
     /* Content adjustments */
@@ -1956,27 +1959,30 @@ select:focus {
     }
 
     .header-container {
-        flex-direction: column;
-        align-items: stretch;
+        display: flex;
+        flex-direction: row;
+        align-items: center;
         gap: var(--spacing-md);
     }
 
     .header-breadcrumb {
-        font-size: 12px;
+        display: none;
     }
 
     .header-actions {
-        flex-direction: column;
+        flex-direction: row;
         gap: var(--spacing-sm);
+        margin-left: auto;
     }
 
     .search-box {
-        min-width: 100%;
-        padding: var(--spacing-sm) var(--spacing-md);
+        display: none;
     }
 
-    .search-box input {
-        font-size: 16px; /* Important for mobile to not trigger zoom */
+    #newProductBtn {
+        width: auto;
+        padding: var(--spacing-sm) var(--spacing-md);
+        min-height: 44px;
     }
 
     /* Section styling */
