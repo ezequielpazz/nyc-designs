@@ -494,6 +494,7 @@ async function compressImage(file) {
    ============================================ */
 
 function openWizardModal() {
+    console.log('🚀 openWizardModal called');
     currentEditingProductId = null;
     currentWizardStep = 1;
     productFormData = {
@@ -512,7 +513,10 @@ function openWizardModal() {
     
     resetWizardForm();
     showWizardStep(1);
-    document.getElementById('productModal').classList.add('active');
+    const modal = document.getElementById('productModal');
+    console.log('📦 Modal element:', modal);
+    modal.classList.add('active');
+    console.log('✅ Modal classList after add:', modal.classList);
     document.body.style.overflow = 'hidden';
 }
 
@@ -544,7 +548,10 @@ function openEditModal(productId) {
 }
 
 function closeWizardModal() {
-    document.getElementById('productModal').classList.remove('active');
+    console.log('❌ closeWizardModal called');
+    const modal = document.getElementById('productModal');
+    modal.classList.remove('active');
+    console.log('✅ Modal classList after remove:', modal.classList);
     document.body.style.overflow = 'auto';
     currentEditingProductId = null;
     currentWizardStep = 1;
@@ -860,6 +867,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function setupEventListeners() {
+    console.log('🔗 Setting up event listeners...');
     
     // ========== LOGIN ==========
     document.getElementById('googleLoginBtn')?.addEventListener('click', signInWithGoogle);
@@ -878,6 +886,8 @@ function setupEventListeners() {
     
     // ========== PRODUCTS - MAIN BUTTON ==========
     document.getElementById('newProductBtn')?.addEventListener('click', openWizardModal);
+    document.getElementById('dashboardAddBtn')?.addEventListener('click', openWizardModal);
+    document.getElementById('emptyStateAddBtn')?.addEventListener('click', openWizardModal);
     
     // ========== FILTER TABS ==========
     document.querySelectorAll('.filter-tab').forEach(tab => {
@@ -1023,6 +1033,7 @@ function setupEventListeners() {
     
     // ========== WIZARD - CLOSE MODAL ==========
     document.getElementById('closeWizardBtn')?.addEventListener('click', closeWizardModal);
+    document.getElementById('modalClose')?.addEventListener('click', closeWizardModal);
     
     // Cerrar modal con Escape
     document.addEventListener('keydown', (e) => {
@@ -1044,14 +1055,14 @@ function setupEventListeners() {
     document.getElementById('closeDeleteModalBtn')?.addEventListener('click', closeDeleteModal);
     
     // ========== SETTINGS ==========
-    document.getElementById('syncFirebaseBtn')?.addEventListener('click', async () => {
+    document.getElementById('syncBtn')?.addEventListener('click', async () => {
         showToast('Sincronizando con Firebase...', 'info');
         await loadProducts();
         showToast('✅ Sincronización completada', 'success');
     });
     
     // ========== SEARCH ==========
-    document.getElementById('searchBox')?.addEventListener('input', (e) => {
+    document.getElementById('searchProducts')?.addEventListener('input', (e) => {
         const query = e.target.value.toLowerCase();
         if (query.length === 0) {
             renderProductsGrid();
