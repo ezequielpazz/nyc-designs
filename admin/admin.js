@@ -18,7 +18,7 @@ const CLOUDINARY_CONFIG = {
 
 // Authorized admin emails
 const AUTHORIZED_EMAILS = [
-    "newyorkcitydesings4@gmail.com",
+    "newyorkcitydesigns4@gmail.com",
     "javierituarte20@gmail.com"
 ];
 

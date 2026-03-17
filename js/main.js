@@ -14,8 +14,9 @@
 // ========== CONFIGURACIÓN ==========
 // ⚠️ CAMBIAR ESTOS VALORES POR LOS REALES
 const CONFIG = {
-  WHATSAPP_NUMBER: '5491112345678',  // ← Tu número de WhatsApp
-  INSTAGRAM_USER: 'newyorkcitydesingns',  // ← Tu usuario de Instagram
+  WHATSAPP_NUMBER: '5491123199122',  // ← Tu número de WhatsApp
+  INSTAGRAM_USER: 'newyorkcitydesigns',  // ← Tu usuario de Instagram
+  EMAIL: 'newyorkcitydesigns4@gmail.com',  // ← Tu email
   STORE_NAME: 'NYC Designs'
 };
 
@@ -38,16 +39,16 @@ const USE_FIREBASE = true; // Cambiar a false para usar productos estáticos
 
 
 // ========== CATEGORÍAS DINÁMICAS ==========
-// añadir un objeto aquí para que aparezca como categoría/filtro y etiqueta.
+// Categorías reales del negocio NYC Designs
 const CATEGORIES = [
-  { id: 'tazas', label: 'Tazas', emoji: '☕', description: 'Sublimadas, con y sin diseño personalizado.' },
-  { id: 'regalos', label: 'Regalos', emoji: '🎁', description: 'Packs listos para entregar.' },
-  { id: 'calendarios', label: 'Calendarios', emoji: '📅', description: 'Anuales, de escritorio o pared.' },
-  { id: 'personalizados', label: 'Personalizados', emoji: '✨', description: 'Mandanos tu idea.' },
-  // categorías de ejemplo adicionales:
-  { id: 'dia-de-la-madre', label: 'Día de la Madre', emoji: '🌷', description: 'Regalos especiales para mamá.' },
-  { id: 'navidad', label: 'Navidad', emoji: '🎄', description: 'Promos navideñas.' },
-  { id: 'empresas', label: 'Empresas', emoji: '🏢', description: 'Detalles corporativos.' }
+  { id: 'polaroids', nombre: 'Polaroids', emoji: '📷' },
+  { id: 'stickers-celular', nombre: 'Stickers Celular', emoji: '📱' },
+  { id: 'stickers-mascotas', nombre: 'Stickers Mascotas', emoji: '🐾' },
+  { id: 'tazas', nombre: 'Tazas', emoji: '☕' },
+  { id: 'cuadros', nombre: 'Cuadros', emoji: '🖼️' },
+  { id: 'totebags', nombre: 'Totebags', emoji: '👜' },
+  { id: 'kits-cumpleanos', nombre: 'Kits Cumpleaños', emoji: '🎂' },
+  { id: 'plantillas-digitales', nombre: 'Plantillas Digitales', emoji: '📄' }
 ];
 
 // ========== PRECIOS PARA CALCULADORA ==========
