@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel de Administración - NYC Designs</title>
+  <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+  <!-- LOGIN SCREEN -->
+  <div id="loginScreen" class="login-screen">
+    <div class="login-container">
+      <div class="login-card">
+        <div class="login-logo">
+          <span>🏢</span>
+        </div>
+        <h1>Panel de Administración</h1>
+        <p>NYC Designs - Gestión de Productos</p>
+        
+        <div class="login-content">
+          <p class="info-text">
+            Accede con tu cuenta de administrador autorizado
+          </p>
+          
+          <button id="googleLoginBtn" class="btn btn-google">
+            <span class="google-icon">🔐</span>
+            Iniciar sesión con Google
+          </button>
+          
+          <p class="auth-email">
+            Email autorizado: <strong>newyorkcitydesings4@gmail.com</strong>
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADMIN PANEL -->
+  <div id="adminPanel" class="admin-panel hidden">
+    <!-- Header -->
+    <header class="admin-header">
+      <div class="admin-header-content">
+        <div class="admin-brand">
+          <h1>📦 NYC Designs Admin</h1>
+          <p>Panel de Gestión de Productos</p>
+        </div>
+        
+        <div class="admin-user">
+          <div class="user-info">
+            <span id="userEmail" class="user-email"></span>
+            <span id="userName" class="user-name"></span>
+          </div>
+          <button id="logoutBtn" class="btn btn-logout">
+            Cerrar Sesión
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="admin-container">
+      <!-- Sidebar -->
+      <aside class="admin-sidebar">
+        <nav class="admin-nav">
+          <a href="#dashboard" class="nav-item active" data-section="dashboard">
+            <span>📊</span> Dashboard
+          </a>
+          <a href="#productos" class="nav-item" data-section="productos">
+            <span>📦</span> Productos
+          </a>
+          <a href="#configuracion" class="nav-item" data-section="configuracion">
+            <span>⚙️</span> Configuración
+          </a>
+        </nav>
+      </aside>
+
+      <!-- Main Content Area -->
+      <main class="admin-main">
+        <!-- DASHBOARD SECTION -->
+        <section id="dashboard" class="section active">
+          <div class="section-header">
+            <h2>Dashboard</h2>
+            <p>Resumen de tu tienda</p>
+          </div>
+
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-icon">📦</div>
+              <div class="stat-content">
+                <p class="stat-label">Total de Productos</p>
+                <p class="stat-value" id="totalProducts">0</p>
+              </div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-icon">✨</div>
+              <div class="stat-content">
+                <p class="stat-label">Productos Destacados</p>
+                <p class="stat-value" id="featuredProducts">0</p>
+              </div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-icon">👁️</div>
+              <div class="stat-content">
+                <p class="stat-label">Productos Visibles</p>
+                <p class="stat-value" id="visibleProducts">0</p>
+              </div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-icon">🔄</div>
+              <div class="stat-content">
+                <p class="stat-label">Última Actualización</p>
+                <p class="stat-value" id="lastUpdate">--</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="quick-actions">
+            <button id="dashboardAddBtn" class="btn btn-primary">
+              ➕ Agregar Producto
+            </button>
+            <button id="syncBtn" class="btn btn-secondary">
+              🔄 Sincronizar
+            </button>
+          </div>
+        </section>
+
+        <!-- PRODUCTOS SECTION -->
+        <section id="productos" class="section">
+          <div class="section-header">
+            <div class="header-left">
+              <h2>Productos</h2>
+              <p>Gestiona todos tus productos</p>
+            </div>
+            <button id="addProductBtn" class="btn btn-primary">
+              ➕ Agregar Producto
+            </button>
+          </div>
+
+          <div class="productos-toolbar">
+            <div class="search-box">
+              <input 
+                type="text" 
+                id="searchProducts" 
+                placeholder="🔍 Buscar productos..."
+                class="input-search"
+              >
+            </div>
+            <select id="filterCategory" class="input-select">
+              <option value="">📂 Todas las categorías</option>
+              <option value="tazas">☕ Tazas</option>
+              <option value="regalos">🎁 Regalos</option>
+              <option value="calendarios">📅 Calendarios</option>
+              <option value="personalizados">✨ Personalizados</option>
+              <option value="dia-de-la-madre">🌷 Día de la Madre</option>
+              <option value="navidad">🎄 Navidad</option>
+              <option value="empresas">🏢 Empresas</option>
+            </select>
+          </div>
+
+          <div class="table-container">
+            <table class="productos-table">
+              <thead>
+                <tr>
+                  <th>Imagen</th>
+                  <th>Nombre</th>
+                  <th>Categoría</th>
+                  <th>Precio</th>
+                  <th>Stock</th>
+                  <th>Destacado</th>
+                  <th>Visible</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="productosTableBody">
+                <!-- Productos se cargarán aquí dinámicamente -->
+              </tbody>
+            </table>
+            <div id="noProductsMessage" class="no-data">
+              <p>📭 No hay productos para mostrar</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- CONFIGURACIÓN SECTION -->
+        <section id="configuracion" class="section">
+          <div class="section-header">
+            <h2>Configuración</h2>
+            <p>Ajusta los parámetros de tu tienda</p>
+          </div>
+
+          <div class="config-form">
+            <div class="form-group">
+              <label for="configProductsPerPage">Productos por página</label>
+              <input 
+                type="number" 
+                id="configProductsPerPage" 
+                min="1" 
+                max="50" 
+                value="12"
+                class="input-text"
+              >
+            </div>
+
+            <div class="form-group">
+              <label for="configCurrency">Moneda</label>
+              <input 
+                type="text" 
+                id="configCurrency" 
+                value="$"
+                class="input-text"
+              >
+            </div>
+
+            <div class="form-group checkbox">
+              <label>
+                <input 
+                  type="checkbox" 
+                  id="configShowOutOfStock"
+                  checked
+                >
+                Mostrar productos agotados
+              </label>
+            </div>
+
+            <button id="saveConfigBtn" class="btn btn-primary">
+              💾 Guardar Configuración
+            </button>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <!-- MODAL: Agregar/Editar Producto -->
+  <div id="productModal" class="modal">
+    <div class="modal-overlay"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="modalTitle">Agregar Producto</h2>
+        <button class="modal-close" id="modalClose">&times;</button>
+      </div>
+
+      <form id="productForm" class="product-form">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="productNombre">Nombre *</label>
+            <input 
+              type="text" 
+              id="productNombre" 
+              required
+              class="input-text"
+            >
+          </div>
+
+          <div class="form-group">
+            <label for="productCategoria">Categoría *</label>
+            <select id="productCategoria" required class="input-select">
+              <option value="">-- Selecciona una categoría --</option>
+              <option value="tazas">☕ Tazas</option>
+              <option value="regalos">🎁 Regalos</option>
+              <option value="calendarios">📅 Calendarios</option>
+              <option value="personalizados">✨ Personalizados</option>
+              <option value="dia-de-la-madre">🌷 Día de la Madre</option>
+              <option value="navidad">🎄 Navidad</option>
+              <option value="empresas">🏢 Empresas</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="productPrecio">Precio (ARS) *</label>
+            <input 
+              type="number" 
+              id="productPrecio" 
+              min="0" 
+              step="100"
+              required
+              class="input-text"
+            >
+          </div>
+
+          <div class="form-group">
+            <label for="productPrecioAnterior">Precio Anterior (descuento)</label>
+            <input 
+              type="number" 
+              id="productPrecioAnterior" 
+              min="0" 
+              step="100"
+              class="input-text"
+            >
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="productDescripcion">Descripción</label>
+          <textarea 
+            id="productDescripcion" 
+            rows="3"
+            class="input-textarea"
+            placeholder="Describe el producto..."
+          ></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="productStock">Stock</label>
+          <input 
+            type="text" 
+            id="productStock" 
+            placeholder="ej: 10, ilimitado, agotado"
+            class="input-text"
+          >
+        </div>
+
+        <div class="form-group">
+          <label for="productOrden">Orden de Visualización</label>
+          <input 
+            type="number" 
+            id="productOrden" 
+            min="0" 
+            value="0"
+            class="input-text"
+          >
+        </div>
+
+        <!-- Image Upload -->
+        <div class="form-group">
+          <label for="productImagen">Imagen del Producto</label>
+          <div class="image-upload-wrapper">
+            <div id="imagePreview" class="image-preview">
+              <span>📷 Sin imagen</span>
+            </div>
+            <input 
+              type="file" 
+              id="productImagen" 
+              accept="image/*"
+              class="input-file"
+            >
+            <p class="form-help">Máximo 2MB. Se comprimirá automáticamente.</p>
+          </div>
+        </div>
+
+        <!-- Badges -->
+        <div class="form-group">
+          <label>Badges (Etiquetas)</label>
+          <div class="badges-grid">
+            <label class="checkbox-label">
+              <input type="checkbox" name="badge" value="Nuevo" class="badge-checkbox">
+              🆕 Nuevo
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" name="badge" value="Popular" class="badge-checkbox">
+              ⭐ Popular
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" name="badge" value="Oferta" class="badge-checkbox">
+              🏷️ Oferta
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" name="badge" value="Personalizable" class="badge-checkbox">
+              ✨ Personalizable
+            </label>
+          </div>
+        </div>
+
+        <!-- Checkboxes -->
+        <div class="form-group checkboxes-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="productDestacado">
+            ✨ Marcar como Destacado
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" id="productVisible" checked>
+            👁️ Visible en la tienda
+          </label>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="form-actions">
+          <button type="button" id="modalCancelBtn" class="btn btn-secondary">
+            Cancelar
+          </button>
+          <button type="submit" class="btn btn-primary">
+            💾 Guardar Producto
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: Confirmar Eliminación -->
+  <div id="confirmDeleteModal" class="modal">
+    <div class="modal-overlay"></div>
+    <div class="modal-content modal-confirm">
+      <div class="modal-header">
+        <h2>⚠️ Confirmar Eliminación</h2>
+      </div>
+      <p id="deleteConfirmText" class="confirm-text"></p>
+      <div class="form-actions">
+        <button id="cancelDeleteBtn" class="btn btn-secondary">
+          Cancelar
+        </button>
+        <button id="confirmDeleteBtn" class="btn btn-danger">
+          🗑️ Eliminar Producto
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- LOADING SPINNER -->
+  <div id="loadingSpinner" class="loading-spinner hidden">
+    <div class="spinner"></div>
+    <p>Cargando...</p>
+  </div>
+
+  <!-- TOAST NOTIFICATIONS -->
+  <div id="toast" class="toast"></div>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.4.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.4.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.4.0/firebase-storage.js"></script>
+
+  <!-- Admin JS -->
+  <script src="admin.js"></script>
+</body>
+</html>

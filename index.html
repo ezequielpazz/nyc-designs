@@ -1,0 +1,688 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  
+  <!-- SEO BÁSICO -->
+  <title>New York City Designs — Tazas, Regalos y Personalizados con estilo NYC</title>
+  <meta name="description" content="Tienda de tazas sublimadas, regalos personalizados y calendarios con estética NYC. Envíos por E-Pick. Producción 3-7 días hábiles.">
+  <meta name="keywords" content="tazas personalizadas, regalos, sublimación, NYC, calendarios, packaging, personalizados, newyorkcitydesingns">
+  <meta name="author" content="New York City Designs">
+  <meta name="robots" content="index, follow">
+  
+  <!-- OPEN GRAPH (para compartir en redes) -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="New York City Designs — Personalizados con estilo NYC">
+  <meta property="og:description" content="Tazas, regalos y personalizados con estética minimal. Envíos por E-Pick.">
+  <meta property="og:image" content="assets/img/logo.jpg">
+  <meta property="og:url" content="https://tu-dominio.com">
+  <meta property="og:site_name" content="New York City Designs">
+  
+  <!-- TWITTER CARD -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="New York City Designs">
+  <meta name="twitter:description" content="Tazas, regalos y personalizados con estética NYC">
+  
+  <!-- FAVICON -->
+  <link rel="icon" type="image/jpeg" href="assets/img/logo.jpg">
+  <link rel="apple-touch-icon" href="assets/img/logo.jpg">
+  
+  <!-- THEME COLOR -->
+  <meta name="theme-color" content="#B8777F">
+  <meta name="msapplication-TileColor" content="#B8777F">
+  
+  <!-- ESTILOS -->
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <!-- PRELOADER: pantalla de carga con el logo -->
+  <div id="loader" class="loader">
+    <img src="assets/img/logo.jpg" alt="Logo NYC Designs">
+    <p>Cargando...</p>
+  </div>
+
+  <div class="announce">
+    <div class="container">
+      <div class="inner">
+        <span class="pill"><span class="dot"></span> Personalizados: 3–7 días hábiles</span>
+        <span>Pagos: Transferencia / Efectivo</span>
+      </div>
+    </div>
+  </div>
+
+  <header class="container">
+    <div class="nav">
+      <a class="brand" href="#">
+        <img src="assets/img/logo.jpg" alt="Logo NYC Designs">
+        <div class="name">
+          <strong>New York City Designs</strong>
+          <span>Personalizados con estilo NYC</span>
+        </div>
+      </a>
+
+      <nav class="menu" aria-label="Menú principal">
+        <a href="#productos">Productos</a>
+        <a href="#personalizados">Personalizados</a>
+        <a href="#como-comprar">Cómo comprar</a>
+        <a href="#videos">Videos</a>
+        <a href="#calculadora">Calculadora</a>
+        <a href="#faq">FAQ</a>
+        <a href="#contacto">Contacto</a>
+      </nav>
+
+      <div class="actions">
+        <button class="hamburger" type="button" aria-label="Menú">
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+        <button class="btn primary" type="button" id="cartBtn">
+          🛒 Carrito <span class="cart-badge" id="cartCount"></span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Mobile Menu -->
+  <div class="mobile-menu" id="mobileMenu">
+    <a href="#productos">Productos</a>
+    <a href="#personalizados">Personalizados</a>
+    <a href="#como-comprar">Cómo comprar</a>
+    <a href="#videos">Videos</a>
+    <a href="#calculadora">Calculadora</a>
+    <a href="#faq">FAQ</a>
+    <a href="#contacto">Contacto</a>
+  </div>
+
+  <main class="container">
+
+    <section class="hero fade-in" aria-label="Portada">
+      <div class="card hero-left">
+        <!-- etiquetas de categorías generadas desde JS. Agregá una nueva categoría al array CATEGORIES en js/main.js -->
+        <div class="kicker" id="heroTags"></div>
+
+        <h1>Diseños con estilo, hechos para vos</h1>
+        <p class="sub">
+          Tazas, regalos y personalizados con estética NYC. Minimal, prolijo y con detalles que suman.
+        </p>
+
+        <div class="hero-cta">
+          <a class="btn primary" href="#productos">Ver productos</a>
+          <a class="btn" href="#personalizados">Quiero personalizar</a>
+        </div>
+
+        <div class="mini-info">
+          <div class="mini">
+            <div class="t">Pagos</div>
+            <div class="v">Transferencia / Efectivo al retirar</div>
+          </div>
+          <div class="mini">
+            <div class="t">Envíos</div>
+            <div class="v">Retiro / E-Pick</div>
+          </div>
+          <div class="mini">
+            <div class="t">Personalizados</div>
+            <div class="v">Producción 3–7 días hábiles</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="hero-right">
+        <div class="imgwrap" onclick="openLightbox(this.querySelector('img').src)">
+          <!-- CAMBIAR POR TU IMAGEN HERO -->
+          <img src="assets/img/logo.jpg" alt="Producto destacado" style="object-fit: contain; padding: 20px; background: #FAF7F5;">
+        </div>
+        <p class="caption">📷 Reemplazar con imagen de producto destacado</p>
+      </div>
+    </section>
+
+    <section id="categorias" class="fade-in" aria-label="Categorías">
+      <div class="section-title">
+        <h2>Categorías</h2>
+        <p>Explorá nuestras líneas de productos.</p>
+      </div>
+
+      <!-- las categorías se muestran aquí; se generan automáticamente a partir del array CATEGORIES en js/main.js -->
+      <div class="grid-cats" id="categoryGrid"></div>
+    </section>
+
+    <section id="productos" class="fade-in" aria-label="Productos destacados">
+      <div class="section-title">
+        <h2>Productos</h2>
+        <p>Los más pedidos de la tienda.</p>
+      </div>
+
+      <!-- Buscador -->
+      <div class="search-bar">
+        <input type="text" class="search-input" id="searchInput" placeholder="🔍 Buscar productos...">
+      </div>
+
+      <!-- Filtros -->
+      <!-- botones de filtro generados según las categorías configuradas en js/main.js -->
+      <div class="filter-buttons" id="filterButtons"></div>
+
+      <!-- Encabezado de productos con selector de cantidad por página -->
+      <div class="products-header">
+        <span id="productCount">Mostrando productos</span>
+        <select id="productsPerPage" class="products-per-page">
+          <option value="6">6 por página</option>
+          <option value="12" selected>12 por página</option>
+          <option value="24">24 por página</option>
+          <option value="all">Ver todos</option>
+        </select>
+      </div>
+
+      <div class="product-grid" id="productGrid">
+        
+        <!-- PRODUCTO 1 -->
+        <article class="product" data-id="1" data-name="Taza NYC Classic" data-price="4500" data-category="tazas">
+          <div class="pimg">
+            <!-- CAMBIAR: src="assets/img/producto-1.jpg" -->
+            <img src="assets/img/logo.jpg" alt="Taza NYC Classic" style="object-fit: contain; padding: 20px;">
+          </div>
+          <div class="pbody">
+            <div class="badges">
+              <span class="badge">Sublimada</span>
+              <span class="badge">Cerámica</span>
+            </div>
+            <strong>Taza NYC Classic</strong>
+            <div class="price">
+              <strong>$4.500</strong>
+              <span>Stock disponible</span>
+            </div>
+            <button class="btn primary add-to-cart" type="button">Agregar al carrito</button>
+          </div>
+        </article>
+
+        <!-- PRODUCTO 2 -->
+        <article class="product" data-id="2" data-name="Pack Regalo Especial" data-price="8900" data-category="regalos">
+          <div class="pimg">
+            <!-- CAMBIAR: src="assets/img/producto-2.jpg" -->
+            <img src="assets/img/logo.jpg" alt="Pack Regalo Especial" style="object-fit: contain; padding: 20px;">
+          </div>
+          <div class="pbody">
+            <div class="badges">
+              <span class="badge strong">Popular</span>
+              <span class="badge">Incluye caja</span>
+            </div>
+            <strong>Pack Regalo Especial</strong>
+            <div class="price">
+              <strong>$8.900</strong>
+              <span>Stock disponible</span>
+            </div>
+            <button class="btn primary add-to-cart" type="button">Agregar al carrito</button>
+          </div>
+        </article>
+
+        <!-- PRODUCTO 3 -->
+        <article class="product" data-id="3" data-name="Calendario 2025" data-price="6200" data-category="calendarios">
+          <div class="pimg">
+            <!-- CAMBIAR: src="assets/img/producto-3.jpg" -->
+            <img src="assets/img/logo.jpg" alt="Calendario 2025" style="object-fit: contain; padding: 20px;">
+          </div>
+          <div class="pbody">
+            <div class="badges">
+              <span class="badge strong">Personalizado</span>
+              <span class="badge">3-7 días</span>
+            </div>
+            <strong>Calendario 2025 Personalizado</strong>
+            <div class="price">
+              <strong>$6.200</strong>
+              <span>A pedido</span>
+            </div>
+            <button class="btn primary add-to-cart" type="button">Agregar al carrito</button>
+          </div>
+        </article>
+
+        <!-- PRODUCTO 4 -->
+        <article class="product" data-id="4" data-name="Taza Diseño Minimalista" data-price="4800" data-category="tazas">
+          <div class="pimg">
+            <img src="assets/img/logo.jpg" alt="Taza Minimalista" style="object-fit: contain; padding: 20px;">
+          </div>
+          <div class="pbody">
+            <div class="badges">
+              <span class="badge">Sublimada</span>
+              <span class="badge">Nueva</span>
+            </div>
+            <strong>Taza Diseño Minimalista</strong>
+            <div class="price">
+              <strong>$4.800</strong>
+              <span>Stock disponible</span>
+            </div>
+            <button class="btn primary add-to-cart" type="button">Agregar al carrito</button>
+          </div>
+        </article>
+
+        <!-- PRODUCTO 5 -->
+        <article class="product" data-id="5" data-name="Box Cumpleaños" data-price="12500" data-category="regalos">
+          <div class="pimg">
+            <img src="assets/img/logo.jpg" alt="Box Cumpleaños" style="object-fit: contain; padding: 20px;">
+          </div>
+          <div class="pbody">
+            <div class="badges">
+              <span class="badge strong">Exclusivo</span>
+              <span class="badge">Personalizable</span>
+            </div>
+            <strong>Box Cumpleaños Completo</strong>
+            <div class="price">
+              <strong>$12.500</strong>
+              <span>A pedido</span>
+            </div>
+            <button class="btn primary add-to-cart" type="button">Agregar al carrito</button>
+          </div>
+        </article>
+
+        <!-- PRODUCTO 6 -->
+        <article class="product" data-id="6" data-name="Taza Personalizada Foto" data-price="5500" data-category="personalizados">
+          <div class="pimg">
+            <img src="assets/img/logo.jpg" alt="Taza con Foto" style="object-fit: contain; padding: 20px;">
+          </div>
+          <div class="pbody">
+            <div class="badges">
+              <span class="badge strong">Personalizado</span>
+              <span class="badge">Tu diseño</span>
+            </div>
+            <strong>Taza Personalizada con Foto</strong>
+            <div class="price">
+              <strong>$5.500</strong>
+              <span>3-7 días</span>
+            </div>
+            <button class="btn primary add-to-cart" type="button">Agregar al carrito</button>
+          </div>
+        </article>
+      </div>
+
+      <!-- Botón para cargar más productos -->
+      <button id="loadMoreBtn" class="btn secondary load-more-btn" style="display: none;">
+        Cargar más productos
+      </button>
+
+      <p id="noResults" style="display:none; text-align:center; padding:40px; color:rgba(43,43,43,.6);">
+        No se encontraron productos 😕
+      </p>
+    </section>
+
+    <!-- CALCULADORA DE PEDIDO -->
+    <section id="calculadora" class="fade-in" aria-label="Calculadora de precio">
+      <div class="section-title">
+        <h2>Calculá tu pedido</h2>
+        <p>Armá un presupuesto rápido.</p>
+      </div>
+      <div class="calculator">
+        <form id="priceCalcForm">
+          <div class="form-row">
+            <label>Producto base</label>
+            <select id="calcProduct">
+              <option value="taza">Taza</option>
+              <option value="pack">Pack</option>
+              <option value="calendario">Calendario</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <label><input type="checkbox" id="calcPersonalizado"> + Personalización</label>
+          </div>
+          <div class="form-row">
+            <label><input type="checkbox" id="calcCaja"> + Caja de regalo</label>
+          </div>
+          <div class="form-row">
+            <label><input type="checkbox" id="calcEnvio"> + Envío</label>
+          </div>
+          <div class="form-row">
+            <label>Cantidad</label>
+            <input type="number" id="calcCantidad" min="1" value="1">
+          </div>
+          <div class="calc-total">Subtotal: $<span id="calcSubtotal">0</span></div>
+          <button type="button" class="btn primary" id="calcWhatsappBtn">Consultar este pedido</button>
+        </form>
+      </div>
+    </section>
+
+    <section id="como-comprar" class="fade-in" aria-label="Cómo comprar">
+      <div class="section-title">
+        <h2>Cómo comprar</h2>
+        <p>Es súper fácil, seguí estos pasos.</p>
+      </div>
+
+      <div class="how">
+        <div class="step">
+          <div class="head">
+            <div class="icon">1️⃣</div>
+            <strong>Elegí tu producto</strong>
+          </div>
+          <p>Navegá la tienda o escribinos para armarlo personalizado.</p>
+        </div>
+        <div class="step">
+          <div class="head">
+            <div class="icon">2️⃣</div>
+            <strong>Confirmá el pedido</strong>
+          </div>
+          <p>Coordinamos por WhatsApp: precio, variante y forma de envío.</p>
+        </div>
+        <div class="step">
+          <div class="head">
+            <div class="icon">3️⃣</div>
+            <strong>Recibí tu compra</strong>
+          </div>
+          <p>Retirá o te lo mandamos por E-Pick con seguimiento.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="personalizados" class="fade-in" aria-label="Detalle de producto">
+      <div class="section-title">
+        <h2>Detalle de producto</h2>
+        <p>Así se ve una página de producto.</p>
+      </div>
+
+      <div class="product-page">
+        <div class="gallery">
+          <img class="main-img" id="mainImg" src="assets/img/logo.jpg" alt="Taza personalizada" onclick="openLightbox(this.src)" style="object-fit: contain; padding: 30px; background: #FAF7F5;">
+          <div class="thumbs">
+            <img class="active" src="assets/img/logo.jpg" alt="Vista 1" onclick="changeMainImg(this)">
+            <img src="assets/img/logo.jpg" alt="Vista 2" onclick="changeMainImg(this)" style="filter: brightness(0.9);">
+            <img src="assets/img/logo.jpg" alt="Vista 3" onclick="changeMainImg(this)" style="filter: brightness(0.8);">
+            <img src="assets/img/logo.jpg" alt="Vista 4" onclick="changeMainImg(this)" style="filter: brightness(0.7);">
+          </div>
+        </div>
+
+        <div class="pinfo">
+          <div class="badges">
+            <span class="badge strong">Personalizado</span>
+            <span class="badge">Producción 3–7 días</span>
+          </div>
+
+          <h3>Taza personalizada — Edición especial</h3>
+          <p class="desc">
+            Elegí tu diseño, agregá texto o nombre y lo preparamos a medida. Ideal para regalar.
+          </p>
+
+          <div class="info-box">
+            <b>Producción y entrega:</b> Si elegís personalizado, la producción demora entre <b>3 y 7 días hábiles</b>.
+            Luego coordinamos <b>retiro</b> o despachamos por <b>E-Pick</b>.
+          </div>
+
+          <div class="qty">
+            <label for="variante"><b>Variante</b></label>
+            <select id="variante">
+              <option value="diseno1">Diseño 1 - NYC Skyline</option>
+              <option value="diseno2">Diseño 2 - Minimalista</option>
+              <option value="personalizado">Personalizado (tu foto/texto)</option>
+            </select>
+          </div>
+
+          <button class="btn primary add-to-cart" type="button" data-id="7" data-name="Taza Personalizada Especial" data-price="5500">Agregar al carrito</button>
+
+          <div class="line"><span><b>Pagos</b></span><span>Transferencia / Efectivo al retirar</span></div>
+          <div class="line"><span><b>Envíos</b></span><span>Retiro / E-Pick</span></div>
+          <div class="line"><span><b>Tiempo</b></span><span>3–7 días hábiles (si es personalizado)</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIDEOS TIKTOK / REELS -->
+    <section id="videos" class="fade-in" aria-label="Videos">
+      <div class="section-title">
+        <h2>Videos</h2>
+        <p>Miranos en acción</p>
+      </div>
+      <div class="video-grid" id="videoGrid">
+        <div class="video-wrap">
+          <div class="placeholder">Video TikTok #1</div>
+          <!-- Para embeber un video real reemplazar el div anterior con un iframe
+               <iframe src="https://www.tiktok.com/embed/ID_DEL_VIDEO" frameborder="0" allowfullscreen></iframe> -->
+        </div>
+        <div class="video-wrap">
+          <div class="placeholder">Video TikTok #2</div>
+        </div>
+        <div class="video-wrap">
+          <div class="placeholder">Video TikTok #3</div>
+        </div>
+      </div>
+      <div class="center">
+        <a class="btn" href="https://www.tiktok.com/@yourprofile" target="_blank" rel="noopener">Ver más en TikTok</a>
+      </div>
+    </section>
+
+    <!-- TESTIMONIOS -->
+    <section id="testimonios" class="fade-in" aria-label="Testimonios">
+      <div class="section-title">
+        <h2>Lo que dicen nuestros clientes</h2>
+        <p>Reseñas reales de compradores.</p>
+      </div>
+
+      <div class="testimonials">
+        <div class="testimonial">
+          <div class="testimonial-stars">⭐⭐⭐⭐⭐</div>
+          <p class="testimonial-text">"Hermosa la taza que me hicieron para el cumple de mi mamá. Llegó súper bien embalada y el diseño quedó perfecto."</p>
+          <p class="testimonial-author">— María L.</p>
+        </div>
+        <div class="testimonial">
+          <div class="testimonial-stars">⭐⭐⭐⭐⭐</div>
+          <p class="testimonial-text">"Pedí un pack de regalo y superó mis expectativas. La presentación es increíble, ideal para regalar."</p>
+          <p class="testimonial-author">— Joaquín P.</p>
+        </div>
+        <div class="testimonial">
+          <div class="testimonial-stars">⭐⭐⭐⭐⭐</div>
+          <p class="testimonial-text">"Excelente atención por WhatsApp. Me ayudaron a elegir el diseño y todo llegó en tiempo y forma."</p>
+          <p class="testimonial-author">— Carolina M.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="faq" class="fade-in" aria-label="Preguntas frecuentes">
+      <div class="section-title">
+        <h2>Preguntas frecuentes</h2>
+        <p>Dudas comunes sobre la tienda.</p>
+      </div>
+
+      <div class="faq-container">
+        <div class="faq-item">
+          <div class="faq-question">¿Cuánto tarda un personalizado?</div>
+          <div class="faq-answer">
+            <p>Producción estimada <b>3–7 días hábiles</b>. Después se coordina retiro o se envía por E-Pick con seguimiento.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-question">¿Cómo funcionan los envíos?</div>
+          <div class="faq-answer">
+            <p>Podés elegir <b>retiro</b> en nuestro punto o <b>E-Pick</b> a domicilio. Al despachar te enviamos el código de seguimiento.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-question">¿Qué medios de pago aceptan?</div>
+          <div class="faq-answer">
+            <p><b>Transferencia bancaria</b> o <b>efectivo al retirar</b>. Próximamente MercadoPago.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-question">¿Puedo pedir un diseño a medida?</div>
+          <div class="faq-answer">
+            <p>¡Sí! Entrá en "Personalizados" o escribinos por WhatsApp/Instagram para armarlo juntos.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-question">¿Hacen envíos a todo el país?</div>
+          <div class="faq-answer">
+            <p>Sí, enviamos a todo el país a través de E-Pick. El costo depende de la zona.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-question">¿Tienen local físico?</div>
+          <div class="faq-answer">
+            <p>Trabajamos con punto de retiro. Coordinamos día y horario por WhatsApp.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="contacto" class="fade-in" aria-label="Contacto">
+      <div class="section-title">
+        <h2>Contacto</h2>
+        <p>Escribinos para consultas o pedidos.</p>
+      </div>
+
+      <div class="card" style="padding: 24px;">
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items:start;">
+          <div>
+            <h3 style="margin:0 0 12px; font-size:18px;">📬 Escribinos directo</h3>
+            <p class="sub" style="margin:0 0 16px;">
+              ¿Querés personalizar algo? Mandanos el diseño/idea y te respondemos rápido.
+            </p>
+            <div class="hero-cta">
+              <!-- CAMBIAR: El número de WhatsApp está en js/main.js -->
+              <a class="btn primary" href="https://wa.me/5491112345678?text=Hola!%20Quiero%20consultar%20por%20un%20producto" target="_blank" rel="noopener">💬 WhatsApp</a>
+              <a class="btn" href="https://instagram.com/newyorkcitydesingns" target="_blank" rel="noopener">📸 Instagram</a>
+            </div>
+            
+            <div style="margin-top:20px; padding:14px; background:rgba(217,161,167,.15); border-radius:12px;">
+              <p style="margin:0; font-size:13px;"><b>⏰ Horarios de atención:</b><br>Lunes a Viernes: 10:00 - 19:00<br>Sábados: 10:00 - 14:00</p>
+            </div>
+          </div>
+          
+          <div>
+            <h3 style="margin:0 0 12px; font-size:18px;">📝 O dejanos un mensaje</h3>
+            <form class="contact-form" onsubmit="handleContactForm(event)">
+              <div class="form-row">
+                <input type="text" class="form-input" placeholder="Tu nombre" required>
+                <input type="email" class="form-input" placeholder="Tu email" required>
+              </div>
+              <input type="text" class="form-input" placeholder="Asunto">
+              <textarea class="form-input form-textarea" placeholder="Tu mensaje..." required></textarea>
+              <button type="submit" class="btn primary">Enviar mensaje</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+    <div class="container">
+      <div class="foot">
+        <div>
+          <h4>New York City Designs</h4>
+          <p>Personalizados con estética NYC. Minimal, prolijo y con detalles que suman.</p>
+          <div class="social-links">
+            <a href="https://wa.me/5491112345678" class="social-link" target="_blank" rel="noopener" title="WhatsApp">💬</a>
+            <a href="https://instagram.com/newyorkcitydesingns" class="social-link" target="_blank" rel="noopener" title="Instagram">📸</a>
+            <a href="mailto:hola@nycdesigns.com" class="social-link" title="Email">✉️</a>
+          </div>
+          <p class="credit">© 2025 New York City Designs</p>
+        </div>
+        <div class="links">
+          <h4>Tienda</h4>
+          <a href="#productos">Productos</a>
+          <a href="#personalizados">Personalizados</a>
+          <a href="#categorias">Categorías</a>
+          <a href="#videos">Videos</a>
+          <a href="#calculadora">Calculadora</a>
+        </div>
+        <div class="links">
+          <h4>Info</h4>
+          <a href="#como-comprar">Cómo comprar</a>
+          <a href="#faq">Preguntas frecuentes</a>
+          <a href="#contacto">Contacto</a>
+        </div>
+        <div class="links">
+          <h4>Envíos & Pagos</h4>
+          <p><b>Pagos:</b> Transferencia / Efectivo</p>
+          <p><b>Envíos:</b> Retiro / E-Pick</p>
+          <p><b>Personalizados:</b> 3–7 días hábiles</p>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Cart Sidebar -->
+  <div class="cart-overlay" id="cartOverlay"></div>
+  <div class="cart-sidebar" id="cartSidebar">
+    <div class="cart-header">
+      <h3>🛒 Tu carrito</h3>
+      <button class="cart-close" id="cartClose">&times;</button>
+    </div>
+    <div class="cart-items" id="cartItems"></div>
+    <div class="cart-footer">
+      <div class="cart-total">
+        <span>Total:</span>
+        <span id="cartTotal">$0</span>
+      </div>
+      <div class="cart-actions">
+        <a class="btn primary" id="checkoutBtn" href="#" target="_blank" rel="noopener">Finalizar por WhatsApp</a>
+        <button class="btn" id="mpOpenBtn" type="button">Pagar con MercadoPago</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MERCADOPAGO CHECKOUT MODAL -->
+  <div class="mp-modal" id="mpModal">
+    <div class="mp-modal-content">
+      <button class="mp-close" id="mpClose">&times;</button>
+      <h3>Finalizar compra</h3>
+      <form id="mpForm">
+        <input type="text" id="mpName" placeholder="Nombre completo" required>
+        <input type="email" id="mpEmail" placeholder="Email" required>
+        <input type="tel" id="mpPhone" placeholder="Teléfono" required>
+        <button type="button" class="btn primary" id="mpPayBtn">Pagar con MercadoPago</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Lightbox -->
+  <div class="lightbox" id="lightbox">
+    <button class="lightbox-close" onclick="closeLightbox()">&times;</button>
+    <img src="" alt="Imagen ampliada" id="lightboxImg">
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast">
+    <span class="toast-icon">✓</span>
+    <span id="toastText">¡Agregado al carrito!</span>
+  </div>
+
+  <!-- Back to top -->
+  <button class="back-to-top" id="backToTop" aria-label="Volver arriba">↑</button>
+
+  <!-- CHATBOT -->
+  <button class="chatbot-button has-notification" id="chatbotBtn" aria-label="Abrir chat">
+    💬
+  </button>
+
+  <div class="chatbot-window" id="chatbotWindow">
+    <div class="chatbot-header">
+      <div class="chatbot-avatar">🗽</div>
+      <div class="chatbot-info">
+        <h4>Asistente NYC</h4>
+        <span>Respondo al instante</span>
+      </div>
+      <button class="chatbot-close" id="chatbotClose">&times;</button>
+    </div>
+    <div class="chatbot-messages" id="chatMessages"></div>
+    <div class="chatbot-input">
+      <input type="text" id="chatInput" placeholder="Escribí tu consulta...">
+      <button id="chatSend">➤</button>
+    </div>
+  </div>
+
+  <!-- SDK de MercadoPago (Argentina) -->
+  <!-- ⚠️ Reemplazar PUBLIC_KEY con la llave pública de tu cuenta -->
+  <script src="https://sdk.mercadopago.com/js/v2"></script>
+
+  <!-- Firebase SDK (v10.4.0) - Modular -->
+  <script src="https://www.gstatic.com/firebasejs/10.4.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.4.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.4.0/firebase-storage.js"></script>
+
+  <!-- JAVASCRIPT -->
+  <script src="js/main.js"></script>
+
+</body>
+</html>
