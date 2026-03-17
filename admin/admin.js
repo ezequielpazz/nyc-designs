@@ -16,6 +16,16 @@ const CLOUDINARY_CONFIG = {
     uploadPreset: 'nyc_designs'
 };
 
+// Authorized admin emails
+const AUTHORIZED_EMAILS = [
+    "newyorkcitydesings4@gmail.com",
+    "javierituarte20@gmail.com"
+];
+
+function checkAuthorization(email) {
+    return AUTHORIZED_EMAILS.includes(email.toLowerCase());
+}
+
 // Inicializar Firebase COMPAT
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
@@ -57,11 +67,15 @@ async function initFirebase() {
     try {
         // Verificar si el usuario ya está autenticado
         auth.onAuthStateChanged(async (user) => {
-            if (user) {
+            if (user && checkAuthorization(user.email)) {
                 currentUser = user;
                 showAdminPanel();
                 await loadProducts();
             } else {
+                if (user) {
+                    // User is logged in but not authorized
+                    await auth.signOut();
+                }
                 showLoginScreen();
             }
         });
@@ -74,6 +88,16 @@ async function signInWithGoogle() {
     try {
         showLoading(true);
         const result = await auth.signInWithPopup(googleProvider);
+        const userEmail = result.user.email;
+        
+        // Check authorization
+        if (!checkAuthorization(userEmail)) {
+            await auth.signOut();
+            showToast('❌ No autorizado. Solo admins pueden acceder.', 'error');
+            showLoginScreen();
+            return;
+        }
+        
         currentUser = result.user;
         console.log('✅ Usuario autenticado:', currentUser.email);
         showAdminPanel();
