@@ -413,17 +413,24 @@ async function deleteProduct(productId) {
 }
 
 async function uploadImage(file) {
-    if (!file) return null;
+    if (!file) {
+        console.warn('⚠️ No file provided for upload');
+        return null;
+    }
     
     try {
+        console.log('📷 Starting image upload...', file.name);
+        
         // Comprimir si es necesario
         const MAX_SIZE = 2 * 1024 * 1024;
         let fileToUpload = file;
         
         if (file.size > MAX_SIZE) {
+            console.log('🔄 File size exceeds limit, compressing...');
             fileToUpload = await compressImage(file);
         }
         
+        console.log('📤 Uploading to Cloudinary...');
         const formData = new FormData();
         formData.append('file', fileToUpload);
         formData.append('upload_preset', CLOUDINARY_CONFIG.uploadPreset);
@@ -436,14 +443,18 @@ async function uploadImage(file) {
             }
         );
         
-        if (!response.ok) throw new Error('Error en subida de imagen');
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(`Cloudinary error: ${errorData.error?.message || 'Unknown error'}`);
+        }
         
         const data = await response.json();
+        console.log('✅ Image uploaded successfully:', data.secure_url);
         return data.secure_url;
         
     } catch (error) {
-        console.error('Error subiendo imagen:', error);
-        showToast('Error subiendo imagen', 'error');
+        console.error('❌ Error subiendo imagen:', error);
+        showToast('Error al subir imagen: ' + error.message, 'error');
         return null;
     }
 }
@@ -522,7 +533,12 @@ function openWizardModal() {
 
 function openEditModal(productId) {
     const product = allProducts.find(p => p.id === productId);
-    if (!product) return;
+    if (!product) {
+        console.warn('⚠️ Product not found:', productId);
+        return;
+    }
+    
+    console.log('✏️ Opening edit modal for product:', product.nombre);
     
     currentEditingProductId = productId;
     currentWizardStep = 1;
@@ -543,8 +559,14 @@ function openEditModal(productId) {
     
     populateWizardForm();
     showWizardStep(1);
-    document.getElementById('productModal').classList.add('active');
-    document.body.style.overflow = 'hidden';
+    
+    const modal = document.getElementById('productModal');
+    if (modal) {
+        modal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    } else {
+        console.error('❌ Product modal not found');
+    }
 }
 
 function closeWizardModal() {
@@ -621,11 +643,19 @@ function showWizardStep(stepNumber) {
     });
     
     // Mostrar el actual
-    document.querySelector(`.wizard-step[data-step="${stepNumber}"]`).classList.add('active');
+    const activeStep = document.querySelector(`.wizard-step[data-step="${stepNumber}"]`);
+    if (activeStep) {
+        activeStep.classList.add('active');
+    } else {
+        console.warn(`⚠️ Wizard step not found for step ${stepNumber}`);
+    }
     
     // Actualizar progress
     const percentage = (stepNumber / 6) * 100;
-    document.getElementById('progressBar').style.width = percentage + '%';
+    const progressBar = document.getElementById('progressBar');
+    if (progressBar) {
+        progressBar.style.width = percentage + '%';
+    }
     
     // Actualizar progress steps
     document.querySelectorAll('.progress-step').forEach((step, index) => {
@@ -779,22 +809,51 @@ function updateCharCount() {
 }
 
 function updateImagePreview() {
-    const file = document.getElementById('productImagen').files[0];
-    if (!file) return;
+    const imageInput = document.getElementById('productImagen');
+    if (!imageInput) {
+        console.warn('⚠️ Image input element not found');
+        return;
+    }
     
+    const file = imageInput.files[0];
+    if (!file) {
+        console.log('ℹ️ No file selected');
+        return;
+    }
+    
+    console.log('🖼️ Creating preview for:', file.name);
     const reader = new FileReader();
     reader.onload = (e) => {
         const preview = document.getElementById('imagePreview');
+        if (!preview) {
+            console.warn('⚠️ Preview element not found (id="imagePreview")');
+            return;
+        }
         preview.innerHTML = `<img id="previewImg" src="${e.target.result}" alt="Preview"><button type="button" class="btn-remove-image">✕</button>`;
         preview.style.display = 'block';
         productFormData.imagen = e.target.result;
+        console.log('✅ Preview created');
+    };
+    reader.onerror = () => {
+        console.error('❌ Error reading file');
     };
     reader.readAsDataURL(file);
 }
 
 function toggleStockInput() {
-    const stockType = document.querySelector('input[name="stockType"]:checked').value;
-    document.getElementById('productStock').style.display = stockType === 'limitado' ? 'block' : 'none';
+    const stockTypeRadio = document.querySelector('input[name="stockType"]:checked');
+    if (!stockTypeRadio) {
+        console.warn('⚠️ Stock type radio not found');
+        return;
+    }
+    
+    const stockType = stockTypeRadio.value;
+    const productStock = document.getElementById('productStock');
+    if (productStock) {
+        productStock.style.display = stockType === 'limitado' ? 'block' : 'none';
+    } else {
+        console.warn('⚠️ productStock element not found');
+    }
 }
 
 /* ============================================
@@ -824,11 +883,19 @@ function confirmDelete() {
    ============================================ */
 
 function switchSection(section) {
+    console.log('🔄 Switching to section:', section);
+    
     // Actualizar navegación
     document.querySelectorAll('.nav-item').forEach(item => {
         item.classList.remove('active');
     });
-    document.querySelector(`[data-section="${section}"]`).classList.add('active');
+    
+    const navItem = document.querySelector(`[data-section="${section}"]`);
+    if (navItem) {
+        navItem.classList.add('active');
+    } else {
+        console.warn(`⚠️ Navigation item not found for section: ${section}`);
+    }
     
     // Actualizar página title
     const titles = {
@@ -836,7 +903,12 @@ function switchSection(section) {
         'products': 'Productos',
         'settings': 'Configuración'
     };
-    document.getElementById('pageTitle').textContent = titles[section];
+    const pageTitle = document.getElementById('pageTitle');
+    if (pageTitle) {
+        pageTitle.textContent = titles[section] || section;
+    } else {
+        console.warn('⚠️ Page title element not found');
+    }
     
     // Mostrar/ocultar secciones
     document.querySelectorAll('.section').forEach(sec => {
@@ -844,15 +916,21 @@ function switchSection(section) {
     });
     
     switch(section) {
-        case 'dashboard':
-            document.getElementById('dashboardSection').classList.add('active');
+        case 'dashboard': {
+            const dashboardSection = document.getElementById('dashboardSection');
+            if (dashboardSection) dashboardSection.classList.add('active');
             break;
-        case 'products':
-            document.getElementById('productsSection').classList.add('active');
+        }
+        case 'products': {
+            const productsSection = document.getElementById('productsSection');
+            if (productsSection) productsSection.classList.add('active');
             break;
-        case 'settings':
-            document.getElementById('settingsSection').classList.add('active');
+        }
+        case 'settings': {
+            const settingsSection = document.getElementById('settingsSection');
+            if (settingsSection) settingsSection.classList.add('active');
             break;
+        }
     }
 }
 
@@ -929,7 +1007,10 @@ function setupEventListeners() {
             document.querySelectorAll('.category-option').forEach(opt => {
                 opt.classList.remove('selected');
             });
-            e.target.closest('.category-option').classList.add('selected');
+            const categoryOption = e.target.closest('.category-option');
+            if (categoryOption) {
+                categoryOption.classList.add('selected');
+            }
             updatePreview();
         });
     });
@@ -945,19 +1026,27 @@ function setupEventListeners() {
     });
     
     // ========== WIZARD - IMAGE UPLOAD ==========
-    document.getElementById('productImagen')?.addEventListener('change', async (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            updateImagePreview();
-            // Subir a Cloudinary
-            const url = await uploadImage(file);
-            if (url) {
-                productFormData.imagen = url;
-                updatePreview();
-                showToast('✅ Imagen subida', 'success');
+    const imageInput = document.getElementById('productImagen');
+    if (imageInput) {
+        imageInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                console.log('📷 File selected:', file.name, `(${(file.size / 1024).toFixed(2)} KB)`);
+                updateImagePreview();
+                // Subir a Cloudinary
+                const url = await uploadImage(file);
+                if (url) {
+                    productFormData.imagen = url;
+                    updatePreview();
+                    showToast('✅ Imagen subida', 'success');
+                } else {
+                    console.warn('⚠️ Image upload returned null URL');
+                }
             }
-        }
-    });
+        });
+    } else {
+        console.warn('⚠️ Image input element not found (id="productImagen")');
+    }
     
     // ========== WIZARD - DROPZONE ==========
     const dropzone = document.getElementById('imageDropzone');
@@ -983,8 +1072,10 @@ function setupEventListeners() {
                     if (url) {
                         productFormData.imagen = url;
                         const preview = document.getElementById('imagePreview');
-                        preview.innerHTML = `<img src="${url}" style="max-width: 100%; max-height: 200px;"><button type="button" class="btn-remove-image">✕</button>`;
-                        preview.style.display = 'block';
+                        if (preview) {
+                            preview.innerHTML = `<img src="${url}" style="max-width: 100%; max-height: 200px;"><button type="button" class="btn-remove-image">✕</button>`;
+                            preview.style.display = 'block';
+                        }
                         updatePreview();
                         showToast('✅ Imagen subida', 'success');
                     }
@@ -1002,10 +1093,16 @@ function setupEventListeners() {
     
     // Remove image button
     document.addEventListener('click', (e) => {
-        if (e.target.classList.contains('btn-remove-image')) {
-            document.getElementById('imagePreview').innerHTML = '';
-            document.getElementById('imagePreview').style.display = 'none';
-            document.getElementById('productImagen').value = '';
+        if (e.target && e.target.classList && e.target.classList.contains('btn-remove-image')) {
+            const preview = document.getElementById('imagePreview');
+            const imageInput = document.getElementById('productImagen');
+            if (preview) {
+                preview.innerHTML = '';
+                preview.style.display = 'none';
+            }
+            if (imageInput) {
+                imageInput.value = '';
+            }
             productFormData.imagen = null;
         }
     });
