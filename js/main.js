@@ -16,7 +16,7 @@
 const CONFIG = {
   WHATSAPP_NUMBER: '5491123199122',  // ← Tu número de WhatsApp
   INSTAGRAM_USER: 'newyorkcitydesingns',  // ← Tu usuario de Instagram
-  EMAIL: 'newyorkcitydesigns4@gmail.com',  // ← Tu email
+  EMAIL: 'newyorkcitydesings4@gmail.com',  // ← Tu email
   STORE_NAME: 'NYC Designs'
 };
 
@@ -39,16 +39,16 @@ const USE_FIREBASE = true; // Cambiar a false para usar productos estáticos
 
 
 // ========== CATEGORÍAS DINÁMICAS ==========
-// Categorías reales del negocio NYC Designs
+// añadir un objeto aquí para que aparezca como categoría/filtro y etiqueta.
 const CATEGORIES = [
-  { id: 'polaroids', label: 'Polaroids', description: 'Fotografías en formato polaroid personalizadas.' },
-  { id: 'stickers-celular', label: 'Stickers Celular', description: 'Pegatinas para tu celular con diseños únicos.' },
-  { id: 'stickers-mascotas', label: 'Stickers Mascotas', description: 'Stickers temática de mascotas.' },
-  { id: 'tazas', label: 'Tazas', description: 'Tazas sublimadas con diseños personalizados.' },
-  { id: 'cuadros', label: 'Cuadros', description: 'Cuadros decorativos para tu hogar.' },
-  { id: 'totebags', label: 'Totebags', description: 'Bolsas de tela personalizadas.' },
-  { id: 'kits-cumpleanos', label: 'Kits Cumpleaños', description: 'Packs especiales para celebraciones.' },
-  { id: 'plantillas-digitales', label: 'Plantillas Digitales', description: 'Diseños digitales para descargar.' }
+  { id: 'tazas', label: 'Tazas', emoji: '☕', description: 'Sublimadas, con y sin diseño personalizado.' },
+  { id: 'regalos', label: 'Regalos', emoji: '🎁', description: 'Packs listos para entregar.' },
+  { id: 'calendarios', label: 'Calendarios', emoji: '📅', description: 'Anuales, de escritorio o pared.' },
+  { id: 'personalizados', label: 'Personalizados', emoji: '✨', description: 'Mandanos tu idea.' },
+  // categorías de ejemplo adicionales:
+  { id: 'dia-de-la-madre', label: 'Día de la Madre', emoji: '🌷', description: 'Regalos especiales para mamá.' },
+  { id: 'navidad', label: 'Navidad', emoji: '🎄', description: 'Promos navideñas.' },
+  { id: 'empresas', label: 'Empresas', emoji: '🏢', description: 'Detalles corporativos.' }
 ];
 
 // ========== PRECIOS PARA CALCULADORA ==========
