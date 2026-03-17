@@ -1051,8 +1051,11 @@ function setupEventListeners() {
     // ========== WIZARD - DROPZONE ==========
     const dropzone = document.getElementById('imageDropzone');
     if (dropzone) {
+        console.log('✅ Dropzone found, setting up listeners');
+        
         dropzone.addEventListener('dragover', (e) => {
             e.preventDefault();
+            e.stopPropagation();
             dropzone.classList.add('dragging');
         });
         
@@ -1062,11 +1065,14 @@ function setupEventListeners() {
         
         dropzone.addEventListener('drop', async (e) => {
             e.preventDefault();
+            e.stopPropagation();
             dropzone.classList.remove('dragging');
             
             const files = e.dataTransfer.files;
+            console.log('📦 File dropped, count:', files.length);
             if (files.length > 0) {
                 const file = files[0];
+                console.log('📷 Processing file:', file.name, file.type);
                 if (file.type.startsWith('image/')) {
                     const url = await uploadImage(file);
                     if (url) {
@@ -1086,8 +1092,14 @@ function setupEventListeners() {
         });
         
         // Click to upload
-        dropzone.addEventListener('click', () => {
-            document.getElementById('productImagen').click();
+        dropzone.addEventListener('click', (e) => {
+            console.log('🖱️ Dropzone clicked, opening file picker');
+            const imageInput = document.getElementById('productImagen');
+            if (imageInput) {
+                imageInput.click();
+            } else {
+                console.error('❌ File input element not found');
+            }
         });
     }
     

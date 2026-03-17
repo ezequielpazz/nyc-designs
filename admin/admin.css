@@ -1353,11 +1353,19 @@ select:focus {
     cursor: pointer;
     transition: var(--transition);
     background-color: var(--bg-tertiary);
+    user-select: none;
+    -webkit-user-select: none;
 }
 
 .dropzone:hover {
     border-color: var(--primary);
     background-color: rgba(184, 119, 127, 0.05);
+}
+
+.dropzone.dragging {
+    border-color: var(--primary);
+    background-color: rgba(184, 119, 127, 0.1);
+    transform: scale(1.02);
 }
 
 .dropzone svg {
