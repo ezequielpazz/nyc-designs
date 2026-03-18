@@ -56,7 +56,10 @@ let productFormData = {
     visible: true,
     destacado: false,
     badges: [],
-    imagen: null
+    imagen: null,
+    material: '',
+    medidas: '',
+    cuidados: ''
 };
 
 /* ============================================
@@ -365,6 +368,9 @@ async function saveProduct() {
             destacado: productFormData.destacado,
             badges: productFormData.badges,
             imagen: productFormData.imagen,
+            material: productFormData.material || '',
+            medidas: productFormData.medidas || '',
+            cuidados: productFormData.cuidados || '',
             updatedAt: new Date()
         };
         
@@ -602,6 +608,9 @@ function resetWizardForm() {
 function populateWizardForm() {
     document.getElementById('productNombre').value = productFormData.nombre;
     document.getElementById('productDescripcion').value = productFormData.descripcion;
+    document.getElementById('productMaterial').value = productFormData.material || '';
+    document.getElementById('productMedidas').value = productFormData.medidas || '';
+    document.getElementById('productCuidados').value = productFormData.cuidados || '';
     document.getElementById('productPrecio').value = productFormData.precio;
     document.getElementById('productPrecioAnterior').value = productFormData.precio_anterior || '';
     document.getElementById('productStock').value = productFormData.stock === 'ilimitado' ? '' : productFormData.stock;
@@ -759,6 +768,9 @@ function saveWizardStepData(step) {
             productFormData.descripcion = document.getElementById('productDescripcion').value.trim();
             break;
         case 2:
+            productFormData.material = document.getElementById('productMaterial')?.value || '';
+            productFormData.medidas = document.getElementById('productMedidas')?.value || '';
+            productFormData.cuidados = document.getElementById('productCuidados')?.value || '';
             productFormData.precio = document.getElementById('productPrecio').value;
             productFormData.precio_anterior = document.getElementById('productPrecioAnterior').value || null;
             break;

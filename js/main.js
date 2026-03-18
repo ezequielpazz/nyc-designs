@@ -155,7 +155,10 @@ async function loadProductsFromFirebase() {
         featured: data.destacado,
         badges: data.badges || [],
         order: data.orden || 999,
-        visible: data.visible
+        visible: data.visible,
+        material: data.material || '',
+        medidas: data.medidas || '',
+        cuidados: data.cuidados || ''
       });
     });
     
@@ -234,14 +237,17 @@ function renderProductsPage(page = 1, category = 'todos', searchTerm = '') {
 
   grid.innerHTML = pageProducts.map(p => `
     <article class="product" data-id="${p.id}" data-name="${p.name}" data-price="${p.price}" data-category="${p.category}">
-      <div class="pimg" onclick="openLightbox('${p.image1}')">
+      <div class="pimg" onclick="openProductModal(${JSON.stringify(p).replace(/"/g, '&quot;')})">
         <img src="${p.image1}" alt="${p.name}" onerror="this.src='assets/img/logo.jpg'">
+        <div class="pimg-overlay">
+          <span>Ver detalles</span>
+        </div>
       </div>
       <div class="pbody">
         <div class="badges">
           ${p.badges.map(b => `<span class="badge${b === 'Popular' || b === 'Nuevo' ? ' strong' : ''}">${b}</span>`).join('')}
         </div>
-        <strong>${p.name}</strong>
+        <strong onclick="openProductModal(${JSON.stringify(p).replace(/"/g, '&quot;')})" style="cursor:pointer;">${p.name}</strong>
         <div class="price">
           <div>
             <strong>$${p.price.toLocaleString('es-AR')}</strong>
@@ -356,6 +362,92 @@ function clearCart() {
   updateCartUI();
 }
 
+// ========== PRODUCT MODAL ==========
+let currentModalProduct = null;
+
+function openProductModal(productData) {
+  currentModalProduct = productData;
+  const modal = document.getElementById('productModal');
+  
+  // Populate modal with product data
+  document.getElementById('modalProductImage').src = productData.image1 || 'assets/img/logo.jpg';
+  document.getElementById('modalProductName').textContent = productData.name;
+  document.getElementById('modalProductPrice').textContent = '$' + productData.price.toLocaleString('es-AR');
+  
+  // Old price
+  const oldPriceEl = document.getElementById('modalProductOldPrice');
+  if (productData.old_price && productData.old_price > 0) {
+    oldPriceEl.textContent = '$' + productData.old_price.toLocaleString('es-AR');
+    oldPriceEl.style.display = 'inline';
+  } else {
+    oldPriceEl.style.display = 'none';
+  }
+  
+  // Description
+  document.getElementById('modalProductDescription').textContent = productData.description || 'Producto de calidad NYC Designs.';
+  
+  // Badges
+  const badgesContainer = document.getElementById('modalProductBadges');
+  if (productData.badges && productData.badges.length > 0) {
+    badgesContainer.innerHTML = productData.badges.map(b => 
+      `<span class="badge${b === 'Popular' || b === 'Nuevo' ? ' strong' : ''}">${b}</span>`
+    ).join('');
+  } else {
+    badgesContainer.innerHTML = '';
+  }
+  
+  // Material
+  const materialEl = document.getElementById('detailMaterial');
+  const materialValue = document.getElementById('modalProductMaterial');
+  if (productData.material) {
+    materialValue.textContent = productData.material;
+    materialEl.style.display = 'flex';
+  } else {
+    materialEl.style.display = 'none';
+  }
+  
+  // Medidas
+  const medidasEl = document.getElementById('detailMedidas');
+  const medidasValue = document.getElementById('modalProductMedidas');
+  if (productData.medidas) {
+    medidasValue.textContent = productData.medidas;
+    medidasEl.style.display = 'flex';
+  } else {
+    medidasEl.style.display = 'none';
+  }
+  
+  // Cuidados
+  const cuidadosEl = document.getElementById('detailCuidados');
+  const cuidadosValue = document.getElementById('modalProductCuidados');
+  if (productData.cuidados) {
+    cuidadosValue.textContent = productData.cuidados;
+    cuidadosEl.style.display = 'flex';
+  } else {
+    cuidadosEl.style.display = 'none';
+  }
+  
+  // Stock
+  document.getElementById('modalProductStock').textContent = productData.stock || 'Disponible';
+  
+  // Update WhatsApp link with product name
+  const whatsappBtn = document.querySelector('.product-modal-whatsapp');
+  if (whatsappBtn) {
+    const msg = `Hola! Quiero consultar sobre: ${productData.name}`;
+    whatsappBtn.href = `https://wa.me/5491123199122?text=${encodeURIComponent(msg)}`;
+  }
+  
+  // Show modal
+  modal.classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeProductModal() {
+  const modal = document.getElementById('productModal');
+  modal.classList.remove('active');
+  document.body.style.overflow = '';
+  currentModalProduct = null;
+}
+
 // ========== LOAD TESTIMONIALS FROM FIREBASE ==========
 async function loadTestimonials() {
   const container = document.querySelector('.testimonials-grid');
@@ -427,7 +519,7 @@ async function loadBannerConfig() {
     
     // ===== UPDATE BANNER TEXT =====
     if (data.bannerText) {
-      const bannerSpan = document.querySelector('.announce .inner span:last-child');
+      const bannerSpan = document.querySelector('.announce .inner > span:not(.pill)');
       if (bannerSpan) {
         bannerSpan.textContent = data.bannerText;
       }
@@ -874,6 +966,24 @@ document.addEventListener('DOMContentLoaded', async () => {
       showToast('No se pudo iniciar MercadoPago. Intentá de nuevo.');
     }
   });
+});
+
+// Product modal event listeners
+document.getElementById('closeProductModal')?.addEventListener('click', closeProductModal);
+document.querySelector('.product-modal-overlay')?.addEventListener('click', closeProductModal);
+
+document.getElementById('modalAddToCart')?.addEventListener('click', () => {
+  if (currentModalProduct) {
+    addToCart(currentModalProduct.id, currentModalProduct.name, currentModalProduct.price);
+    closeProductModal();
+  }
+});
+
+// ESC key to close modal
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && document.getElementById('productModal')?.classList.contains('active')) {
+    closeProductModal();
+  }
 });
 
 // Cart sidebar
@@ -1364,3 +1474,5 @@ window.filterProducts = filterProducts;
 window.handleContactForm = handleContactForm;
 window.applyCoupon = applyCoupon;
 window.removeCoupon = removeCoupon;
+window.openProductModal = openProductModal;
+window.closeProductModal = closeProductModal;
