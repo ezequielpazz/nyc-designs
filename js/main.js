@@ -288,11 +288,12 @@ function updateCartUI() {
   const cartCount = document.getElementById('cartCount');
   const cartTotal = document.getElementById('cartTotal');
   const checkoutBtn = document.getElementById('checkoutBtn');
+  const personalizationText = document.getElementById('personalizationText')?.value || '';
 
   cartCount.textContent = cart.length || '';
 
   if (cart.length === 0) {
-    cartItems.innerHTML = `<div class="cart-empty"><span>🛒</span><p>Tu carrito está vacío</p></div>`;
+    cartItems.innerHTML = `<div class="cart-empty"><p>Tu carrito está vacío</p></div>`;
     cartTotal.textContent = '$0';
     checkoutBtn.href = '#';
     return;
@@ -300,6 +301,7 @@ function updateCartUI() {
 
   let total = 0;
   let itemsText = cart.map(item => `• ${item.name} ($${item.price.toLocaleString('es-AR')})`).join('%0A');
+  let personalizationMsg = personalizationText ? `%0A%0APersonalización:%20${encodeURIComponent(personalizationText)}` : '';
   
   cartItems.innerHTML = cart.map((item, index) => {
     total += item.price;
@@ -316,7 +318,7 @@ function updateCartUI() {
   }).join('');
 
   cartTotal.textContent = '$' + total.toLocaleString('es-AR');
-  checkoutBtn.href = `https://wa.me/${CONFIG.WHATSAPP_NUMBER}?text=Hola!%20Quiero%20hacer%20un%20pedido:%0A%0A${itemsText}%0A%0ATotal:%20$${total.toLocaleString('es-AR')}`;
+  checkoutBtn.href = `https://wa.me/${CONFIG.WHATSAPP_NUMBER}?text=Hola!%20Quiero%20hacer%20un%20pedido:%0A%0A${itemsText}%0A%0ATotal:%20$${total.toLocaleString('es-AR')}${personalizationMsg}`;
 }
 
 function addToCart(id, name, price) {
@@ -410,6 +412,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   const loadMoreBtn = document.getElementById('loadMoreBtn');
   if (loadMoreBtn) {
     loadMoreBtn.addEventListener('click', loadMoreProducts);
+  }
+
+  // Personalization checkbox listener
+  const personalizationCheckbox = document.getElementById('wantsPersonalization');
+  const personalizationFields = document.getElementById('personalizationFields');
+  if (personalizationCheckbox && personalizationFields) {
+    personalizationCheckbox.addEventListener('change', () => {
+      personalizationFields.style.display = personalizationCheckbox.checked ? 'block' : 'none';
+      updateCartUI(); // Actualizar carrito cuando cambia personalization
+    });
   }
 
   // inicializar calculadora de precios
@@ -906,9 +918,14 @@ function openChatbot() {
   chatbotWindow?.classList.add('active');
   chatbotBtn?.classList.remove('has-notification');
   
+  const quickRepliesEl = document.getElementById('quickReplies');
+  if (quickRepliesEl) {
+    quickRepliesEl.classList.add('active');
+  }
+  
   if (chatMessages && chatMessages.children.length === 0) {
     setTimeout(() => {
-      addMessage('¡Hola! 👋 Soy el asistente virtual de NYC Designs.\n\n¿En qué puedo ayudarte?', true, true);
+      addMessage('¡Hola! Soy NYC Designs. ¿En qué puedo ayudarte?', true, false);
     }, 500);
   }
 }
@@ -926,6 +943,21 @@ chatbotBtn?.addEventListener('click', () => {
 });
 
 chatbotClose?.addEventListener('click', closeChatbot);
+
+// Quick replies listeners
+const quickReplyBtns = document.querySelectorAll('.quick-reply:not(.whatsapp-btn)');
+quickReplyBtns.forEach(btn => {
+  btn.addEventListener('click', (e) => {
+    e.preventDefault();
+    const msg = btn.dataset.msg;
+    if (msg) {
+      if (!chatbotWindow?.classList.contains('active')) {
+        openChatbot();
+      }
+      sendMessage(msg);
+    }
+  });
+});
 chatSend?.addEventListener('click', () => sendMessage());
 chatInput?.addEventListener('keypress', (e) => {
   if (e.key === 'Enter') sendMessage();
