@@ -443,7 +443,9 @@ function openProductModal(productData) {
 
 function closeProductModal() {
   const modal = document.getElementById('productModal');
-  modal.classList.remove('active');
+  if (modal) {
+    modal.classList.remove('active');
+  }
   document.body.style.overflow = '';
   currentModalProduct = null;
 }
@@ -968,22 +970,51 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 });
 
-// Product modal event listeners
-document.getElementById('closeProductModal')?.addEventListener('click', closeProductModal);
-document.querySelector('.product-modal-overlay')?.addEventListener('click', closeProductModal);
-
-document.getElementById('modalAddToCart')?.addEventListener('click', () => {
-  if (currentModalProduct) {
-    addToCart(currentModalProduct.id, currentModalProduct.name, currentModalProduct.price);
-    closeProductModal();
+// ========== PRODUCT MODAL EVENT LISTENERS ==========
+document.addEventListener('DOMContentLoaded', function() {
+  // Close button
+  const closeBtn = document.getElementById('closeProductModal');
+  if (closeBtn) {
+    closeBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      closeProductModal();
+    });
   }
-});
 
-// ESC key to close modal
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && document.getElementById('productModal')?.classList.contains('active')) {
-    closeProductModal();
+  // Overlay click to close
+  const overlay = document.querySelector('.product-modal-overlay');
+  if (overlay) {
+    overlay.addEventListener('click', function(e) {
+      e.preventDefault();
+      closeProductModal();
+    });
   }
+
+  // Add to cart from modal
+  const addBtn = document.getElementById('modalAddToCart');
+  if (addBtn) {
+    addBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      if (currentModalProduct) {
+        addToCart(currentModalProduct.id, currentModalProduct.name, currentModalProduct.price);
+        closeProductModal();
+        showToast('¡Agregado al carrito!');
+      }
+    });
+  }
+
+  // ESC key to close
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      const modal = document.getElementById('productModal');
+      if (modal && modal.classList.contains('active')) {
+        closeProductModal();
+      }
+    }
+  });
+
+  console.log('✅ Product modal event listeners attached');
 });
 
 // Cart sidebar
