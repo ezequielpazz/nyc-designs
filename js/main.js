@@ -283,12 +283,32 @@ function loadMoreProducts() {
 // ========== CARRITO ==========
 let cart = JSON.parse(localStorage.getItem('nycCart')) || [];
 
+function generateWhatsAppMessage() {
+  if (cart.length === 0) return '';
+  
+  let message = "¡Hola! Quiero realizar este pedido:\n\n";
+  let total = 0;
+  
+  cart.forEach(item => {
+    message += `• ${item.name} x1 - $${item.price.toLocaleString('es-AR')}\n`;
+    total += item.price;
+  });
+  
+  message += `\n💰 *Total: $${total.toLocaleString('es-AR')}*\n\n`;
+  message += "📌 *Próximos pasos:*\n";
+  message += "1. Me pasan los datos para transferir\n";
+  message += "2. Les envío el comprobante\n";
+  message += "3. Coordinamos la personalización (si aplica)\n\n";
+  message += "¡Gracias!";
+  
+  return encodeURIComponent(message);
+}
+
 function updateCartUI() {
   const cartItems = document.getElementById('cartItems');
   const cartCount = document.getElementById('cartCount');
   const cartTotal = document.getElementById('cartTotal');
   const checkoutBtn = document.getElementById('checkoutBtn');
-  const personalizationText = document.getElementById('personalizationText')?.value || '';
 
   cartCount.textContent = cart.length || '';
 
@@ -300,8 +320,6 @@ function updateCartUI() {
   }
 
   let total = 0;
-  let itemsText = cart.map(item => `• ${item.name} ($${item.price.toLocaleString('es-AR')})`).join('%0A');
-  let personalizationMsg = personalizationText ? `%0A%0APersonalización:%20${encodeURIComponent(personalizationText)}` : '';
   
   cartItems.innerHTML = cart.map((item, index) => {
     total += item.price;
@@ -318,7 +336,7 @@ function updateCartUI() {
   }).join('');
 
   cartTotal.textContent = '$' + total.toLocaleString('es-AR');
-  checkoutBtn.href = `https://wa.me/${CONFIG.WHATSAPP_NUMBER}?text=Hola!%20Quiero%20hacer%20un%20pedido:%0A%0A${itemsText}%0A%0ATotal:%20$${total.toLocaleString('es-AR')}${personalizationMsg}`;
+  checkoutBtn.href = `https://wa.me/${CONFIG.WHATSAPP_NUMBER}?text=${generateWhatsAppMessage()}`;
 }
 
 function addToCart(id, name, price) {
@@ -415,12 +433,78 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // Personalization checkbox listener
-  const personalizationCheckbox = document.getElementById('wantsPersonalization');
-  const personalizationFields = document.getElementById('personalizationFields');
-  if (personalizationCheckbox && personalizationFields) {
-    personalizationCheckbox.addEventListener('change', () => {
-      personalizationFields.style.display = personalizationCheckbox.checked ? 'block' : 'none';
-      updateCartUI(); // Actualizar carrito cuando cambia personalization
+  // Personalization Modal Handlers
+  const personalizationModal = document.getElementById('personalizationModal');
+  const openFormBtn = document.getElementById('openPersonalizationForm');
+  const closeFormBtn = document.getElementById('closePersonalizationModal');
+
+  if (openFormBtn) {
+    openFormBtn.addEventListener('click', () => {
+      personalizationModal.classList.add('active');
+      document.body.style.overflow = 'hidden';
+    });
+  }
+
+  if (closeFormBtn) {
+    closeFormBtn.addEventListener('click', () => {
+      personalizationModal.classList.remove('active');
+      document.body.style.overflow = '';
+    });
+  }
+
+  // Close on overlay click
+  personalizationModal?.querySelector('.modal-overlay')?.addEventListener('click', () => {
+    personalizationModal.classList.remove('active');
+    document.body.style.overflow = '';
+  });
+
+  // File upload counter
+  const fileInput = document.getElementById('personalizationImages');
+  const fileCount = document.getElementById('fileCount');
+
+  if (fileInput) {
+    fileInput.addEventListener('change', () => {
+      const count = fileInput.files.length;
+      fileCount.textContent = count === 0 ? 'Ningún archivo seleccionado' : 
+                             count === 1 ? '1 archivo seleccionado' : 
+                             `${count} archivos seleccionados`;
+    });
+  }
+
+  // Form submission - sends to WhatsApp with details
+  const personalizationForm = document.getElementById('personalizationForm');
+
+  if (personalizationForm) {
+    personalizationForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      
+      const formData = new FormData(personalizationForm);
+      const nombre = formData.get('nombre');
+      const telefono = formData.get('telefono');
+      const producto = formData.get('producto');
+      const detalles = formData.get('detalles');
+      const notas = formData.get('notas');
+      
+      let message = `¡Hola! Ya pagué y quiero enviar los detalles de personalización:\n\n`;
+      message += `👤 *Nombre:* ${nombre}\n`;
+      message += `📱 *WhatsApp:* ${telefono}\n`;
+      message += `📦 *Producto:* ${producto}\n\n`;
+      message += `✨ *Personalización:*\n${detalles}\n`;
+      if (notas) {
+        message += `\n📝 *Notas:* ${notas}\n`;
+      }
+      message += `\n_Adjunto las imágenes por separado si las tengo._`;
+      
+      const whatsappUrl = `https://wa.me/5491123199122?text=${encodeURIComponent(message)}`;
+      window.open(whatsappUrl, '_blank');
+      
+      // Close modal and reset form
+      personalizationModal.classList.remove('active');
+      document.body.style.overflow = '';
+      personalizationForm.reset();
+      fileCount.textContent = 'Ningún archivo seleccionado';
+      
+      showToast('¡Listo! Se abrió WhatsApp para enviar los detalles.');
     });
   }
 
