@@ -901,6 +901,10 @@ function switchSection(section) {
     const titles = {
         'dashboard': 'Inicio',
         'products': 'Productos',
+        'orders': 'Pedidos',
+        'testimonials': 'Testimonios',
+        'coupons': 'Cupones',
+        'messages': 'Mensajes',
         'settings': 'Configuración'
     };
     const pageTitle = document.getElementById('pageTitle');
@@ -926,17 +930,512 @@ function switchSection(section) {
             if (productsSection) productsSection.classList.add('active');
             break;
         }
+        case 'orders': {
+            const ordersSection = document.getElementById('ordersSection');
+            if (ordersSection) ordersSection.classList.add('active');
+            loadOrders('todos');
+            break;
+        }
+        case 'testimonials': {
+            const testimonialsSection = document.getElementById('testimonialsSection');
+            if (testimonialsSection) testimonialsSection.classList.add('active');
+            loadTestimonials();
+            break;
+        }
+        case 'coupons': {
+            const couponsSection = document.getElementById('couponsSection');
+            if (couponsSection) couponsSection.classList.add('active');
+            loadCoupons();
+            break;
+        }
+        case 'messages': {
+            const messagesSection = document.getElementById('messagesSection');
+            if (messagesSection) messagesSection.classList.add('active');
+            loadMessages();
+            break;
+        }
         case 'settings': {
             const settingsSection = document.getElementById('settingsSection');
             if (settingsSection) settingsSection.classList.add('active');
+            loadSettings();
             break;
         }
     }
 }
 
 /* ============================================
-   EVENT LISTENERS AND INITIALIZATION
+   ÓRDENES / PEDIDOS
    ============================================ */
+
+async function loadOrders(filter = 'todos') {
+    try {
+        const ordersRef = db.collection('pedidos');
+        let query = ordersRef;
+        
+        if (filter !== 'todos') {
+            query = ordersRef.where('status', '==', filter);
+        }
+        
+        const snapshot = await query.orderBy('createdAt', 'desc').get();
+        const ordersGrid = document.getElementById('ordersGrid');
+        const ordersEmpty = document.getElementById('ordersEmpty');
+        
+        if (snapshot.empty) {
+            if (ordersGrid) ordersGrid.innerHTML = '';
+            if (ordersEmpty) ordersEmpty.style.display = 'flex';
+            return;
+        }
+        
+        if (ordersEmpty) ordersEmpty.style.display = 'none';
+        
+        const orders = [];
+        snapshot.forEach(doc => {
+            orders.push({ id: doc.id, ...doc.data() });
+        });
+        
+        if (ordersGrid) {
+            ordersGrid.innerHTML = orders.map(order => `
+                <div class="order-card">
+                    <div class="order-id">#${order.id.slice(0, 8).toUpperCase()}</div>
+                    <div class="order-customer">
+                        <div class="order-customer-name">${order.customer?.name || 'N/A'}</div>
+                        <div class="order-customer-email">${order.customer?.email || ''}</div>
+                    </div>
+                    <div class="order-total">$${(order.total || 0).toLocaleString('es-AR')}</div>
+                    <div class="order-actions">
+                        <span class="order-status status-${order.status || 'pendiente'}">${order.status || 'pendiente'}</span>
+                        <select onchange="updateOrderStatus('${order.id}', this.value)" class="order-status-select">
+                            <option value="pendiente" ${order.status === 'pendiente' ? 'selected' : ''}>Pendiente</option>
+                            <option value="pagado" ${order.status === 'pagado' ? 'selected' : ''}>Pagado</option>
+                            <option value="enviado" ${order.status === 'enviado' ? 'selected' : ''}>Enviado</option>
+                            <option value="entregado" ${order.status === 'entregado' ? 'selected' : ''}>Entregado</option>
+                        </select>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        // Update orders badge
+        const pendingOrders = orders.filter(o => o.status === 'pendiente').length;
+        const badge = document.getElementById('navOrdersBadge');
+        if (badge) {
+            badge.textContent = pendingOrders;
+            badge.style.display = pendingOrders > 0 ? 'flex' : 'none';
+        }
+    } catch (error) {
+        console.error('❌ Error loading orders:', error);
+        alert('Error al cargar pedidos: ' + error.message);
+    }
+}
+
+async function updateOrderStatus(orderId, status) {
+    try {
+        await db.collection('pedidos').doc(orderId).update({
+            status: status,
+            updatedAt: new Date()
+        });
+        console.log('✅ Order status updated');
+        loadOrders(document.querySelector('.filter-tab.active')?.dataset.filter || 'todos');
+    } catch (error) {
+        console.error('❌ Error updating order:', error);
+        alert('Error al actualizar pedido');
+    }
+}
+
+/* ============================================
+   TESTIMONIOS
+   ============================================ */
+
+async function loadTestimonials() {
+    try {
+        const snapshot = await db.collection('testimonios').orderBy('createdAt', 'desc').get();
+        const testimonialsGrid = document.getElementById('testimonialsGrid');
+        
+        if (snapshot.empty) {
+            if (testimonialsGrid) {
+                testimonialsGrid.innerHTML = `
+                    <div class="empty-state" style="grid-column: 1 / -1;">
+                        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                        </svg>
+                        <h2>No hay testimonios</h2>
+                        <p>Agrega tu primer testimonio de cliente</p>
+                    </div>
+                `;
+            }
+            return;
+        }
+        
+        const testimonials = [];
+        snapshot.forEach(doc => {
+            testimonials.push({ id: doc.id, ...doc.data() });
+        });
+        
+        if (testimonialsGrid) {
+            testimonialsGrid.innerHTML = testimonials.map(t => `
+                <div class="testimonial-admin-card">
+                    <div class="testimonial-header">
+                        <div class="testimonial-info">
+                            <div class="testimonial-author">${t.name || 'Anónimo'}</div>
+                            <div class="testimonial-location">${t.location || 'Ubicación no especificada'}</div>
+                            <div class="testimonial-rating">${'⭐'.repeat(t.rating || 5)}</div>
+                        </div>
+                        ${t.visible ? '<span class="testimonial-visible-badge">Visible</span>' : ''}
+                    </div>
+                    <div class="testimonial-text">"${t.text || ''}"</div>
+                    <div class="testimonial-actions">
+                        <button class="btn btn-secondary" onclick="deleteTestimonial('${t.id}')">Eliminar</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+    } catch (error) {
+        console.error('❌ Error loading testimonials:', error);
+    }
+}
+
+function openTestimonialModal() {
+    const modal = document.getElementById('testimonialModal');
+    if (modal) {
+        modal.style.display = 'flex';
+        document.getElementById('testimonialForm').reset();
+    }
+}
+
+function closeTestimonialModal() {
+    const modal = document.getElementById('testimonialModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+async function saveTestimonial(e) {
+    e.preventDefault();
+    try {
+        const name = document.getElementById('testimonialName').value;
+        const location = document.getElementById('testimonialLocation').value;
+        const rating = parseInt(document.getElementById('testimonialRating').value);
+        const text = document.getElementById('testimonialText').value;
+        const visible = document.getElementById('testimonialVisible').checked;
+        
+        await db.collection('testimonios').add({
+            name,
+            location,
+            rating,
+            text,
+            visible,
+            createdAt: new Date()
+        });
+        
+        console.log('✅ Testimonial saved');
+        closeTestimonialModal();
+        loadTestimonials();
+    } catch (error) {
+        console.error('❌ Error saving testimonial:', error);
+        alert('Error al guardar testimonio');
+    }
+}
+
+async function deleteTestimonial(id) {
+    if (!confirm('¿Eliminar este testimonio?')) return;
+    
+    try {
+        await db.collection('testimonios').doc(id).delete();
+        console.log('✅ Testimonial deleted');
+        loadTestimonials();
+    } catch (error) {
+        console.error('❌ Error deleting testimonial:', error);
+        alert('Error al eliminar testimonio');
+    }
+}
+
+/* ============================================
+   CUPONES
+   ============================================ */
+
+async function loadCoupons() {
+    try {
+        const snapshot = await db.collection('cupones').orderBy('createdAt', 'desc').get();
+        const couponsGrid = document.getElementById('couponsGrid');
+        const couponsEmpty = document.getElementById('couponsEmpty');
+        
+        if (snapshot.empty) {
+            if (couponsGrid) couponsGrid.innerHTML = '';
+            if (couponsEmpty) couponsEmpty.style.display = 'flex';
+            return;
+        }
+        
+        if (couponsEmpty) couponsEmpty.style.display = 'none';
+        
+        const coupons = [];
+        snapshot.forEach(doc => {
+            coupons.push({ id: doc.id, ...doc.data() });
+        });
+        
+        if (couponsGrid) {
+            couponsGrid.innerHTML = coupons.map(coupon => `
+                <div class="coupon-card">
+                    <div class="coupon-code">${coupon.code}</div>
+                    <div class="coupon-discount-badge">
+                        ${coupon.type === 'percentage' ? coupon.value + '%' : '$' + coupon.value}
+                    </div>
+                    <div class="coupon-details">
+                        <div class="coupon-detail-item">
+                            <div class="coupon-detail-label">Tipo</div>
+                            <div class="coupon-detail-value">${coupon.type === 'percentage' ? 'Porcentaje' : 'Monto fijo'}</div>
+                        </div>
+                        <div class="coupon-detail-item">
+                            <div class="coupon-detail-label">Usado</div>
+                            <div class="coupon-detail-value">${coupon.uses || 0}${coupon.maxUses ? '/' + coupon.maxUses : ''}</div>
+                        </div>
+                    </div>
+                    <div class="coupon-status">
+                        <div class="coupon-status-indicator ${coupon.active ? 'active' : 'inactive'}"></div>
+                        <span class="coupon-status-text">${coupon.active ? 'Activo' : 'Inactivo'}</span>
+                    </div>
+                    <div class="coupon-actions">
+                        <button class="btn btn-secondary" onclick="toggleCoupon('${coupon.id}', ${!coupon.active})" style="flex: 1;">
+                            ${coupon.active ? 'Desactivar' : 'Activar'}
+                        </button>
+                        <button class="btn btn-secondary" onclick="deleteCoupon('${coupon.id}')" style="flex: 1;">Eliminar</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+    } catch (error) {
+        console.error('❌ Error loading coupons:', error);
+    }
+}
+
+function openCouponModal() {
+    const modal = document.getElementById('couponModal');
+    if (modal) {
+        modal.style.display = 'flex';
+        document.getElementById('couponForm').reset();
+    }
+}
+
+function closeCouponModal() {
+    const modal = document.getElementById('couponModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+function updateCouponPreview() {
+    const type = document.getElementById('couponType').value;
+    const value = document.getElementById('couponValue').value;
+    const preview = document.getElementById('couponPreview');
+    
+    if (type && value) {
+        const text = type === 'percentage' ? value + '% descuento' : '$' + value + ' descuento';
+        document.getElementById('couponPreviewText').textContent = text;
+        preview.style.display = 'block';
+    } else {
+        preview.style.display = 'none';
+    }
+}
+
+async function saveCoupon(e) {
+    e.preventDefault();
+    try {
+        const code = document.getElementById('couponCode').value.toUpperCase();
+        const type = document.getElementById('couponType').value;
+        const value = parseFloat(document.getElementById('couponValue').value);
+        const maxUses = document.getElementById('couponMaxUses').value ? parseInt(document.getElementById('couponMaxUses').value) : null;
+        const expiry = document.getElementById('couponExpiry').value;
+        const active = document.getElementById('couponActive').checked;
+        
+        // Check if code already exists
+        const existing = await db.collection('cupones').where('code', '==', code).get();
+        if (!existing.empty) {
+            alert('Este código de cupón ya existe');
+            return;
+        }
+        
+        await db.collection('cupones').add({
+            code,
+            type,
+            value,
+            maxUses: maxUses || null,
+            uses: 0,
+            expiry: expiry ? new Date(expiry) : null,
+            active,
+            createdAt: new Date()
+        });
+        
+        console.log('✅ Coupon saved');
+        closeCouponModal();
+        loadCoupons();
+    } catch (error) {
+        console.error('❌ Error saving coupon:', error);
+        alert('Error al guardar cupón');
+    }
+}
+
+async function toggleCoupon(id, active) {
+    try {
+        await db.collection('cupones').doc(id).update({
+            active: active,
+            updatedAt: new Date()
+        });
+        console.log('✅ Coupon toggled');
+        loadCoupons();
+    } catch (error) {
+        console.error('❌ Error toggling coupon:', error);
+        alert('Error al actualizar cupón');
+    }
+}
+
+async function deleteCoupon(id) {
+    if (!confirm('¿Eliminar este cupón?')) return;
+    
+    try {
+        await db.collection('cupones').doc(id).delete();
+        console.log('✅ Coupon deleted');
+        loadCoupons();
+    } catch (error) {
+        console.error('❌ Error deleting coupon:', error);
+        alert('Error al eliminar cupón');
+    }
+}
+
+/* ============================================
+   MENSAJES
+   ============================================ */
+
+async function loadMessages() {
+    try {
+        const snapshot = await db.collection('mensajes').orderBy('createdAt', 'desc').get();
+        const messagesGrid = document.getElementById('messagesGrid');
+        const messagesEmpty = document.getElementById('messagesEmpty');
+        
+        if (snapshot.empty) {
+            if (messagesGrid) messagesGrid.innerHTML = '';
+            if (messagesEmpty) messagesEmpty.style.display = 'flex';
+            return;
+        }
+        
+        if (messagesEmpty) messagesEmpty.style.display = 'none';
+        
+        const messages = [];
+        let unreadCount = 0;
+        snapshot.forEach(doc => {
+            const msg = { id: doc.id, ...doc.data() };
+            messages.push(msg);
+            if (!msg.read) unreadCount++;
+        });
+        
+        if (messagesGrid) {
+            messagesGrid.innerHTML = messages.map(msg => `
+                <div class="message-card ${!msg.read ? 'unread' : ''}">
+                    <div class="message-header">
+                        <div class="message-sender">
+                            <div class="message-from">${msg.name || 'Anónimo'}</div>
+                            <div class="message-email">${msg.email || ''}</div>
+                        </div>
+                        <div class="message-date">${new Date(msg.createdAt?.toDate()).toLocaleDateString('es-AR')}</div>
+                    </div>
+                    <div class="message-subject">${msg.subject || 'Sin asunto'}</div>
+                    <div class="message-text">${msg.message || ''}</div>
+                    <div class="message-actions">
+                        ${!msg.read ? `<button onclick="markAsRead('${msg.id}')">Marcar como leído</button>` : ''}
+                        <button onclick="deleteMessage('${msg.id}')">Eliminar</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        // Update messages badge
+        const badge = document.getElementById('navMessagesBadge');
+        if (badge) {
+            badge.textContent = unreadCount;
+            badge.style.display = unreadCount > 0 ? 'flex' : 'none';
+        }
+    } catch (error) {
+        console.error('❌ Error loading messages:', error);
+    }
+}
+
+async function markAsRead(id) {
+    try {
+        await db.collection('mensajes').doc(id).update({
+            read: true
+        });
+        console.log('✅ Message marked as read');
+        loadMessages();
+    } catch (error) {
+        console.error('❌ Error marking message as read:', error);
+    }
+}
+
+async function deleteMessage(id) {
+    try {
+        await db.collection('mensajes').doc(id).delete();
+        console.log('✅ Message deleted');
+        loadMessages();
+    } catch (error) {
+        console.error('❌ Error deleting message:', error);
+        alert('Error al eliminar mensaje');
+    }
+}
+
+/* ============================================
+   CONFIGURACIÓN
+   ============================================ */
+
+async function loadSettings() {
+    try {
+        const settingsDoc = await db.collection('configuracion').doc('settings').get();
+        
+        if (!settingsDoc.exists) {
+            console.log('No settings found, using defaults');
+            return;
+        }
+        
+        const settings = settingsDoc.data();
+        console.log('Settings loaded:', settings);
+    } catch (error) {
+        console.error('❌ Error loading settings:', error);
+    }
+}
+
+async function saveSettings(type) {
+    try {
+        const settingsRef = db.collection('configuracion').doc('settings');
+        
+        if (type === 'banner') {
+            const bannerText = document.getElementById('bannerText')?.value;
+            await settingsRef.update({
+                bannerText: bannerText
+            });
+        } else if (type === 'hours') {
+            const weekday = document.getElementById('hoursWeekday')?.value;
+            const saturday = document.getElementById('hoursSaturday')?.value;
+            const sunday = document.getElementById('hoursSunday')?.value;
+            await settingsRef.update({
+                'hours.weekday': weekday,
+                'hours.saturday': saturday,
+                'hours.sunday': sunday
+            });
+        } else if (type === 'shipping') {
+            const time = document.getElementById('shippingTime')?.value;
+            const methods = document.getElementById('shippingMethods')?.value;
+            await settingsRef.update({
+                'shipping.productionTime': time,
+                'shipping.methods': methods
+            });
+        }
+        
+        console.log('✅ Settings saved');
+        alert('Configuración guardada exitosamente');
+    } catch (error) {
+        console.error('❌ Error saving settings:', error);
+        alert('Error al guardar configuración');
+    }
+}
+
+
 
 document.addEventListener('DOMContentLoaded', () => {
     console.log('🚀 Inicializando admin panel...');
@@ -1215,7 +1714,40 @@ function setupEventListeners() {
             renderFilteredProducts(filtered);
         }
     });
+    
+    // ========== FILTER TABS - ORDERS ==========
+    document.querySelectorAll('[data-filter]').forEach(tab => {
+        tab.addEventListener('click', (e) => {
+            document.querySelectorAll('[data-filter].active').forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            const filter = tab.dataset.filter;
+            if (filter) {
+                loadOrders(filter);
+            }
+        });
+    });
+    
+    // ========== TESTIMONIALS ==========
+    document.getElementById('addTestimonialBtn')?.addEventListener('click', openTestimonialModal);
+    document.getElementById('testimonialForm')?.addEventListener('submit', saveTestimonial);
+    document.getElementById('testimonialModal')?.addEventListener('click', (e) => {
+        if (e.target === e.currentTarget || e.target.classList.contains('wizard-overlay')) {
+            closeTestimonialModal();
+        }
+    });
+    
+    // ========== COUPONS ==========
+    document.getElementById('addCouponBtn')?.addEventListener('click', openCouponModal);
+    document.getElementById('couponForm')?.addEventListener('submit', saveCoupon);
+    document.getElementById('couponType')?.addEventListener('change', updateCouponPreview);
+    document.getElementById('couponValue')?.addEventListener('input', updateCouponPreview);
+    document.getElementById('couponModal')?.addEventListener('click', (e) => {
+        if (e.target === e.currentTarget || e.target.classList.contains('wizard-overlay')) {
+            closeCouponModal();
+        }
+    });
 }
+
 
 function renderFilteredProducts(products) {
     const grid = document.getElementById('productsGrid');

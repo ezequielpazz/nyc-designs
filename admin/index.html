@@ -51,27 +51,51 @@
                 
                 <a href="#" class="nav-item" data-section="products">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="12" y1="5" x2="12" y2="19"></line>
-                        <polyline points="19 12 12 19 5 12"></polyline>
+                        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
                     </svg>
                     <span>Productos</span>
                     <span class="nav-badge" id="navProductBadge">0</span>
                 </a>
                 
-                <a href="#" class="nav-item disabled">
+                <a href="#" class="nav-item" data-section="orders">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="9" cy="21" r="1"></circle>
-                        <circle cx="20" cy="21" r="1"></circle>
-                        <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
                     </svg>
                     <span>Pedidos</span>
-                    <span class="nav-badge-coming">Próximos</span>
+                    <span class="nav-badge" id="navOrdersBadge">0</span>
+                </a>
+                
+                <a href="#" class="nav-item" data-section="testimonials">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                    </svg>
+                    <span>Testimonios</span>
+                </a>
+                
+                <a href="#" class="nav-item" data-section="coupons">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+                        <line x1="7" y1="7" x2="7.01" y2="7"></line>
+                    </svg>
+                    <span>Cupones</span>
+                </a>
+                
+                <a href="#" class="nav-item" data-section="messages">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                        <polyline points="22,6 12,13 2,6"></polyline>
+                    </svg>
+                    <span>Mensajes</span>
+                    <span class="nav-badge" id="navMessagesBadge">0</span>
                 </a>
                 
                 <a href="#" class="nav-item" data-section="settings">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="12" cy="12" r="3"></circle>
-                        <path d="M12 1v6m0 6v6M4.22 4.22l4.24 4.24m5.08 5.08l4.24 4.24M1 12h6m6 0h6M4.22 19.78l4.24-4.24m5.08-5.08l4.24-4.24"></path>
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
                     </svg>
                     <span>Configuración</span>
                 </a>
@@ -292,11 +316,108 @@
                     </div>
                 </section>
 
+                <!-- Orders Section -->
+                <section id="ordersSection" class="section">
+                    <div class="section-header">
+                        <div>
+                            <h1>Pedidos</h1>
+                            <p>Gestiona los pedidos de tu tienda</p>
+                        </div>
+                    </div>
+
+                    <div class="filter-tabs">
+                        <button class="filter-tab active" data-filter="todos">Todos</button>
+                        <button class="filter-tab" data-filter="pendiente">Pendientes</button>
+                        <button class="filter-tab" data-filter="pagado">Pagados</button>
+                        <button class="filter-tab" data-filter="enviado">Enviados</button>
+                        <button class="filter-tab" data-filter="entregado">Entregados</button>
+                    </div>
+
+                    <div id="ordersGrid" class="orders-list"><!-- Orders will be loaded here --></div>
+                    
+                    <div id="ordersEmpty" class="empty-state" style="display: none;">
+                        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                        </svg>
+                        <h2>No hay pedidos aún</h2>
+                        <p>Los pedidos aparecerán aquí cuando los clientes compren</p>
+                    </div>
+                </section>
+
+                <!-- Testimonials Section -->
+                <section id="testimonialsSection" class="section">
+                    <div class="section-header">
+                        <div>
+                            <h1>Testimonios</h1>
+                            <p>Gestiona las reseñas que se muestran en la tienda</p>
+                        </div>
+                        <button class="btn btn-primary" id="addTestimonialBtn">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                            Agregar testimonio
+                        </button>
+                    </div>
+
+                    <div id="testimonialsGrid" class="testimonials-admin-grid"><!-- Testimonials will be loaded here --></div>
+                </section>
+
+                <!-- Coupons Section -->
+                <section id="couponsSection" class="section">
+                    <div class="section-header">
+                        <div>
+                            <h1>Cupones</h1>
+                            <p>Crea códigos de descuento para tus clientes</p>
+                        </div>
+                        <button class="btn btn-primary" id="addCouponBtn">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                            Crear cupón
+                        </button>
+                    </div>
+
+                    <div id="couponsGrid" class="coupons-grid"><!-- Coupons will be loaded here --></div>
+                    
+                    <div id="couponsEmpty" class="empty-state" style="display: none;">
+                        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+                            <line x1="7" y1="7" x2="7.01" y2="7"></line>
+                        </svg>
+                        <h2>No hay cupones</h2>
+                        <p>Crea tu primer cupón de descuento</p>
+                    </div>
+                </section>
+
+                <!-- Messages Section -->
+                <section id="messagesSection" class="section">
+                    <div class="section-header">
+                        <div>
+                            <h1>Mensajes</h1>
+                            <p>Mensajes recibidos del formulario de contacto</p>
+                        </div>
+                    </div>
+
+                    <div id="messagesGrid" class="messages-list"><!-- Messages will be loaded here --></div>
+                    
+                    <div id="messagesEmpty" class="empty-state" style="display: none;">
+                        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                            <polyline points="22,6 12,13 2,6"></polyline>
+                        </svg>
+                        <h2>No hay mensajes</h2>
+                        <p>Los mensajes del formulario de contacto aparecerán aquí</p>
+                    </div>
+                </section>
+
                 <!-- Settings Section -->
                 <section id="settingsSection" class="section">
                     <div class="section-header">
                         <h1>Configuración</h1>
-                        <p>Configurar tu tienda</p>
+                        <p>Ajustes generales de la tienda</p>
                     </div>
 
                     <div class="settings-card">
@@ -331,6 +452,113 @@
                 </section>
             </div>
         </main>
+    </div>
+
+    <!-- Testimonial Modal -->
+    <div id="testimonialModal" class="wizard-modal" style="display: none;">
+        <div class="wizard-overlay"></div>
+        <div class="wizard-container" style="max-width: 500px;">
+            <div class="wizard-header">
+                <h2>Agregar Testimonio</h2>
+                <button class="wizard-close" onclick="closeTestimonialModal()">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <form id="testimonialForm" class="wizard-form">
+                <div class="form-group">
+                    <label for="testimonialName">Nombre</label>
+                    <input type="text" id="testimonialName" required placeholder="Nombre del cliente">
+                </div>
+                <div class="form-group">
+                    <label for="testimonialLocation">Ubicación</label>
+                    <input type="text" id="testimonialLocation" placeholder="Ciudad, País">
+                </div>
+                <div class="form-group">
+                    <label for="testimonialRating">Calificación</label>
+                    <select id="testimonialRating" required>
+                        <option value="">Seleccionar...</option>
+                        <option value="5">⭐⭐⭐⭐⭐ Excelente</option>
+                        <option value="4">⭐⭐⭐⭐ Muy bien</option>
+                        <option value="3">⭐⭐⭐ Bien</option>
+                        <option value="2">⭐⭐ Regular</option>
+                        <option value="1">⭐ Malo</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="testimonialText">Testimonio</label>
+                    <textarea id="testimonialText" required placeholder="¿Qué le pareció?" rows="4"></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="testimonialVisible" checked>
+                        <span>Visible en la tienda</span>
+                    </label>
+                </div>
+                <div class="wizard-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeTestimonialModal()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar testimonio</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Coupon Modal -->
+    <div id="couponModal" class="wizard-modal" style="display: none;">
+        <div class="wizard-overlay"></div>
+        <div class="wizard-container" style="max-width: 500px;">
+            <div class="wizard-header">
+                <h2>Crear Cupón</h2>
+                <button class="wizard-close" onclick="closeCouponModal()">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <form id="couponForm" class="wizard-form">
+                <div class="form-group">
+                    <label for="couponCode">Código del Cupón</label>
+                    <input type="text" id="couponCode" required placeholder="ej: SUMMER20" style="text-transform: uppercase;">
+                </div>
+                <div class="form-group">
+                    <label for="couponType">Tipo de Descuento</label>
+                    <select id="couponType" required onchange="updateCouponPreview()">
+                        <option value="">Seleccionar...</option>
+                        <option value="percentage">Porcentaje (%)</option>
+                        <option value="fixed">Monto fijo ($)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="couponValue">Valor de Descuento</label>
+                    <input type="number" id="couponValue" required placeholder="20" min="0">
+                </div>
+                <div class="form-group">
+                    <label for="couponMaxUses">Usos Máximos</label>
+                    <input type="number" id="couponMaxUses" placeholder="Sin límite" min="1">
+                </div>
+                <div class="form-group">
+                    <label for="couponExpiry">Fecha de Expiración</label>
+                    <input type="date" id="couponExpiry">
+                </div>
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="couponActive" checked>
+                        <span>Cupón activo</span>
+                    </label>
+                </div>
+                <div id="couponPreview" class="coupon-preview" style="display: none; margin: 15px 0; padding: 15px; border: 2px dashed var(--primary); border-radius: 8px; text-align: center;">
+                    <div style="font-size: 14px; color: var(--text-secondary);">Adelanto:</div>
+                    <div id="couponPreviewText" style="font-size: 18px; font-weight: bold; color: var(--primary); margin: 5px 0;"></div>
+                </div>
+                <div class="wizard-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeCouponModal()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Crear cupón</button>
+                </div>
+            </form>
+        </div>
     </div>
 
     <!-- Product Wizard Modal -->
