@@ -283,39 +283,16 @@ function loadMoreProducts() {
 // ========== CARRITO ==========
 let cart = JSON.parse(localStorage.getItem('nycCart')) || [];
 
-function generateWhatsAppMessage() {
-  if (cart.length === 0) return '';
-  
-  let message = "¡Hola! Quiero realizar este pedido:\n\n";
-  let total = 0;
-  
-  cart.forEach(item => {
-    message += `• ${item.name} x1 - $${item.price.toLocaleString('es-AR')}\n`;
-    total += item.price;
-  });
-  
-  message += `\n💰 *Total: $${total.toLocaleString('es-AR')}*\n\n`;
-  message += "📌 *Próximos pasos:*\n";
-  message += "1. Me pasan los datos para transferir\n";
-  message += "2. Les envío el comprobante\n";
-  message += "3. Coordinamos la personalización (si aplica)\n\n";
-  message += "¡Gracias!";
-  
-  return encodeURIComponent(message);
-}
-
 function updateCartUI() {
   const cartItems = document.getElementById('cartItems');
   const cartCount = document.getElementById('cartCount');
   const cartTotal = document.getElementById('cartTotal');
-  const checkoutBtn = document.getElementById('checkoutBtn');
 
   cartCount.textContent = cart.length || '';
 
   if (cart.length === 0) {
     cartItems.innerHTML = `<div class="cart-empty"><p>Tu carrito está vacío</p></div>`;
     cartTotal.textContent = '$0';
-    checkoutBtn.href = '#';
     return;
   }
 
@@ -336,7 +313,6 @@ function updateCartUI() {
   }).join('');
 
   cartTotal.textContent = '$' + total.toLocaleString('es-AR');
-  checkoutBtn.href = `https://wa.me/${CONFIG.WHATSAPP_NUMBER}?text=${generateWhatsAppMessage()}`;
 }
 
 function addToCart(id, name, price) {
