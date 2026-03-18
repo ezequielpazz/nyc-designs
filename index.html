@@ -63,11 +63,9 @@
       </a>
 
       <nav class="menu" aria-label="Menú principal">
+        <a href="#como-funciona">Cómo funciona</a>
         <a href="#productos">Productos</a>
-        <a href="#personalizados">Personalizados</a>
         <a href="#como-comprar">Cómo comprar</a>
-        <a href="#videos">Videos</a>
-        <a href="#calculadora">Calculadora</a>
         <a href="#faq">FAQ</a>
         <a href="#contacto">Contacto</a>
       </nav>
@@ -79,7 +77,7 @@
           <span></span>
         </button>
         <button class="btn primary" type="button" id="cartBtn">
-          🛒 Carrito <span class="cart-badge" id="cartCount"></span>
+          Carrito <span class="cart-badge" id="cartCount"></span>
         </button>
       </div>
     </div>
@@ -87,11 +85,9 @@
 
   <!-- Mobile Menu -->
   <div class="mobile-menu" id="mobileMenu">
+    <a href="#como-funciona">Cómo funciona</a>
     <a href="#productos">Productos</a>
-    <a href="#personalizados">Personalizados</a>
     <a href="#como-comprar">Cómo comprar</a>
-    <a href="#videos">Videos</a>
-    <a href="#calculadora">Calculadora</a>
     <a href="#faq">FAQ</a>
     <a href="#contacto">Contacto</a>
   </div>
@@ -131,10 +127,37 @@
 
       <div class="hero-right">
         <div class="imgwrap" onclick="openLightbox(this.querySelector('img').src)">
-          <!-- CAMBIAR POR TU IMAGEN HERO -->
           <img src="assets/img/logo.jpg" alt="Producto destacado" style="object-fit: contain; padding: 20px; background: #FAF7F5;">
         </div>
-        <p class="caption">📷 Reemplazar con imagen de producto destacado</p>
+      </div>
+    </section>
+
+    <!-- CÓMO FUNCIONA -->
+    <section id="como-funciona" class="fade-in" aria-label="Cómo funciona">
+      <div class="section-title">
+        <h2>Cómo funciona</h2>
+        <p>Tres simples pasos para tu compra.</p>
+      </div>
+
+      <div class="how-works">
+        <div class="work-step">
+          <div class="step-number">1</div>
+          <div class="step-icon">📦</div>
+          <h3>Elegí</h3>
+          <p>Navegá nuestro catálogo y encontrá lo que buscas. Personalizable o listo para comprar.</p>
+        </div>
+        <div class="work-step">
+          <div class="step-number">2</div>
+          <div class="step-icon">✏️</div>
+          <h3>Personalizá</h3>
+          <p>Agregá tu diseño, texto o foto. Coordinamos todos los detalles por WhatsApp.</p>
+        </div>
+        <div class="work-step">
+          <div class="step-number">3</div>
+          <div class="step-icon">🚚</div>
+          <h3>Recibí</h3>
+          <p>Retirá en nuestro punto o lo enviamos por E-Pick con seguimiento incluido.</p>
+        </div>
       </div>
     </section>
 
@@ -156,7 +179,7 @@
 
       <!-- Buscador -->
       <div class="search-bar">
-        <input type="text" class="search-input" id="searchInput" placeholder="🔍 Buscar productos...">
+        <input type="text" class="search-input" id="searchInput" placeholder="Buscar productos...">
       </div>
 
       <!-- Filtros -->
@@ -300,123 +323,31 @@
       </button>
 
       <p id="noResults" style="display:none; text-align:center; padding:40px; color:rgba(43,43,43,.6);">
-        No se encontraron productos 😕
+        No se encontraron productos
       </p>
-    </section>
-
-    <!-- CALCULADORA DE PEDIDO -->
-    <section id="calculadora" class="fade-in" aria-label="Calculadora de precio">
-      <div class="section-title">
-        <h2>Calculá tu pedido</h2>
-        <p>Armá un presupuesto rápido.</p>
-      </div>
-      <div class="calculator">
-        <form id="priceCalcForm">
-          <div class="form-row">
-            <label>Producto base</label>
-            <select id="calcProduct">
-              <option value="taza">Taza</option>
-              <option value="pack">Pack</option>
-              <option value="calendario">Calendario</option>
-            </select>
-          </div>
-          <div class="form-row">
-            <label><input type="checkbox" id="calcPersonalizado"> + Personalización</label>
-          </div>
-          <div class="form-row">
-            <label><input type="checkbox" id="calcCaja"> + Caja de regalo</label>
-          </div>
-          <div class="form-row">
-            <label><input type="checkbox" id="calcEnvio"> + Envío</label>
-          </div>
-          <div class="form-row">
-            <label>Cantidad</label>
-            <input type="number" id="calcCantidad" min="1" value="1">
-          </div>
-          <div class="calc-total">Subtotal: $<span id="calcSubtotal">0</span></div>
-          <button type="button" class="btn primary" id="calcWhatsappBtn">Consultar este pedido</button>
-        </form>
-      </div>
     </section>
 
     <section id="como-comprar" class="fade-in" aria-label="Cómo comprar">
       <div class="section-title">
         <h2>Cómo comprar</h2>
-        <p>Es súper fácil, seguí estos pasos.</p>
+        <p>Proceso simple y rápido.</p>
       </div>
 
-      <div class="how">
-        <div class="step">
-          <div class="head">
-            <div class="icon">1️⃣</div>
-            <strong>Elegí tu producto</strong>
-          </div>
-          <p>Navegá la tienda o escribinos para armarlo personalizado.</p>
+      <div class="how-to-buy">
+        <div class="step-item">
+          <div class="step-circle">1</div>
+          <h3>Elegí tu producto</h3>
+          <p>Navegá la tienda o escribinos para crear algo personalizado.</p>
         </div>
-        <div class="step">
-          <div class="head">
-            <div class="icon">2️⃣</div>
-            <strong>Confirmá el pedido</strong>
-          </div>
-          <p>Coordinamos por WhatsApp: precio, variante y forma de envío.</p>
+        <div class="step-item">
+          <div class="step-circle">2</div>
+          <h3>Personalizalo</h3>
+          <p>Coordinamos por WhatsApp todos los detalles, precio y variantes.</p>
         </div>
-        <div class="step">
-          <div class="head">
-            <div class="icon">3️⃣</div>
-            <strong>Recibí tu compra</strong>
-          </div>
-          <p>Retirá o te lo mandamos por E-Pick con seguimiento.</p>
-        </div>
-      </div>
-    </section>
-
-    <section id="personalizados" class="fade-in" aria-label="Detalle de producto">
-      <div class="section-title">
-        <h2>Detalle de producto</h2>
-        <p>Así se ve una página de producto.</p>
-      </div>
-
-      <div class="product-page">
-        <div class="gallery">
-          <img class="main-img" id="mainImg" src="assets/img/logo.jpg" alt="Taza personalizada" onclick="openLightbox(this.src)" style="object-fit: contain; padding: 30px; background: #FAF7F5;">
-          <div class="thumbs">
-            <img class="active" src="assets/img/logo.jpg" alt="Vista 1" onclick="changeMainImg(this)">
-            <img src="assets/img/logo.jpg" alt="Vista 2" onclick="changeMainImg(this)" style="filter: brightness(0.9);">
-            <img src="assets/img/logo.jpg" alt="Vista 3" onclick="changeMainImg(this)" style="filter: brightness(0.8);">
-            <img src="assets/img/logo.jpg" alt="Vista 4" onclick="changeMainImg(this)" style="filter: brightness(0.7);">
-          </div>
-        </div>
-
-        <div class="pinfo">
-          <div class="badges">
-            <span class="badge strong">Personalizado</span>
-            <span class="badge">Producción 3–7 días</span>
-          </div>
-
-          <h3>Taza personalizada — Edición especial</h3>
-          <p class="desc">
-            Elegí tu diseño, agregá texto o nombre y lo preparamos a medida. Ideal para regalar.
-          </p>
-
-          <div class="info-box">
-            <b>Producción y entrega:</b> Si elegís personalizado, la producción demora entre <b>3 y 7 días hábiles</b>.
-            Luego coordinamos <b>retiro</b> o despachamos por <b>E-Pick</b>.
-          </div>
-
-          <div class="qty">
-            <label for="variante"><b>Variante</b></label>
-            <select id="variante">
-              <option value="diseno1">Diseño 1 - NYC Skyline</option>
-              <option value="diseno2">Diseño 2 - Minimalista</option>
-              <option value="personalizado">Personalizado (tu foto/texto)</option>
-            </select>
-          </div>
-
-          <button class="btn primary add-to-cart" type="button" data-id="7" data-name="Taza Personalizada Especial" data-price="5500">Agregar al carrito</button>
-
-          <div class="line"><span><b>Pagos</b></span><span>Transferencia / Efectivo al retirar</span></div>
-          <div class="line"><span><b>Envíos</b></span><span>Retiro / E-Pick</span></div>
-          <div class="line"><span><b>Tiempo</b></span><span>3–7 días hábiles (si es personalizado)</span></div>
+        <div class="step-item">
+          <div class="step-circle">3</div>
+          <h3>Recibilo en casa</h3>
+          <p>Retirá o lo enviamos por E-Pick con seguimiento incluido.</p>
         </div>
       </div>
     </section>
@@ -531,23 +462,22 @@
       <div class="card" style="padding: 24px;">
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items:start;">
           <div>
-            <h3 style="margin:0 0 12px; font-size:18px;">📬 Escribinos directo</h3>
+            <h3 style="margin:0 0 12px; font-size:18px;">Contacto directo</h3>
             <p class="sub" style="margin:0 0 16px;">
               ¿Querés personalizar algo? Mandanos el diseño/idea y te respondemos rápido.
             </p>
             <div class="hero-cta">
-              <!-- CAMBIAR: El número de WhatsApp está en js/main.js -->
-              <a class="btn primary" href="https://wa.me/5491112345678?text=Hola!%20Quiero%20consultar%20por%20un%20producto" target="_blank" rel="noopener">💬 WhatsApp</a>
-              <a class="btn" href="https://www.instagram.com/newyorkcitydesigns" target="_blank" rel="noopener">📸 Instagram</a>
+              <a class="btn primary" href="https://wa.me/5491123199122?text=Hola!%20Quiero%20consultar%20sobre%20un%20producto" target="_blank" rel="noopener">WhatsApp</a>
+              <a class="btn" href="mailto:newyorkcitydesigns4@gmail.com">Email</a>
             </div>
             
             <div style="margin-top:20px; padding:14px; background:rgba(217,161,167,.15); border-radius:12px;">
-              <p style="margin:0; font-size:13px;"><b>⏰ Horarios de atención:</b><br>Lunes a Viernes: 10:00 - 19:00<br>Sábados: 10:00 - 14:00</p>
+              <p style="margin:0; font-size:13px;"><b>Horarios de atención:</b><br>Lunes a Viernes: 10:00 - 19:00<br>Sábados: 10:00 - 14:00</p>
             </div>
           </div>
           
           <div>
-            <h3 style="margin:0 0 12px; font-size:18px;">📝 O dejanos un mensaje</h3>
+            <h3 style="margin:0 0 12px; font-size:18px;">Escribinos un mensaje</h3>
             <form class="contact-form" onsubmit="handleContactForm(event)">
               <div class="form-row">
                 <input type="text" class="form-input" placeholder="Tu nombre" required>
@@ -571,19 +501,17 @@
           <h4>New York City Designs</h4>
           <p>Personalizados con estética NYC. Minimal, prolijo y con detalles que suman.</p>
           <div class="social-links">
-            <a href="https://wa.me/5491112345678" class="social-link" target="_blank" rel="noopener" title="WhatsApp">💬</a>
-            <a href="https://www.instagram.com/newyorkcitydesigns" class="social-link" target="_blank" rel="noopener" title="Instagram">📸</a>
-            <a href="mailto:hola@nycdesigns.com" class="social-link" title="Email">✉️</a>
+            <a href="https://wa.me/5491123199122" class="social-link" target="_blank" rel="noopener" title="WhatsApp">W</a>
+            <a href="https://www.instagram.com/newyorkcitydesigns" class="social-link" target="_blank" rel="noopener" title="Instagram">IG</a>
+            <a href="mailto:newyorkcitydesigns4@gmail.com" class="social-link" title="Email">✉</a>
           </div>
           <p class="credit">© 2025 New York City Designs</p>
         </div>
         <div class="links">
           <h4>Tienda</h4>
+          <a href="#como-funciona">Cómo funciona</a>
           <a href="#productos">Productos</a>
-          <a href="#personalizados">Personalizados</a>
           <a href="#categorias">Categorías</a>
-          <a href="#videos">Videos</a>
-          <a href="#calculadora">Calculadora</a>
         </div>
         <div class="links">
           <h4>Info</h4>
