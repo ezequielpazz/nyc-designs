@@ -679,6 +679,18 @@
     <div class="cart-items" id="cartItems"></div>
     
     <div class="cart-footer">
+      <div class="cart-coupon">
+        <div class="coupon-input-group">
+          <input type="text" id="couponInput" placeholder="Código de descuento" style="text-transform: uppercase;">
+          <button type="button" id="applyCouponBtn" class="btn btn-secondary">Aplicar</button>
+        </div>
+        <div id="couponMessage" class="coupon-message"></div>
+        <div id="couponApplied" class="coupon-applied" style="display: none;">
+          <span id="couponAppliedText"></span>
+          <button type="button" id="removeCouponBtn" class="remove-coupon">&times;</button>
+        </div>
+      </div>
+      
       <div class="cart-total">
         <span>Total:</span>
         <span id="cartTotal">$0</span>

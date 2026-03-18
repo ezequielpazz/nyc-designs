@@ -100,6 +100,20 @@ function initializeFirebase() {
   }
 }
 
+// ========== FIREBASE COLLECTIONS FOR PUBLIC STORE ==========
+let testimonialsRef = null;
+let configRef = null;
+let couponsRef = null;
+
+function getFirebaseCollections() {
+  if (firebaseDb && !testimonialsRef) {
+    testimonialsRef = firebaseDb.collection('testimonios');
+    configRef = firebaseDb.collection('configuracion');
+    couponsRef = firebaseDb.collection('cupones');
+  }
+  return { testimonialsRef, configRef, couponsRef };
+}
+
 // ========== CARGAR PRODUCTOS DESDE FIREBASE ==========
 
 async function loadProductsFromFirebase() {
@@ -296,10 +310,7 @@ function updateCartUI() {
     return;
   }
 
-  let total = 0;
-  
   cartItems.innerHTML = cart.map((item, index) => {
-    total += item.price;
     return `
       <div class="cart-item">
         <img src="assets/img/logo.jpg" alt="${item.name}">
@@ -312,7 +323,18 @@ function updateCartUI() {
     `;
   }).join('');
 
-  cartTotal.textContent = '$' + total.toLocaleString('es-AR');
+  // Calculate total with coupon discount
+  const { subtotal, discount, total } = calculateCartTotal();
+  
+  // Update total display
+  if (discount > 0) {
+    cartTotal.innerHTML = `
+      <span class="original-price">$${subtotal.toLocaleString('es-AR')}</span>
+      <span class="discounted-price">$${total.toLocaleString('es-AR')}</span>
+    `;
+  } else {
+    cartTotal.textContent = '$' + total.toLocaleString('es-AR');
+  }
 }
 
 function addToCart(id, name, price) {
@@ -334,10 +356,220 @@ function clearCart() {
   updateCartUI();
 }
 
+// ========== LOAD TESTIMONIALS FROM FIREBASE ==========
+async function loadTestimonials() {
+  const container = document.querySelector('.testimonials-grid');
+  if (!container) return;
+  
+  try {
+    if (!firebaseDb) {
+      initializeFirebase();
+    }
+    
+    const { testimonialsRef: ref } = getFirebaseCollections();
+    if (!ref) return;
+    
+    const snapshot = await ref
+      .where('visible', '==', true)
+      .orderBy('createdAt', 'desc')
+      .limit(6)
+      .get();
+    
+    if (snapshot.empty) {
+      // Keep default testimonials if none in Firebase
+      console.log('📝 Using default testimonials');
+      return;
+    }
+    
+    const testimonials = [];
+    snapshot.forEach(doc => {
+      testimonials.push(doc.data());
+    });
+    
+    container.innerHTML = testimonials.map(t => {
+      const stars = '★'.repeat(t.rating || 5);
+      return `
+        <div class="testimonial-card">
+          <div class="testimonial-stars">${stars}</div>
+          <p class="testimonial-text">"${t.text}"</p>
+          <div class="testimonial-author">
+            <span class="author-name">${t.name}</span>
+            <span class="author-location">${t.location}</span>
+          </div>
+        </div>
+      `;
+    }).join('');
+    
+    console.log('✅ Testimonials loaded from Firebase');
+  } catch (error) {
+    console.log('⚠️ Using default testimonials:', error.message);
+  }
+}
+
+// ========== LOAD BANNER CONFIG FROM FIREBASE ==========
+async function loadBannerConfig() {
+  try {
+    if (!firebaseDb) {
+      initializeFirebase();
+    }
+    
+    const { configRef: ref } = getFirebaseCollections();
+    if (!ref) return;
+    
+    const doc = await ref.doc('general').get();
+    if (doc.exists) {
+      const data = doc.data();
+      
+      // Update banner text
+      if (data.bannerText) {
+        const bannerSpan = document.querySelector('.announce .inner span:last-child');
+        if (bannerSpan) {
+          bannerSpan.textContent = data.bannerText;
+        }
+      }
+      
+      // Update production time if set
+      if (data.shipping?.productionTime) {
+        const pill = document.querySelector('.announce .pill');
+        if (pill) {
+          pill.innerHTML = `<span class="dot"></span> Personalizados: ${data.shipping.productionTime}`;
+        }
+      }
+    }
+  } catch (error) {
+    console.log('⚠️ Using default banner config:', error.message);
+  }
+}
+
+// ========== COUPON STATE AND FUNCTIONS ==========
+let appliedCoupon = null;
+
+async function applyCoupon() {
+  const input = document.getElementById('couponInput');
+  const message = document.getElementById('couponMessage');
+  const code = input.value.trim().toUpperCase();
+  
+  if (!code) {
+    message.textContent = 'Ingresá un código';
+    message.className = 'coupon-message error';
+    return;
+  }
+  
+  try {
+    if (!firebaseDb) {
+      initializeFirebase();
+    }
+    
+    const { couponsRef: ref } = getFirebaseCollections();
+    if (!ref) {
+      message.textContent = 'Error al conectar con el servidor';
+      message.className = 'coupon-message error';
+      return;
+    }
+    
+    const snapshot = await ref
+      .where('code', '==', code)
+      .where('active', '==', true)
+      .limit(1)
+      .get();
+    
+    if (snapshot.empty) {
+      message.textContent = 'Código inválido o expirado';
+      message.className = 'coupon-message error';
+      return;
+    }
+    
+    const couponDoc = snapshot.docs[0];
+    const coupon = couponDoc.data();
+    
+    // Check expiry
+    if (coupon.expiry) {
+      const expiryDate = coupon.expiry instanceof Date ? coupon.expiry : new Date(coupon.expiry);
+      if (expiryDate < new Date()) {
+        message.textContent = 'Este cupón ha expirado';
+        message.className = 'coupon-message error';
+        return;
+      }
+    }
+    
+    // Check max uses
+    if (coupon.maxUses && coupon.uses >= coupon.maxUses) {
+      message.textContent = 'Este cupón ya no está disponible';
+      message.className = 'coupon-message error';
+      return;
+    }
+    
+    // Apply coupon
+    appliedCoupon = {
+      id: couponDoc.id,
+      code: coupon.code,
+      type: coupon.type,
+      value: coupon.value
+    };
+    
+    // Update UI
+    message.textContent = '';
+    message.className = 'coupon-message';
+    input.value = '';
+    
+    const appliedDiv = document.getElementById('couponApplied');
+    const appliedText = document.getElementById('couponAppliedText');
+    const discount = coupon.type === 'percentage' ? `${coupon.value}%` : `$${coupon.value}`;
+    appliedText.textContent = `${coupon.code} (-${discount})`;
+    appliedDiv.style.display = 'flex';
+    
+    // Hide input group
+    document.querySelector('.coupon-input-group').style.display = 'none';
+    
+    // Recalculate cart
+    updateCartUI();
+    showToast('¡Cupón aplicado!');
+    
+  } catch (error) {
+    console.error('Error applying coupon:', error);
+    message.textContent = 'Error al verificar cupón';
+    message.className = 'coupon-message error';
+  }
+}
+
+function removeCoupon() {
+  appliedCoupon = null;
+  
+  document.getElementById('couponApplied').style.display = 'none';
+  document.querySelector('.coupon-input-group').style.display = 'flex';
+  document.getElementById('couponMessage').textContent = '';
+  
+  updateCartUI();
+  showToast('Cupón removido');
+}
+
+function calculateCartTotal() {
+  let subtotal = cart.reduce((sum, item) => sum + item.price, 0);
+  let discount = 0;
+  
+  if (appliedCoupon) {
+    if (appliedCoupon.type === 'percentage') {
+      discount = Math.round(subtotal * (appliedCoupon.value / 100));
+    } else {
+      discount = appliedCoupon.value;
+    }
+  }
+  
+  return {
+    subtotal,
+    discount,
+    total: Math.max(0, subtotal - discount)
+  };
+}
+
 // Event listeners para botones de agregar al carrito
 document.addEventListener('DOMContentLoaded', async () => {
   // Cargar configuración
   await loadConfig();
+  
+  // Load testimonials and banner from Firebase
+  await loadTestimonials();
+  await loadBannerConfig();
   
   // Cargar productos desde Firebase (si está configurado) o fallback a HTML
   const productsLoaded = await loadProducts();
@@ -541,11 +773,22 @@ document.addEventListener('DOMContentLoaded', async () => {
       quantity: 1
     }));
 
+    // Calculate total with coupon
+    const { subtotal, discount, total } = calculateCartTotal();
+
     try {
       const resp = await fetch(`${API_URL}/crear-preferencia`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items, payer: { name, email, phone } })
+        body: JSON.stringify({
+          items,
+          payer: { name, email, phone },
+          coupon: appliedCoupon ? {
+            code: appliedCoupon.code,
+            discount: discount
+          } : null,
+          total: total
+        })
       });
 
       if (!resp.ok) throw new Error('Error en el servidor');
@@ -583,6 +826,16 @@ function closeCart() {
 cartBtn?.addEventListener('click', openCart);
 cartOverlay?.addEventListener('click', closeCart);
 cartClose?.addEventListener('click', closeCart);
+
+// ========== COUPON LISTENERS ==========
+document.getElementById('applyCouponBtn')?.addEventListener('click', applyCoupon);
+document.getElementById('removeCouponBtn')?.addEventListener('click', removeCoupon);
+document.getElementById('couponInput')?.addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    applyCoupon();
+  }
+});
 
 // ========== MENÚ MÓVIL ==========
 const hamburger = document.querySelector('.hamburger');
