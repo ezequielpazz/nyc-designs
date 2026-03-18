@@ -838,10 +838,12 @@ const botKnowledge = {
   'domicilio': '🚚 Sí, enviamos a domicilio por E-Pick a todo el país.',
   
   // Pagos
-  'pago': '💳 Aceptamos:\n\n• Transferencia bancaria\n• Efectivo al retirar\n\nPróximamente: MercadoPago',
-  'pagos': '💳 Podés pagar por transferencia o efectivo al retirar.',
-  'transferencia': '🏦 Sí, aceptamos transferencia. Te pasamos los datos al confirmar tu pedido.',
-  'mercadopago': '📱 MercadoPago viene pronto. Por ahora: transferencia o efectivo.',
+  'pago': '💳 Aceptamos todos los medios de pago a través de MercadoPago: tarjetas de crédito, débito y transferencia bancaria. ¡Pagás 100% seguro!',
+  'pagos': '💳 Pagás fácil con MercadoPago. Aceptamos tarjetas de crédito, débito y transferencia. ¡100% seguro!',
+  'transferencia': '🏦 Sí, aceptamos transferencia bancaria a través de MercadoPago. ¡Fácil y seguro!',
+  'mercadopago': '¡Sí! Usamos MercadoPago para todos los pagos. Podés usar tarjeta de crédito, débito o transferencia bancaria. ¡Pagás 100% seguro!',
+  'medios de pago': 'Aceptamos todos los medios de pago a través de MercadoPago: tarjetas de crédito, débito y transferencia bancaria. ¡Pagás 100% seguro!',
+  'como pago': 'Pagás fácil con MercadoPago. Aceptamos tarjetas de crédito, débito y transferencia. Al finalizar tu compra, te redirige automáticamente.',
   
   // Tiempo / Producción
   'tiempo': '⏱️ Productos en stock: 1-2 días.\nPersonalizados: 3-7 días hábiles.',
@@ -886,8 +888,8 @@ const botKnowledge = {
   'adios': '¡Hasta luego! 👋 Gracias por tu consulta.',
   
   // Comprar
-  'comprar': '🛒 Para comprar:\n\n1. Elegí tus productos\n2. Agregalos al carrito\n3. Finalizá por WhatsApp\n\n¡Es súper fácil!',
-  'como compro': '🛒 Agregá productos al carrito y después finalizá el pedido por WhatsApp. Ahí coordinamos pago y envío.',
+  'comprar': '🛒 Para comprar:\n\n1. Elegí tus productos\n2. Agregalos al carrito\n3. Finalizá el pago con MercadoPago\n\n¡Es súper fácil!',
+  'como compro': '🛒 Agregá productos al carrito y pagá con MercadoPago de forma segura. Si es personalizado, te contactamos después.',
   'pedir': '🛒 Podés armar tu pedido desde la tienda o escribirnos directo por WhatsApp si tenés algo específico en mente.',
   
   // Humano

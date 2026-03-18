@@ -1271,6 +1271,21 @@ footer {
   border-color: var(--rose);
 }
 
+.btn.full-width {
+  width: 100%;
+}
+
+/* Payment Methods Info */
+.payment-methods {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  font-size: 12px;
+  color: var(--taupe);
+}
+
 /* ========== LIGHTBOX ========== */
 .lightbox {
   position: fixed;
