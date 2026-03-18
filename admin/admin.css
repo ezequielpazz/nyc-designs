@@ -2313,10 +2313,17 @@ select:focus {
 }
 
 .settings-card h3 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
     margin: 0 0 var(--spacing-lg) 0;
     color: var(--text-primary);
     font-size: 16px;
     font-weight: 600;
+}
+
+.settings-card h3 svg {
+    color: var(--primary);
 }
 
 .settings-card p {
@@ -2637,6 +2644,12 @@ select:focus {
 
     /* Products grid - single column */
     .products-grid {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-lg);
+    }
+
+    /* Settings grid - single column on mobile */
+    .settings-grid {
         grid-template-columns: 1fr;
         gap: var(--spacing-lg);
     }

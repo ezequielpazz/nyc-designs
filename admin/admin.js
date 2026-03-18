@@ -1386,7 +1386,7 @@ async function deleteMessage(id) {
 
 async function loadSettings() {
     try {
-        const settingsDoc = await db.collection('configuracion').doc('settings').get();
+        const settingsDoc = await db.collection('configuracion').doc('general').get();
         
         if (!settingsDoc.exists) {
             console.log('No settings found, using defaults');
@@ -1394,7 +1394,42 @@ async function loadSettings() {
         }
         
         const settings = settingsDoc.data();
-        console.log('Settings loaded:', settings);
+        
+        // Load banner text
+        if (settings.bannerText) {
+            const bannerInput = document.getElementById('bannerText');
+            if (bannerInput) bannerInput.value = settings.bannerText;
+        }
+        
+        // Load hours
+        if (settings.hours) {
+            if (settings.hours.weekday) {
+                const weekdayInput = document.getElementById('hoursWeekday');
+                if (weekdayInput) weekdayInput.value = settings.hours.weekday;
+            }
+            if (settings.hours.saturday) {
+                const saturdayInput = document.getElementById('hoursSaturday');
+                if (saturdayInput) saturdayInput.value = settings.hours.saturday;
+            }
+            if (settings.hours.sunday) {
+                const sundayInput = document.getElementById('hoursSunday');
+                if (sundayInput) sundayInput.value = settings.hours.sunday;
+            }
+        }
+        
+        // Load shipping info
+        if (settings.shipping) {
+            if (settings.shipping.productionTime) {
+                const timeInput = document.getElementById('productionTime');
+                if (timeInput) timeInput.value = settings.shipping.productionTime;
+            }
+            if (settings.shipping.methods) {
+                const methodsInput = document.getElementById('shippingMethods');
+                if (methodsInput) methodsInput.value = settings.shipping.methods;
+            }
+        }
+        
+        console.log('✅ Settings loaded');
     } catch (error) {
         console.error('❌ Error loading settings:', error);
     }
@@ -1402,36 +1437,51 @@ async function loadSettings() {
 
 async function saveSettings(type) {
     try {
-        const settingsRef = db.collection('configuracion').doc('settings');
+        const settingsRef = db.collection('configuracion').doc('general');
         
         if (type === 'banner') {
             const bannerText = document.getElementById('bannerText')?.value;
-            await settingsRef.update({
-                bannerText: bannerText
-            });
+            if (!bannerText) {
+                showToast('Ingresá el texto del banner');
+                return;
+            }
+            await settingsRef.set({
+                bannerText: bannerText,
+                updatedAt: new Date()
+            }, { merge: true });
+            showToast('✅ Banner guardado');
         } else if (type === 'hours') {
             const weekday = document.getElementById('hoursWeekday')?.value;
             const saturday = document.getElementById('hoursSaturday')?.value;
             const sunday = document.getElementById('hoursSunday')?.value;
-            await settingsRef.update({
-                'hours.weekday': weekday,
-                'hours.saturday': saturday,
-                'hours.sunday': sunday
-            });
+            
+            await settingsRef.set({
+                hours: {
+                    weekday,
+                    saturday,
+                    sunday
+                },
+                updatedAt: new Date()
+            }, { merge: true });
+            showToast('✅ Horarios guardados');
         } else if (type === 'shipping') {
-            const time = document.getElementById('shippingTime')?.value;
-            const methods = document.getElementById('shippingMethods')?.value;
-            await settingsRef.update({
-                'shipping.productionTime': time,
-                'shipping.methods': methods
-            });
+            const productionTime = document.getElementById('productionTime')?.value;
+            const shippingMethods = document.getElementById('shippingMethods')?.value;
+            
+            await settingsRef.set({
+                shipping: {
+                    productionTime,
+                    methods: shippingMethods
+                },
+                updatedAt: new Date()
+            }, { merge: true });
+            showToast('✅ Información de envíos guardada');
         }
         
         console.log('✅ Settings saved');
-        alert('Configuración guardada exitosamente');
     } catch (error) {
         console.error('❌ Error saving settings:', error);
-        alert('Error al guardar configuración');
+        showToast('Error al guardar configuración');
     }
 }
 
@@ -1698,6 +1748,18 @@ function setupEventListeners() {
         showToast('Sincronizando con Firebase...', 'info');
         await loadProducts();
         showToast('✅ Sincronización completada', 'success');
+    });
+    
+    document.getElementById('saveBannerBtn')?.addEventListener('click', () => {
+        saveSettings('banner');
+    });
+    
+    document.getElementById('saveHoursBtn')?.addEventListener('click', () => {
+        saveSettings('hours');
+    });
+    
+    document.getElementById('saveShippingBtn')?.addEventListener('click', () => {
+        saveSettings('shipping');
     });
     
     // ========== SEARCH ==========
