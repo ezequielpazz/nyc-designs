@@ -1013,6 +1013,16 @@ footer {
   padding: 20px;
   border-top: 1px solid rgba(138,111,106,.2);
 }
+
+/* Footer Hours */
+.footer-hours {
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.footer-hours p {
+  margin: 4px 0;
+}
 .cart-total {
   display: flex;
   justify-content: space-between;

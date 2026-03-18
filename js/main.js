@@ -406,7 +406,7 @@ async function loadTestimonials() {
   }
 }
 
-// ========== LOAD BANNER CONFIG FROM FIREBASE ==========
+// ========== LOAD ALL CONFIG FROM FIREBASE ==========
 async function loadBannerConfig() {
   try {
     if (!firebaseDb) {
@@ -417,27 +417,86 @@ async function loadBannerConfig() {
     if (!ref) return;
     
     const doc = await ref.doc('general').get();
-    if (doc.exists) {
-      const data = doc.data();
-      
-      // Update banner text
-      if (data.bannerText) {
-        const bannerSpan = document.querySelector('.announce .inner span:last-child');
-        if (bannerSpan) {
-          bannerSpan.textContent = data.bannerText;
-        }
-      }
-      
-      // Update production time if set
-      if (data.shipping?.productionTime) {
-        const pill = document.querySelector('.announce .pill');
-        if (pill) {
-          pill.innerHTML = `<span class="dot"></span> Personalizados: ${data.shipping.productionTime}`;
-        }
+    if (!doc.exists) {
+      console.log('⚠️ No config found in Firebase, using defaults');
+      return;
+    }
+    
+    const data = doc.data();
+    console.log('📋 Config loaded from Firebase:', data);
+    
+    // ===== UPDATE BANNER TEXT =====
+    if (data.bannerText) {
+      const bannerSpan = document.querySelector('.announce .inner span:last-child');
+      if (bannerSpan) {
+        bannerSpan.textContent = data.bannerText;
       }
     }
+    
+    // ===== UPDATE PRODUCTION TIME EVERYWHERE =====
+    if (data.shipping?.productionTime) {
+      const productionTime = data.shipping.productionTime;
+      
+      // Banner pill
+      const pill = document.querySelector('.announce .pill');
+      if (pill) {
+        pill.innerHTML = `<span class="dot"></span> Personalizados: ${productionTime}`;
+      }
+      
+      // Hero mini-info
+      const heroMini = document.querySelector('.mini-info .mini:nth-child(3) .v');
+      if (heroMini) {
+        heroMini.textContent = `Producción ${productionTime}`;
+      }
+      
+      // FAQ - first question about production time
+      const faqAnswers = document.querySelectorAll('.faq-answer p');
+      faqAnswers.forEach(p => {
+        if (p.textContent.includes('días hábiles')) {
+          p.innerHTML = p.innerHTML.replace(/\d+[-–]\d+\s*días\s*hábiles/gi, productionTime);
+        }
+      });
+      
+      // Product cards with "X-X días" text
+      document.querySelectorAll('.product .price span').forEach(span => {
+        if (span.textContent.match(/\d+-\d+\s*días/i)) {
+          span.textContent = productionTime;
+        }
+      });
+    }
+    
+    // ===== UPDATE SHIPPING METHODS =====
+    if (data.shipping?.methods) {
+      const heroShipping = document.querySelector('.mini-info .mini:nth-child(2) .v');
+      if (heroShipping) {
+        heroShipping.textContent = data.shipping.methods;
+      }
+    }
+    
+    // ===== UPDATE HOURS IN FOOTER AND CHATBOT =====
+    if (data.hours) {
+      // Update footer hours if exists
+      const footerHours = document.querySelector('.footer-hours');
+      if (footerHours) {
+        footerHours.innerHTML = `
+          <p><b>Lunes a Viernes:</b> ${data.hours.weekday || '10:00 - 19:00'}</p>
+          <p><b>Sábados:</b> ${data.hours.saturday || '10:00 - 14:00'}</p>
+          <p><b>Domingos:</b> ${data.hours.sunday || 'Cerrado'}</p>
+        `;
+      }
+      
+      // Update chatbot knowledge
+      if (typeof botKnowledge !== 'undefined') {
+        const hoursText = `⏰ Atención:\n\nLunes a Viernes: ${data.hours.weekday || '10:00 - 19:00'}\nSábados: ${data.hours.saturday || '10:00 - 14:00'}\nDomingos: ${data.hours.sunday || 'Cerrado'}`;
+        botKnowledge['horario'] = hoursText;
+        botKnowledge['atienden'] = `⏰ Lun-Vie ${data.hours.weekday}, Sáb ${data.hours.saturday}`;
+      }
+    }
+    
+    console.log('✅ All config applied from Firebase');
+    
   } catch (error) {
-    console.log('⚠️ Using default banner config:', error.message);
+    console.log('⚠️ Using default config:', error.message);
   }
 }
 
@@ -570,6 +629,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Load testimonials and banner from Firebase
   await loadTestimonials();
   await loadBannerConfig();
+  
+  // Coupon event listeners
+  document.getElementById('applyCouponBtn')?.addEventListener('click', applyCoupon);
+  document.getElementById('removeCouponBtn')?.addEventListener('click', removeCoupon);
+  document.getElementById('couponInput')?.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      applyCoupon();
+    }
+  });
   
   // Cargar productos desde Firebase (si está configurado) o fallback a HTML
   const productsLoaded = await loadProducts();
@@ -1099,6 +1168,8 @@ const botKnowledge = {
   'como pago': 'Pagás fácil con MercadoPago. Aceptamos tarjetas de crédito, débito y transferencia. Al finalizar tu compra, te redirige automáticamente.',
   
   // Tiempo / Producción
+  // NOTE: 'horario' and 'atienden' responses are updated dynamically 
+  // by loadBannerConfig() when Firebase config is loaded
   'tiempo': '⏱️ Productos en stock: 1-2 días.\nPersonalizados: 3-7 días hábiles.',
   'tarda': '⏱️ Los personalizados tardan 3-7 días hábiles. Productos en stock salen más rápido.',
   'demora': '⏱️ Personalizados: 3-7 días hábiles + envío.',
@@ -1285,3 +1356,5 @@ window.changeMainImg = changeMainImg;
 window.removeFromCart = removeFromCart;
 window.filterProducts = filterProducts;
 window.handleContactForm = handleContactForm;
+window.applyCoupon = applyCoupon;
+window.removeCoupon = removeCoupon;
