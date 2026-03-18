@@ -785,21 +785,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // inicializar calculadora de precios
-  updateCalc();
-  ['calcProduct','calcPersonalizado','calcCaja','calcEnvio','calcCantidad'].forEach(id=>{
-    document.getElementById(id)?.addEventListener('input', updateCalc);
-  });
-  document.getElementById('calcWhatsappBtn')?.addEventListener('click', () => {
-    const qty = document.getElementById('calcCantidad').value;
-    const prod = document.getElementById('calcProduct').value;
-    let details = `Producto: ${prod}\nCantidad: ${qty}`;
-    if(document.getElementById('calcPersonalizado').checked) details += '\n+ Personalización';
-    if(document.getElementById('calcCaja').checked) details += '\n+ Caja';
-    if(document.getElementById('calcEnvio').checked) details += '\n+ Envío';
-    details += `\nSubtotal: $${document.getElementById('calcSubtotal').textContent}`;
-    window.open(`https://wa.me/${CONFIG.WHATSAPP_NUMBER}?text=Hola!%20Quiero%20consultar%20este%20pedido:%0A%0A${encodeURIComponent(details)}`, '_blank');
-  });
+  // inicializar calculadora de precios (only if exists)
+  if (document.getElementById('calcProduct')) {
+    updateCalc();
+    ['calcProduct','calcPersonalizado','calcCaja','calcEnvio','calcCantidad'].forEach(id=>{
+      document.getElementById(id)?.addEventListener('input', updateCalc);
+    });
+    document.getElementById('calcWhatsappBtn')?.addEventListener('click', () => {
+      const qty = document.getElementById('calcCantidad').value;
+      const prod = document.getElementById('calcProduct').value;
+      let details = `Producto: ${prod}\nCantidad: ${qty}`;
+      if(document.getElementById('calcPersonalizado').checked) details += '\n+ Personalización';
+      if(document.getElementById('calcCaja').checked) details += '\n+ Caja';
+      if(document.getElementById('calcEnvio').checked) details += '\n+ Envío';
+      details += `\nSubtotal: $${document.getElementById('calcSubtotal').textContent}`;
+      window.open(`https://wa.me/${CONFIG.WHATSAPP_NUMBER}?text=Hola!%20Quiero%20consultar%20este%20pedido:%0A%0A${encodeURIComponent(details)}`, '_blank');
+    });
+  }
 
   // listeners para MercadoPago modal
   const mpOpenBtn = document.getElementById('mpOpenBtn');
@@ -1075,7 +1077,11 @@ function showToast(message) {
 
 // ========== CALCULADORA DE PRECIO ==========
 function updateCalc() {
-  const prod = document.getElementById('calcProduct')?.value;
+  // Check if calculator elements exist
+  const calcProduct = document.getElementById('calcProduct');
+  if (!calcProduct) return; // Calculator not present, skip
+  
+  const prod = calcProduct.value;
   let subtotal = PRICES[prod] || 0;
   if (document.getElementById('calcPersonalizado').checked) subtotal += PRICES.personalizacion;
   if (document.getElementById('calcCaja').checked) subtotal += PRICES.caja;
