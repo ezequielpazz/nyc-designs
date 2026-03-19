@@ -1,0 +1,20 @@
+# NYC Designs - robots.txt
+# https://nyc-designs.vercel.app
+
+User-agent: *
+Allow: /
+
+# Block admin
+Disallow: /admin/
+Disallow: /admin
+
+# Block internal files
+Disallow: /server/
+Disallow: /*.json$
+Disallow: /*.env$
+
+# Sitemap
+Sitemap: https://nyc-designs.vercel.app/sitemap.xml
+
+# Crawl-delay
+Crawl-delay: 1

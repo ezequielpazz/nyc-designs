@@ -1560,26 +1560,25 @@ function animateCounters() {
   const counters = document.querySelectorAll('.proof-number[data-target]');
 
   counters.forEach(counter => {
-    const target = parseInt(counter.dataset.target);
-    const duration = 2000;
-    const increment = target / (duration / 16);
-    let current = 0;
-
-    const updateCounter = () => {
-      current += increment;
-      if (current < target) {
-        counter.textContent = Math.floor(current);
-        requestAnimationFrame(updateCounter);
-      } else {
-        counter.textContent = target;
-      }
-    };
+    const target = parseInt(counter.getAttribute('data-target'));
+    let counted = false;
 
     const observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          updateCounter();
-          observer.unobserve(entry.target);
+        if (entry.isIntersecting && !counted) {
+          counted = true;
+          let current = 0;
+          const increment = target / 60;
+          const timer = setInterval(() => {
+            current += increment;
+            if (current >= target) {
+              counter.textContent = target;
+              clearInterval(timer);
+            } else {
+              counter.textContent = Math.floor(current);
+            }
+          }, 30);
+          observer.unobserve(counter);
         }
       });
     }, { threshold: 0.5 });
@@ -1639,13 +1638,54 @@ function showProductSkeletons() {
 
 // ========== INICIALIZAR MEJORAS ==========
 document.addEventListener('DOMContentLoaded', () => {
-  animateCounters();
+  setTimeout(animateCounters, 500);
 
   setTimeout(() => {
     updateStockWarnings();
     addInstallments();
   }, 1500);
 });
+
+// ========== PAYMENT SUCCESS HANDLER ==========
+function showPersonalizationSection() {
+  const section = document.getElementById('personalizados');
+  if (section) {
+    section.style.display = 'block';
+    section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+
+function checkPaymentReturn() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const status = urlParams.get('collection_status') || urlParams.get('status');
+
+  if (status === 'approved') {
+    showPersonalizationSection();
+    showToast('¡Pago exitoso! Envianos los detalles de personalización.', 'success');
+
+    // Clear cart after successful payment
+    cart = [];
+    localStorage.setItem('nycCart', JSON.stringify(cart));
+    updateCartUI();
+
+    // Track purchase
+    const ref = urlParams.get('external_reference');
+    const paymentId = urlParams.get('payment_id');
+    if (ref || paymentId) {
+      trackPurchase(ref || paymentId, 0);
+    }
+
+    // Clean URL
+    window.history.replaceState({}, document.title, window.location.pathname);
+
+  } else if (status === 'failure' || status === 'rejected') {
+    showToast('El pago no se completó. Intentá de nuevo.', 'error');
+  } else if (status === 'pending') {
+    showToast('Tu pago está pendiente de confirmación.', 'warning');
+  }
+}
+
+document.addEventListener('DOMContentLoaded', checkPaymentReturn);
 
 // ========== ANALYTICS TRACKING ==========
 
@@ -1807,6 +1847,7 @@ window.applyCoupon = applyCoupon;
 window.removeCoupon = removeCoupon;
 window.openProductModal = openProductModal;
 window.closeProductModal = closeProductModal;
+window.showPersonalizationSection = showPersonalizationSection;
 window.showExitPopup = showExitPopup;
 window.closeExitPopup = closeExitPopup;
 window.showToast = showToast;
