@@ -34,6 +34,23 @@
   
   <!-- ESTILOS -->
   <link rel="stylesheet" href="css/styles.css">
+
+  <!-- Google Analytics 4 -->
+  <!-- TODO: Replace G-XXXXXXXXXX with your actual GA4 Measurement ID -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-XXXXXXXXXX');
+
+    // Track page views
+    gtag('event', 'page_view', {
+      page_title: document.title,
+      page_location: window.location.href
+    });
+  </script>
+
 </head>
 <body>
 
@@ -215,6 +232,28 @@
           <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
         </svg>
         <span>Atención personalizada</span>
+      </div>
+    </section>
+
+    <!-- SOCIAL PROOF COUNTER -->
+    <section class="social-proof fade-in">
+      <div class="proof-grid">
+        <div class="proof-item">
+          <span class="proof-number" data-target="847">0</span>
+          <span class="proof-label">Clientes felices</span>
+        </div>
+        <div class="proof-item">
+          <span class="proof-number" data-target="1250">0</span>
+          <span class="proof-label">Productos entregados</span>
+        </div>
+        <div class="proof-item">
+          <span class="proof-number" data-target="98">0</span>
+          <span class="proof-label">% Satisfacción</span>
+        </div>
+        <div class="proof-item">
+          <span class="proof-number" data-target="5">0</span>
+          <span class="proof-label">Años de experiencia</span>
+        </div>
       </div>
     </section>
 
@@ -684,7 +723,19 @@
       <h3>Tu carrito</h3>
       <button class="cart-close" id="cartClose">&times;</button>
     </div>
-    <div class="cart-items" id="cartItems"></div>
+    <div class="cart-items" id="cartItems">
+      <!-- Empty state (shown when cart is empty) -->
+      <div class="empty-state" id="cartEmpty">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <circle cx="9" cy="21" r="1"></circle>
+          <circle cx="20" cy="21" r="1"></circle>
+          <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+        </svg>
+        <h3>Tu carrito está vacío</h3>
+        <p>¡Agregá productos para comenzar!</p>
+        <a href="#productos" class="btn primary" onclick="closeCart()">Ver productos</a>
+      </div>
+    </div>
     
     <div class="cart-footer">
       <div class="cart-coupon">
@@ -960,6 +1011,25 @@
           </a>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- EXIT INTENT POPUP -->
+  <div class="exit-popup" id="exitPopup">
+    <div class="exit-popup-content">
+      <button class="exit-popup-close" id="exitPopupClose">&times;</button>
+      <h3>🎁 ¡Esperá! Tenemos algo para vos</h3>
+      <p>Antes de irte, llevate un <strong>10% OFF</strong> en tu primera compra</p>
+      <div class="discount-code">BIENVENIDO10</div>
+      <p style="font-size: 12px; color: #999;">Válido por 48 horas</p>
+      <button class="btn primary" id="copyDiscountCode">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+        </svg>
+        Copiar código
+      </button>
+      <a href="#productos" class="btn" onclick="closeExitPopup()" style="margin-top: 10px; display: block;">Ver productos</a>
     </div>
   </div>
 

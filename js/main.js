@@ -21,7 +21,9 @@ const CONFIG = {
 };
 
 // URL de la API de backend (cambiar en producción si usa otro host)
-const API_URL = 'http://localhost:3000';
+const API_URL = window.location.hostname === 'localhost'
+  ? 'http://localhost:3000'
+  : '/api';
 
 // ========== FIREBASE CONFIG ==========
 // Configuración de Firebase para Firestore y Autenticación
@@ -238,6 +240,7 @@ function renderProductsPage(page = 1, category = 'todos', searchTerm = '') {
   grid.innerHTML = pageProducts.map(p => `
     <article class="product" data-id="${p.id}" data-name="${p.name}" data-price="${p.price}" data-category="${p.category}">
       <div class="pimg" onclick="openProductModal(${JSON.stringify(p).replace(/"/g, '&quot;')})">
+        ${p.old_price && p.old_price > p.price ? `<span class="discount-badge">-${Math.round((1 - p.price/p.old_price) * 100)}%</span>` : ''}
         <img src="${p.image1}" alt="${p.name}" onerror="this.src='assets/img/logo.jpg'">
         <div class="pimg-overlay">
           <span>Ver detalles</span>
@@ -1207,13 +1210,20 @@ document.querySelectorAll('.faq-question').forEach(question => {
   });
 });
 
-// ========== TOAST ==========
-function showToast(message) {
+// ========== TOAST MEJORADO ==========
+function showToast(message, type = 'success') {
   const toast = document.getElementById('toast');
   const toastText = document.getElementById('toastText');
-  if (toastText) toastText.textContent = message;
-  toast?.classList.add('show');
-  setTimeout(() => toast?.classList.remove('show'), 3000);
+
+  if (toast && toastText) {
+    toast.className = 'toast ' + type;
+    toastText.textContent = message;
+    toast.classList.add('show');
+
+    setTimeout(() => {
+      toast.classList.remove('show');
+    }, 3000);
+  }
 }
 
 // ========== CALCULADORA DE PRECIO ==========
@@ -1383,10 +1393,16 @@ const quickReplies = [
   '👤 Hablar con humano'
 ];
 
+function sanitizeHTML(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML.replace(/\n/g, '<br>');
+}
+
 function addMessage(text, isBot = false, showQuickReplies = false) {
   const messageDiv = document.createElement('div');
   messageDiv.className = `chat-message ${isBot ? 'bot' : 'user'}`;
-  messageDiv.innerHTML = text.replace(/\n/g, '<br>');
+  messageDiv.innerHTML = sanitizeHTML(text);
   chatMessages?.appendChild(messageDiv);
 
   if (showQuickReplies && isBot) {
@@ -1496,6 +1512,290 @@ chatInput?.addEventListener('keypress', (e) => {
   if (e.key === 'Enter') sendMessage();
 });
 
+// ========== EXIT POPUP ==========
+let exitPopupShown = false;
+
+function showExitPopup() {
+  if (exitPopupShown) return;
+  if (sessionStorage.getItem('exitPopupClosed')) return;
+
+  const popup = document.getElementById('exitPopup');
+  if (popup) {
+    popup.classList.add('active');
+    exitPopupShown = true;
+    trackEvent('exit_intent_shown');
+  }
+}
+
+function closeExitPopup() {
+  const popup = document.getElementById('exitPopup');
+  if (popup) {
+    popup.classList.remove('active');
+    sessionStorage.setItem('exitPopupClosed', 'true');
+  }
+}
+
+// Detectar intención de salida (mouse sale de la ventana)
+document.addEventListener('mouseout', (e) => {
+  if (e.clientY <= 0 && !exitPopupShown) {
+    showExitPopup();
+  }
+});
+
+document.getElementById('exitPopupClose')?.addEventListener('click', closeExitPopup);
+document.getElementById('exitPopup')?.addEventListener('click', (e) => {
+  if (e.target.id === 'exitPopup') closeExitPopup();
+});
+
+document.getElementById('copyDiscountCode')?.addEventListener('click', () => {
+  const code = document.querySelector('.discount-code')?.textContent;
+  if (code) {
+    navigator.clipboard.writeText(code);
+    showToast('¡Código copiado!', 'success');
+  }
+});
+
+// ========== CONTADOR ANIMADO ==========
+function animateCounters() {
+  const counters = document.querySelectorAll('.proof-number[data-target]');
+
+  counters.forEach(counter => {
+    const target = parseInt(counter.dataset.target);
+    const duration = 2000;
+    const increment = target / (duration / 16);
+    let current = 0;
+
+    const updateCounter = () => {
+      current += increment;
+      if (current < target) {
+        counter.textContent = Math.floor(current);
+        requestAnimationFrame(updateCounter);
+      } else {
+        counter.textContent = target;
+      }
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          updateCounter();
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.5 });
+
+    observer.observe(counter);
+  });
+}
+
+// ========== URGENCIA - POCAS UNIDADES ==========
+function updateStockWarnings() {
+  document.querySelectorAll('.product').forEach(product => {
+    const stockEl = product.querySelector('.price span:last-child');
+    if (stockEl) {
+      const stockText = stockEl.textContent.toLowerCase();
+      if (!stockText.includes('sin stock') && Math.random() < 0.3) {
+        const units = Math.floor(Math.random() * 5) + 1;
+        const warning = document.createElement('span');
+        warning.className = 'stock-warning';
+        warning.textContent = `¡Solo ${units} disponibles!`;
+        stockEl.parentNode.insertBefore(warning, stockEl);
+        stockEl.style.display = 'none';
+      }
+    }
+  });
+}
+
+// ========== CUOTAS VISIBLES ==========
+function addInstallments() {
+  document.querySelectorAll('.product .price strong').forEach(priceEl => {
+    const price = parseInt(priceEl.textContent.replace(/\D/g, ''));
+    if (price >= 3000) {
+      const installment = Math.floor(price / 3);
+      const installmentEl = document.createElement('div');
+      installmentEl.className = 'installments';
+      installmentEl.innerHTML = `o <strong>3 cuotas de $${installment.toLocaleString('es-AR')}</strong>`;
+      priceEl.parentNode.appendChild(installmentEl);
+    }
+  });
+}
+
+// ========== SKELETON LOADING ==========
+function showProductSkeletons() {
+  const grid = document.getElementById('productGrid');
+  if (!grid) return;
+
+  grid.innerHTML = Array(8).fill('').map(() => `
+    <article class="product skeleton-product">
+      <div class="skeleton" style="height: 200px;"></div>
+      <div style="padding: 16px;">
+        <div class="skeleton skeleton-text"></div>
+        <div class="skeleton skeleton-text short"></div>
+        <div class="skeleton" style="height: 40px; margin-top: 12px;"></div>
+      </div>
+    </article>
+  `).join('');
+}
+
+// ========== INICIALIZAR MEJORAS ==========
+document.addEventListener('DOMContentLoaded', () => {
+  animateCounters();
+
+  setTimeout(() => {
+    updateStockWarnings();
+    addInstallments();
+  }, 1500);
+});
+
+// ========== ANALYTICS TRACKING ==========
+
+function trackEvent(eventName, params = {}) {
+  // Google Analytics 4
+  if (typeof gtag !== 'undefined') {
+    gtag('event', eventName, params);
+  }
+
+  console.log('📊 Event tracked:', eventName, params);
+}
+
+// Track add to cart
+const originalAddToCart = addToCart;
+addToCart = function(id, name, price) {
+  trackEvent('add_to_cart', {
+    currency: 'ARS',
+    value: price,
+    items: [{ item_id: id, item_name: name, price: price }]
+  });
+  return originalAddToCart.apply(this, arguments);
+};
+
+// Track begin checkout
+function trackBeginCheckout() {
+  const total = cart.reduce((sum, item) => sum + item.price, 0);
+  trackEvent('begin_checkout', {
+    currency: 'ARS',
+    value: total,
+    items: cart.map(item => ({
+      item_id: item.id,
+      item_name: item.name,
+      price: item.price,
+      quantity: 1
+    }))
+  });
+}
+
+// Track purchase (call after successful payment)
+function trackPurchase(orderId, total) {
+  trackEvent('purchase', {
+    transaction_id: orderId,
+    currency: 'ARS',
+    value: total,
+    items: cart.map(item => ({
+      item_id: item.id,
+      item_name: item.name,
+      price: item.price,
+      quantity: 1
+    }))
+  });
+}
+
+// Track product view (in modal)
+const originalOpenProductModal = openProductModal;
+openProductModal = function(productData) {
+  trackEvent('view_item', {
+    currency: 'ARS',
+    value: productData.price,
+    items: [{
+      item_id: productData.id,
+      item_name: productData.name,
+      price: productData.price,
+      item_category: productData.category
+    }]
+  });
+  return originalOpenProductModal.apply(this, arguments);
+};
+
+// Track search
+function trackSearch(searchTerm) {
+  if (searchTerm && searchTerm.length > 2) {
+    trackEvent('search', { search_term: searchTerm });
+  }
+}
+
+// Track contact form
+function trackContactSubmit() {
+  trackEvent('generate_lead', { lead_type: 'contact_form' });
+}
+
+// ========== MERCADOPAGO CHECKOUT MEJORADO ==========
+
+async function processPayment() {
+  const payBtn = document.getElementById('mpPayBtn');
+  if (!payBtn) return;
+
+  payBtn.classList.add('loading');
+  payBtn.disabled = true;
+
+  try {
+    trackBeginCheckout();
+
+    const name = document.getElementById('mpName')?.value;
+    const email = document.getElementById('mpEmail')?.value;
+    const phone = document.getElementById('mpPhone')?.value;
+
+    const items = cart.map(item => ({
+      id: item.id,
+      title: item.name,
+      quantity: 1,
+      unit_price: item.price
+    }));
+
+    const { total } = calculateCartTotal();
+
+    const response = await fetch(`${API_URL}/crear-preferencia`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        items,
+        payer: { name, email, phone },
+        coupon: appliedCoupon ? { code: appliedCoupon.code, discount: total } : null,
+        total,
+        external_reference: `order_${Date.now()}`
+      })
+    });
+
+    const data = await response.json();
+
+    if (data.init_point) {
+      await saveOrderToFirebase({ items, total, customer: { name, email, phone }, external_reference: data.external_reference });
+      window.location.href = data.init_point;
+    } else {
+      throw new Error(data.error || 'Respuesta inválida');
+    }
+
+  } catch (error) {
+    console.error('Payment error:', error);
+    showToast('Error al procesar el pago. Intentá de nuevo.', 'error');
+  } finally {
+    payBtn.classList.remove('loading');
+    payBtn.disabled = false;
+  }
+}
+
+async function saveOrderToFirebase(orderData) {
+  if (!firebaseDb) return;
+
+  try {
+    await firebaseDb.collection('pedidos').add({
+      ...orderData,
+      status: 'pendiente',
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  } catch (error) {
+    console.error('Error saving order:', error);
+  }
+}
+
 // ========== EXPONER FUNCIONES GLOBALES ==========
 window.openLightbox = openLightbox;
 window.closeLightbox = closeLightbox;
@@ -1507,3 +1807,12 @@ window.applyCoupon = applyCoupon;
 window.removeCoupon = removeCoupon;
 window.openProductModal = openProductModal;
 window.closeProductModal = closeProductModal;
+window.showExitPopup = showExitPopup;
+window.closeExitPopup = closeExitPopup;
+window.showToast = showToast;
+window.showProductSkeletons = showProductSkeletons;
+window.trackBeginCheckout = trackBeginCheckout;
+window.trackPurchase = trackPurchase;
+window.trackSearch = trackSearch;
+window.trackContactSubmit = trackContactSubmit;
+window.processPayment = processPayment;
