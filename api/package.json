@@ -1,0 +1,8 @@
+{
+  "name": "nyc-designs-api",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "mercadopago": "^2.0.8"
+  }
+}
