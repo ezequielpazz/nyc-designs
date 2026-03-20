@@ -942,7 +942,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }));
 
     // Calculate total with coupon
-    const { subtotal, discount, total } = calculateCartTotal();
+    const { discount, total } = calculateCartTotal();
 
     try {
       const resp = await fetch(`${API_URL}/crear-preferencia`, {
@@ -1559,32 +1559,46 @@ document.getElementById('copyDiscountCode')?.addEventListener('click', () => {
 function animateCounters() {
   const counters = document.querySelectorAll('.proof-number[data-target]');
 
+  if (counters.length === 0) {
+    console.warn('No counters found');
+    return;
+  }
+
   counters.forEach(counter => {
     const target = parseInt(counter.getAttribute('data-target'));
-    let counted = false;
+    if (!target || isNaN(target)) return;
+
+    let hasAnimated = false;
+
+    const runAnimation = () => {
+      if (hasAnimated) return;
+      hasAnimated = true;
+
+      let current = 0;
+      const increment = target / 100;
+
+      const timer = setInterval(() => {
+        current += increment;
+        if (current >= target) {
+          counter.textContent = target;
+          clearInterval(timer);
+        } else {
+          counter.textContent = Math.floor(current);
+        }
+      }, 20);
+    };
 
     const observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting && !counted) {
-          counted = true;
-          let current = 0;
-          const increment = target / 60;
-          const timer = setInterval(() => {
-            current += increment;
-            if (current >= target) {
-              counter.textContent = target;
-              clearInterval(timer);
-            } else {
-              counter.textContent = Math.floor(current);
-            }
-          }, 30);
-          observer.unobserve(counter);
-        }
-      });
-    }, { threshold: 0.5 });
+      if (entries[0].isIntersecting) {
+        runAnimation();
+        observer.disconnect();
+      }
+    }, { threshold: 0.1 });
 
     observer.observe(counter);
   });
+
+  console.log('✅ Counters initialized:', counters.length);
 }
 
 // ========== URGENCIA - POCAS UNIDADES ==========
@@ -1638,7 +1652,7 @@ function showProductSkeletons() {
 
 // ========== INICIALIZAR MEJORAS ==========
 document.addEventListener('DOMContentLoaded', () => {
-  setTimeout(animateCounters, 500);
+  setTimeout(animateCounters, 300);
 
   setTimeout(() => {
     updateStockWarnings();
