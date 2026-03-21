@@ -750,6 +750,38 @@
         </div>
       </div>
       
+      <div class="shipping-section">
+        <h4>Método de entrega</h4>
+        <div class="shipping-options">
+          <label class="shipping-option">
+            <input type="radio" name="shipping" value="pickup" checked>
+            <span class="shipping-option-content">
+              <span class="shipping-option-title">🏠 Retiro en punto</span>
+              <span class="shipping-option-price">Gratis</span>
+              <span class="shipping-option-desc">Coordinamos día y horario por WhatsApp</span>
+            </span>
+          </label>
+          <label class="shipping-option">
+            <input type="radio" name="shipping" value="delivery">
+            <span class="shipping-option-content">
+              <span class="shipping-option-title">🚚 Envío a domicilio</span>
+              <span class="shipping-option-price" id="shippingPrice">Calcular</span>
+              <span class="shipping-option-desc">E-Pick con seguimiento</span>
+            </span>
+          </label>
+        </div>
+        <div class="shipping-calculator" id="shippingCalculator" style="display: none;">
+          <input type="text" id="postalCode" placeholder="Código postal" maxlength="4" pattern="[0-9]{4}">
+          <button type="button" id="calculateShipping" class="btn btn-secondary">Calcular</button>
+          <div id="shippingResult"></div>
+        </div>
+        <div class="shipping-address" id="shippingAddress" style="display: none;">
+          <input type="text" id="addressStreet" placeholder="Calle y número" required>
+          <input type="text" id="addressCity" placeholder="Ciudad" required>
+          <input type="text" id="addressProvince" placeholder="Provincia" required>
+        </div>
+      </div>
+
       <div class="cart-total">
         <span>Total:</span>
         <span id="cartTotal">$0</span>

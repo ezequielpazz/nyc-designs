@@ -332,15 +332,20 @@ function updateCartUI() {
     `;
   }).join('');
 
-  // Calculate total with coupon discount
+  // Calculate total with coupon discount and shipping
   const { subtotal, discount, total } = calculateCartTotal();
-  
+
   // Update total display
-  if (discount > 0) {
-    cartTotal.innerHTML = `
-      <span class="original-price">$${subtotal.toLocaleString('es-AR')}</span>
-      <span class="discounted-price">$${total.toLocaleString('es-AR')}</span>
-    `;
+  if (discount > 0 || shippingCost > 0) {
+    let html = '';
+    if (discount > 0) {
+      html += `<span class="original-price">$${subtotal.toLocaleString('es-AR')}</span> `;
+    }
+    html += `<span class="discounted-price">$${total.toLocaleString('es-AR')}</span>`;
+    if (shippingCost > 0) {
+      html += `<br><small style="font-weight:400;font-size:12px;color:var(--taupe)">Envío: $${shippingCost.toLocaleString('es-AR')}</small>`;
+    }
+    cartTotal.innerHTML = html;
   } else {
     cartTotal.textContent = '$' + total.toLocaleString('es-AR');
   }
@@ -599,6 +604,7 @@ async function loadBannerConfig() {
 
 // ========== COUPON STATE AND FUNCTIONS ==========
 let appliedCoupon = null;
+let shippingCost = 0;
 
 async function applyCoupon() {
   const input = document.getElementById('couponInput');
@@ -702,7 +708,7 @@ function removeCoupon() {
 function calculateCartTotal() {
   let subtotal = cart.reduce((sum, item) => sum + item.price, 0);
   let discount = 0;
-  
+
   if (appliedCoupon) {
     if (appliedCoupon.type === 'percentage') {
       discount = Math.round(subtotal * (appliedCoupon.value / 100));
@@ -710,12 +716,93 @@ function calculateCartTotal() {
       discount = appliedCoupon.value;
     }
   }
-  
+
   return {
     subtotal,
     discount,
-    total: Math.max(0, subtotal - discount)
+    total: Math.max(0, subtotal - discount + shippingCost)
   };
+}
+
+// ========== SHIPPING CALCULATOR ==========
+const SHIPPING_ZONES = {
+  // CABA (1000-1029)
+  '1000':2500,'1001':2500,'1002':2500,'1003':2500,'1004':2500,'1005':2500,'1006':2500,'1007':2500,'1008':2500,'1009':2500,
+  '1010':2500,'1011':2500,'1012':2500,'1013':2500,'1014':2500,'1015':2500,'1016':2500,'1017':2500,'1018':2500,'1019':2500,
+  '1020':2500,'1021':2500,'1022':2500,'1023':2500,'1024':2500,'1025':2500,'1026':2500,'1027':2500,'1028':2500,'1029':2500,
+  // GBA Norte
+  '1602':3000,'1603':3000,'1605':3000,'1606':3000,'1607':3000,'1609':3000,'1610':3000,'1611':3000,'1612':3000,'1613':3000,
+  '1614':3000,'1615':3000,'1616':3000,'1617':3000,'1618':3000,'1619':3000,'1620':3000,'1621':3000,'1623':3000,'1625':3000,
+  '1629':3000,'1630':3000,'1631':3000,'1632':3000,'1633':3000,'1634':3000,'1636':3000,'1638':3000,'1640':3000,'1641':3000,
+  '1642':3000,'1643':3000,'1644':3000,'1645':3000,'1646':3000,'1648':3000,'1650':3000,'1651':3000,'1653':3000,'1655':3000,
+  '1657':3000,'1659':3000,'1661':3000,'1663':3000,'1665':3000,
+  // GBA Oeste
+  '1702':3200,'1704':3200,'1706':3200,'1708':3200,'1712':3200,'1714':3200,'1716':3200,'1718':3200,'1744':3200,'1746':3200,
+  '1748':3200,'1752':3200,'1754':3200,'1755':3200,'1757':3200,'1759':3200,'1763':3200,'1765':3200,'1766':3200,'1768':3200,
+  // GBA Sur
+  '1802':3200,'1804':3200,'1806':3200,'1822':3200,'1824':3200,'1826':3200,'1828':3200,'1832':3200,'1834':3200,'1836':3200,
+  '1838':3200,'1842':3200,'1846':3200,'1852':3200,'1854':3200,'1856':3200,'1870':3200,'1871':3200,'1872':3200,'1873':3200,
+  '1874':3200,'1875':3200,'1876':3200,'1878':3200,'1879':3200,'1880':3200,'1881':3200,'1882':3200,'1884':3200,'1886':3200,
+  '1888':3200,'1889':3200,
+  // La Plata
+  '1900':3500,'1901':3500,'1902':3500,'1903':3500,'1904':3500
+};
+
+function calculateShippingCost() {
+  const postalCode = document.getElementById('postalCode').value.trim();
+  const resultDiv = document.getElementById('shippingResult');
+  const addressSection = document.getElementById('shippingAddress');
+  const priceSpan = document.getElementById('shippingPrice');
+
+  if (!postalCode || postalCode.length !== 4) {
+    resultDiv.innerHTML = '<span style="color:#e74c3c">Ingresá un código postal válido (4 dígitos)</span>';
+    return;
+  }
+
+  resultDiv.innerHTML = '<span>Calculando...</span>';
+
+  let cost = SHIPPING_ZONES[postalCode];
+  if (!cost) {
+    const prefix = postalCode.substring(0, 2);
+    const baPrefixes = ['10','11','12','13','14','15','16','17','18','19'];
+    cost = baPrefixes.includes(prefix) ? 4000 : 5500;
+  }
+
+  shippingCost = cost;
+  resultDiv.innerHTML = '<span style="color:#27ae60">✓ Envío disponible</span>';
+  priceSpan.textContent = `$${cost.toLocaleString('es-AR')}`;
+  addressSection.style.display = 'flex';
+  updateCartUI();
+}
+
+function initShipping() {
+  const pickupRadio = document.querySelector('input[value="pickup"]');
+  const deliveryRadio = document.querySelector('input[value="delivery"]');
+  const calculator = document.getElementById('shippingCalculator');
+  const addressSection = document.getElementById('shippingAddress');
+  const calculateBtn = document.getElementById('calculateShipping');
+  const postalInput = document.getElementById('postalCode');
+
+  if (!pickupRadio || !deliveryRadio) return;
+
+  pickupRadio.addEventListener('change', () => {
+    calculator.style.display = 'none';
+    addressSection.style.display = 'none';
+    shippingCost = 0;
+    document.getElementById('shippingPrice').textContent = 'Calcular';
+    updateCartUI();
+  });
+
+  deliveryRadio.addEventListener('change', () => {
+    calculator.style.display = 'flex';
+  });
+
+  calculateBtn.addEventListener('click', calculateShippingCost);
+  postalInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') calculateShippingCost();
+  });
+
+  console.log('✅ Shipping calculator initialized');
 }
 
 // Event listeners para botones de agregar al carrito
@@ -951,10 +1038,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         body: JSON.stringify({
           items,
           payer: { name, email, phone },
-          coupon: appliedCoupon ? {
-            code: appliedCoupon.code,
-            discount: discount
-          } : null,
+          coupon: appliedCoupon ? { code: appliedCoupon.code, discount: discount } : null,
+          shipping: {
+            type: document.querySelector('input[name="shipping"]:checked')?.value || 'pickup',
+            cost: shippingCost,
+            postalCode: document.getElementById('postalCode')?.value || '',
+            street: document.getElementById('addressStreet')?.value || '',
+            city: document.getElementById('addressCity')?.value || '',
+            province: document.getElementById('addressProvince')?.value || ''
+          },
           total: total
         })
       });
@@ -1652,6 +1744,7 @@ function showProductSkeletons() {
 
 // ========== INICIALIZAR MEJORAS ==========
 document.addEventListener('DOMContentLoaded', () => {
+  initShipping();
   setTimeout(animateCounters, 300);
 
   setTimeout(() => {
@@ -1871,3 +1964,4 @@ window.trackPurchase = trackPurchase;
 window.trackSearch = trackSearch;
 window.trackContactSubmit = trackContactSubmit;
 window.processPayment = processPayment;
+window.calculateShippingCost = calculateShippingCost;
