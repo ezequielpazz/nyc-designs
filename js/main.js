@@ -987,13 +987,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // listeners para MercadoPago modal
-  const mpOpenBtn = document.getElementById('mpOpenBtn');
   const mpModal = document.getElementById('mpModal');
   const mpClose = document.getElementById('mpClose');
-  mpOpenBtn?.addEventListener('click', () => {
-    mpModal?.classList.add('active');
-    document.body.style.overflow = 'hidden';
-  });
   mpClose?.addEventListener('click', () => {
     mpModal?.classList.remove('active');
     document.body.style.overflow = '';
@@ -1008,6 +1003,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     e.preventDefault();
     processPayment();
   });
+
+  // MercadoPago button (cart)
+  const mpBtn = document.getElementById('mpOpenBtn');
+  if (mpBtn) {
+    mpBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      processPayment();
+    });
+  }
 });
 
 // ========== PRODUCT MODAL EVENT LISTENERS ==========
@@ -1834,7 +1838,7 @@ async function processPayment() {
     return;
   }
 
-  const payBtn = document.getElementById('mpPayBtn');
+  const payBtn = document.getElementById('mpOpenBtn');
   if (payBtn) {
     payBtn.disabled = true;
     payBtn.classList.add('loading');
