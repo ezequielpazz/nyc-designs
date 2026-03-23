@@ -43,14 +43,13 @@ const USE_FIREBASE = true; // Cambiar a false para usar productos estáticos
 // ========== CATEGORÍAS DINÁMICAS ==========
 // Categorías reales del negocio NYC Designs
 const CATEGORIES = [
-  { id: 'polaroids', nombre: 'Polaroids', emoji: '📷' },
-  { id: 'stickers-celular', nombre: 'Stickers Celular', emoji: '📱' },
-  { id: 'stickers-mascotas', nombre: 'Stickers Mascotas', emoji: '🐾' },
-  { id: 'tazas', nombre: 'Tazas', emoji: '☕' },
-  { id: 'cuadros', nombre: 'Cuadros', emoji: '🖼️' },
-  { id: 'totebags', nombre: 'Totebags', emoji: '👜' },
-  { id: 'kits-cumpleanos', nombre: 'Kits Cumpleaños', emoji: '🎂' },
-  { id: 'plantillas-digitales', nombre: 'Plantillas Digitales', emoji: '📄' }
+  { id: 'fotos-recuerdos', label: 'Fotos & Recuerdos', emoji: '📸', description: 'Polaroids, álbumes y recuerdos personalizados' },
+  { id: 'decoracion', label: 'Decoración', emoji: '🖼️', description: 'Cuadros, carteles y decoración para tu hogar' },
+  { id: 'tazas-vasos', label: 'Tazas & Vasos', emoji: '☕', description: 'Tazas sublimadas y vasos personalizados' },
+  { id: 'accesorios', label: 'Accesorios', emoji: '👜', description: 'Totebags, llaveros y más' },
+  { id: 'stickers', label: 'Stickers', emoji: '✨', description: 'Stickers para celular, notebook y más' },
+  { id: 'imprimibles-plantillas', label: 'Imprimibles & Plantillas', emoji: '📄', description: 'Plantillas digitales para imprimir' },
+  { id: 'fiestas-eventos', label: 'Fiestas & Eventos', emoji: '🎉', description: 'Kits de cumpleaños, decoración para fiestas' }
 ];
 
 // ========== PRECIOS PARA CALCULADORA ==========
@@ -1005,63 +1004,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       document.body.style.overflow = '';
     }
   });
-  document.getElementById('mpPayBtn')?.addEventListener('click', async () => {
-    // recolección de datos del formulario
-    const name = document.getElementById('mpName').value.trim();
-    const email = document.getElementById('mpEmail').value.trim();
-    const phone = document.getElementById('mpPhone').value.trim();
-
-    if (!name || !email || !phone) {
-      showToast('Por favor completá todos los campos.');
-      return;
-    }
-
-    if (cart.length === 0) {
-      showToast('El carrito está vacío.');
-      return;
-    }
-
-    // construimos items para el backend
-    const items = cart.map(item => ({
-      title: item.name,
-      unit_price: item.price,
-      quantity: 1
-    }));
-
-    // Calculate total with coupon
-    const { discount, total } = calculateCartTotal();
-
-    try {
-      const resp = await fetch(`${API_URL}/crear-preferencia`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          items,
-          payer: { name, email, phone },
-          coupon: appliedCoupon ? { code: appliedCoupon.code, discount: discount } : null,
-          shipping: {
-            type: document.querySelector('input[name="shipping"]:checked')?.value || 'pickup',
-            cost: shippingCost,
-            postalCode: document.getElementById('postalCode')?.value || '',
-            street: document.getElementById('addressStreet')?.value || '',
-            city: document.getElementById('addressCity')?.value || '',
-            province: document.getElementById('addressProvince')?.value || ''
-          },
-          total: total
-        })
-      });
-
-      if (!resp.ok) throw new Error('Error en el servidor');
-      const data = await resp.json();
-      if (data.init_point) {
-        window.location.href = data.init_point;
-      } else {
-        throw new Error('Respuesta inválida');
-      }
-    } catch (err) {
-      console.error('MP fetch error', err);
-      showToast('No se pudo iniciar MercadoPago. Intentá de nuevo.');
-    }
+  document.getElementById('mpPayBtn')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    processPayment();
   });
 });
 
@@ -1431,9 +1376,16 @@ const botKnowledge = {
   
   // Productos
   'taza': '☕ Tenemos tazas sublimadas de cerámica. Vienen con diseños NYC o las personalizamos con tu foto/texto.',
-  'tazas': '☕ Nuestras tazas son de cerámica sublimada. Desde $4.500.',
-  'regalo': '🎁 Tenemos packs de regalo armados con taza + caja presentación. Ideales para cumpleaños o fechas especiales.',
-  'calendario': '📅 Hacemos calendarios personalizados con tus fotos. De escritorio o pared.',
+  'tazas': '☕ Nuestras tazas son de cerámica sublimada. Están en la categoría Tazas & Vasos. Desde $4.500.',
+  'vasos': '🥤 También tenemos vasos personalizados. Buscalos en Tazas & Vasos.',
+  'regalo': '🎁 Tenemos kits para fiestas y eventos armados con taza + caja presentación. Ideales para cumpleaños o fechas especiales.',
+  'calendario': '📅 Hacemos calendarios personalizados con tus fotos. Encontralos en Imprimibles & Plantillas.',
+  'stickers': '✨ Tenemos stickers para celular, notebook y más. Todos personalizables.',
+  'polaroid': '📸 Los polaroids están en la sección Fotos & Recuerdos. Personalizados con tus fotos.',
+  'cuadro': '🖼️ Los cuadros están en Decoración. Personalizados para tu hogar.',
+  'totebag': '👜 Las totebags están en Accesorios. Personalizadas con tu diseño.',
+  'cumpleanos': '🎉 Para cumpleaños tenemos la sección Fiestas & Eventos con kits completos.',
+  'imprimible': '📄 Los imprimibles y plantillas digitales los encontrás en Imprimibles & Plantillas.',
   
   // Contacto
   'whatsapp': `📱 Escribinos directo: wa.me/${CONFIG.WHATSAPP_NUMBER}`,
@@ -1877,55 +1829,91 @@ function trackContactSubmit() {
 // ========== MERCADOPAGO CHECKOUT MEJORADO ==========
 
 async function processPayment() {
-  const payBtn = document.getElementById('mpPayBtn');
-  if (!payBtn) return;
+  if (cart.length === 0) {
+    showToast('El carrito está vacío', 'error');
+    return;
+  }
 
-  payBtn.classList.add('loading');
-  payBtn.disabled = true;
+  const payBtn = document.getElementById('mpPayBtn');
+  if (payBtn) {
+    payBtn.disabled = true;
+    payBtn.classList.add('loading');
+  }
 
   try {
     trackBeginCheckout();
 
-    const name = document.getElementById('mpName')?.value;
-    const email = document.getElementById('mpEmail')?.value;
-    const phone = document.getElementById('mpPhone')?.value;
+    const name = document.getElementById('mpName')?.value?.trim() || '';
+    const email = document.getElementById('mpEmail')?.value?.trim() || '';
+    const phone = document.getElementById('mpPhone')?.value?.trim() || '';
 
+    // Build items - include shipping as line item if delivery
     const items = cart.map(item => ({
-      id: item.id,
+      id: String(item.id),
       title: item.name,
       quantity: 1,
-      unit_price: item.price
+      unit_price: Number(item.price)
     }));
 
-    const { total } = calculateCartTotal();
+    if (shippingCost > 0) {
+      items.push({
+        id: 'shipping',
+        title: 'Envío a domicilio',
+        quantity: 1,
+        unit_price: shippingCost
+      });
+    }
 
-    const response = await fetch(`${API_URL}/crear-preferencia`, {
+    const { total } = calculateCartTotal();
+    const shippingType = document.querySelector('input[name="shipping"]:checked')?.value || 'pickup';
+
+    const external_reference = JSON.stringify({
+      timestamp: Date.now(),
+      shipping_type: shippingType,
+      postal_code: document.getElementById('postalCode')?.value || '',
+      address: shippingType === 'delivery' ? {
+        street: document.getElementById('addressStreet')?.value || '',
+        city: document.getElementById('addressCity')?.value || '',
+        province: document.getElementById('addressProvince')?.value || ''
+      } : null
+    });
+
+    const response = await fetch('/api/create-preference', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         items,
-        payer: { name, email, phone },
-        coupon: appliedCoupon ? { code: appliedCoupon.code, discount: total } : null,
-        total,
-        external_reference: `order_${Date.now()}`
+        payer: { name: name || 'Cliente', email, phone },
+        external_reference
       })
     });
 
     const data = await response.json();
 
+    if (data.error) {
+      throw new Error(data.details || data.error);
+    }
+
     if (data.init_point) {
-      await saveOrderToFirebase({ items, total, customer: { name, email, phone }, external_reference: data.external_reference });
+      await saveOrderToFirebase({
+        items,
+        total,
+        customer: { name, email, phone },
+        shipping: { type: shippingType, cost: shippingCost },
+        external_reference
+      });
       window.location.href = data.init_point;
     } else {
-      throw new Error(data.error || 'Respuesta inválida');
+      throw new Error('No se recibió URL de pago');
     }
 
   } catch (error) {
     console.error('Payment error:', error);
     showToast('Error al procesar el pago. Intentá de nuevo.', 'error');
-  } finally {
-    payBtn.classList.remove('loading');
-    payBtn.disabled = false;
+    if (payBtn) {
+      payBtn.disabled = false;
+      payBtn.classList.remove('loading');
+    }
   }
 }
 

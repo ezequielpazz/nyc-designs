@@ -332,7 +332,7 @@ function updateDashboard() {
 }
 
 function updateFilterTabs() {
-    const categories = ['tazas', 'regalos', 'calendarios', 'personalizados', 'dias-de-la-madre'];
+    const categories = ['fotos-recuerdos', 'decoracion', 'tazas-vasos', 'accesorios', 'stickers', 'imprimibles-plantillas', 'fiestas-eventos'];
     
     document.getElementById('tabTodos').textContent = allProducts.length;
     
