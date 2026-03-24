@@ -1853,11 +1853,16 @@ async function processPayment() {
 
     // Build items - include shipping as line item if delivery
     const items = cart.map(item => ({
-      id: String(item.id),
-      title: item.name,
-      quantity: 1,
-      unit_price: Number(item.price)
+      id: String(item.id || '1'),
+      title: item.name || 'Producto',
+      quantity: parseInt(item.quantity) || 1,
+      unit_price: parseFloat(item.price) || 0
     }));
+
+    if (items.some(i => i.unit_price === 0)) {
+      showToast('Error: algún producto no tiene precio. Revisá el carrito.', 'error');
+      throw new Error('unit_price is 0 for one or more items');
+    }
 
     if (shippingCost > 0) {
       items.push({
