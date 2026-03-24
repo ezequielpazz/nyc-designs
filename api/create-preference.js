@@ -7,7 +7,7 @@ const client = new mercadopago.MercadoPagoConfig({
 const preference = new mercadopago.Preference(client);
 
 module.exports = async (req, res) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Origin', 'https://nyc-designs.vercel.app');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
@@ -26,11 +26,22 @@ module.exports = async (req, res) => {
       return res.status(400).json({ error: 'Items inválidos' });
     }
 
+    for (const item of items) {
+      const price = Number(item.unit_price);
+      const qty = Number(item.quantity);
+      if (!price || price <= 0 || price > 1000000) {
+        return res.status(400).json({ error: `Precio inválido para: ${item.title}` });
+      }
+      if (!qty || qty <= 0 || !Number.isInteger(qty)) {
+        return res.status(400).json({ error: `Cantidad inválida para: ${item.title}` });
+      }
+    }
+
     const preferenceData = {
       items: items.map(item => ({
         id: item.id,
         title: item.title,
-        quantity: item.quantity,
+        quantity: Number(item.quantity),
         unit_price: Number(item.unit_price),
         currency_id: 'ARS'
       })),
