@@ -790,7 +790,7 @@ function saveWizardStepData(step) {
 
 function updatePreview() {
     // Actualizar preview según el paso actual
-    saveFewizardStepData(currentWizardStep);
+    saveWizardStepData(currentWizardStep);
     
     document.getElementById('previewProductName').textContent = productFormData.nombre || 'Nombre del producto';
     document.getElementById('previewProductDesc').textContent = productFormData.descripcion || 'Descripción del producto';
