@@ -303,7 +303,7 @@ function loadMoreProducts() {
 
 
 // ========== CARRITO ==========
-let cart = JSON.parse(localStorage.getItem('nycCart')) || [];
+let cart = (() => { try { return JSON.parse(localStorage.getItem('nycCart')) || []; } catch(e) { return []; } })();
 
 function updateCartUI() {
   const cartItems = document.getElementById('cartItems');
