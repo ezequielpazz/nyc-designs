@@ -237,7 +237,7 @@ function renderProductsPage(page = 1, category = 'todos', searchTerm = '') {
   if (!grid) return;
 
   grid.innerHTML = pageProducts.map(p => `
-    <article class="product" data-id="${p.id}" data-name="${p.name}" data-price="${p.price}" data-category="${p.category}">
+    <article class="product" data-id="${p.id}" data-name="${String(p.name).replace(/"/g, '&quot;')}" data-price="${p.price}" data-category="${p.category}">
       <div class="pimg" onclick="openProductModal(${JSON.stringify(p).replace(/"/g, '&quot;')})">
         ${p.old_price && p.old_price > p.price ? `<span class="discount-badge">-${Math.round((1 - p.price/p.old_price) * 100)}%</span>` : ''}
         <img src="${p.image1}" alt="${p.name}" onerror="this.src='assets/img/logo.jpg'">
@@ -285,7 +285,7 @@ function renderProductsPage(page = 1, category = 'todos', searchTerm = '') {
       const product = this.closest('.product');
       const id = product?.dataset?.id;
       const name = product?.dataset?.name;
-      const price = parseInt(product?.dataset?.price);
+      const price = Number(product?.dataset?.price);
       if (id && name && price) {
         addToCart(id, name, price);
       }
@@ -839,7 +839,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const product = this.closest('.product');
         const id = product?.dataset?.id;
         const name = product?.dataset?.name;
-        const price = parseInt(product?.dataset?.price);
+        const price = Number(product?.dataset?.price);
         if (id && name && price) {
           addToCart(id, name, price);
         }
@@ -853,7 +853,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const product = this.closest('.product') || this.closest('.pinfo');
         const id = product?.dataset?.id || this.dataset.id;
         const name = product?.dataset?.name || this.dataset.name;
-        const price = parseInt(product?.dataset?.price || this.dataset.price);
+        const price = Number(product?.dataset?.price || this.dataset.price);
         if (id && name && price) {
           addToCart(id, name, price);
         }
