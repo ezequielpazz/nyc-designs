@@ -283,8 +283,8 @@ function renderProductsPage(page = 1, category = 'todos', searchTerm = '') {
           </div>
           <span>${p.stock === 'agotado' ? sheetConfig.texto_agotado : p.stock}</span>
         </div>
-        <button class="btn primary add-to-cart" type="button" ${p.stock === 'agotado' ? 'disabled' : ''}>
-          ${p.stock === 'agotado' ? 'Sin stock' : 'Agregar al carrito'}
+        <button class="btn primary add-to-cart" type="button" ${(p.stock === 'agotado' || p.stock === 0 || p.stock === '0') ? 'disabled' : ''}>
+          ${(p.stock === 'agotado' || p.stock === 0 || p.stock === '0') ? 'Sin stock' : 'Agregar al carrito'}
         </button>
       </div>
     </article>
@@ -377,6 +377,23 @@ function updateCartUI() {
 }
 
 function addToCart(id, name, price) {
+  // Validate stock before adding
+  const product = allProducts.find(p => p.id === id);
+  if (product) {
+    const stock = product.stock;
+    if (stock === 'agotado' || stock === 0 || stock === '0') {
+      showToast('Este producto no tiene stock disponible', 'error');
+      return;
+    }
+    // Check quantity in cart vs available stock
+    if (stock !== 'ilimitado' && typeof stock === 'number' && stock > 0) {
+      const inCart = cart.filter(item => item.id === id).length;
+      if (inCart >= stock) {
+        showToast(`Solo hay ${stock} unidades disponibles`, 'error');
+        return;
+      }
+    }
+  }
   cart.push({ id, name, price });
   localStorage.setItem('nycCart', JSON.stringify(cart));
   updateCartUI();

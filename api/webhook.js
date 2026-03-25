@@ -9,7 +9,36 @@ const payment = new mercadopago.Payment(client);
 
 // Firestore REST API helper
 const FIREBASE_PROJECT = 'nyc-designs';
-const FIREBASE_API_KEY = process.env.FIREBASE_API_KEY || 'AIzaSyDTZdpmpGLxOQVVw0Q3k4g2yKzZZ8K8XIw';
+const FIREBASE_API_KEY = process.env.FIREBASE_API_KEY;
+
+async function decrementStock(productId, quantity) {
+  if (!FIREBASE_API_KEY) return;
+  const docUrl = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT}/databases/(default)/documents/productos/${productId}?key=${FIREBASE_API_KEY}`;
+
+  try {
+    const getResp = await fetch(docUrl);
+    if (!getResp.ok) return;
+    const doc = await getResp.json();
+    const currentStock = doc.fields?.stock;
+
+    // Skip if stock is 'ilimitado' or not a number
+    if (!currentStock || currentStock.stringValue === 'ilimitado') return;
+
+    const stockVal = parseInt(currentStock.integerValue || currentStock.stringValue, 10);
+    if (isNaN(stockVal)) return;
+
+    const newStock = Math.max(0, stockVal - quantity);
+    const patchUrl = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT}/databases/(default)/documents/productos/${productId}?updateMask.fieldPaths=stock&key=${FIREBASE_API_KEY}`;
+
+    await fetch(patchUrl, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fields: { stock: { integerValue: String(newStock) } } })
+    });
+  } catch (err) {
+    console.error(`Stock decrement failed for ${productId}:`, err.message);
+  }
+}
 
 async function saveOrderToFirestore(orderData) {
   const url = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT}/databases/(default)/documents/pedidos?key=${FIREBASE_API_KEY}`;
@@ -20,7 +49,7 @@ async function saveOrderToFirestore(orderData) {
       payment_id: { stringValue: String(orderData.payment_id) },
       status: { stringValue: orderData.status },
       total: { doubleValue: orderData.total },
-      payer: { mapValue: { fields: {
+      customer: { mapValue: { fields: {
         email: { stringValue: orderData.payer.email || '' },
         name: { stringValue: orderData.payer.name || '' }
       }}},
@@ -28,7 +57,8 @@ async function saveOrderToFirestore(orderData) {
         mapValue: { fields: {
           title: { stringValue: item.title || '' },
           quantity: { integerValue: String(item.quantity || 1) },
-          unit_price: { doubleValue: item.unit_price || 0 }
+          unit_price: { doubleValue: item.unit_price || 0 },
+          product_id: { stringValue: item.id || '' }
         }}
       })) }},
       shipping_type: { stringValue: orderData.shipping_type || 'pending' },
@@ -108,13 +138,21 @@ module.exports = async (req, res) => {
           items: (paymentData.additional_info?.items || []).map(item => ({
             title: item.title,
             quantity: Number(item.quantity),
-            unit_price: Number(item.unit_price)
+            unit_price: Number(item.unit_price),
+            product_id: item.id || ''
           })),
           shipping_type: 'pending',
           external_reference: paymentData.external_reference || ''
         };
 
         await saveOrderToFirestore(orderData);
+
+        // Decrement stock for purchased items
+        for (const item of orderData.items) {
+          if (item.product_id) {
+            await decrementStock(item.product_id, item.quantity);
+          }
+        }
       }
     }
 
