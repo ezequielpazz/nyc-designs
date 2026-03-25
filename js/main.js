@@ -21,6 +21,14 @@ function escapeHtml(str) {
     .replace(/'/g, '&#039;');
 }
 
+function debounce(fn, delay) {
+  let timer;
+  return function(...args) {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn.apply(this, args), delay);
+  };
+}
+
 // ========== CONFIGURACIÓN ==========
 // ⚠️ CAMBIAR ESTOS VALORES POR LOS REALES
 const CONFIG = {
@@ -241,7 +249,7 @@ function renderProductsPage(page = 1, category = 'todos', searchTerm = '') {
     <article class="product" data-id="${p.id}" data-name="${String(p.name).replace(/"/g, '&quot;')}" data-price="${p.price}" data-category="${p.category}">
       <div class="pimg" onclick="openProductModal(${JSON.stringify(p).replace(/"/g, '&quot;')})">
         ${p.old_price && p.old_price > p.price ? `<span class="discount-badge">-${Math.round((1 - p.price/p.old_price) * 100)}%</span>` : ''}
-        <img src="${p.image1}" alt="${p.name}" onerror="this.src='assets/img/logo.jpg'">
+        <img src="${p.image1}" alt="${p.name}" loading="lazy" onerror="this.src='assets/img/logo.jpg'">
         <div class="pimg-overlay">
           <span>Ver detalles</span>
         </div>
@@ -746,8 +754,8 @@ function calculateShippingCost() {
   const addressSection = document.getElementById('shippingAddress');
   const priceSpan = document.getElementById('shippingPrice');
 
-  if (!postalCode || postalCode.length !== 4) {
-    resultDiv.innerHTML = '<span style="color:#e74c3c">Ingresá un código postal válido (4 dígitos)</span>';
+  if (!postalCode || !/^\d{4}$/.test(postalCode)) {
+    resultDiv.innerHTML = '<span style="color:#e74c3c">Ingresá un código postal válido (4 dígitos numéricos)</span>';
     return;
   }
 
@@ -1178,10 +1186,10 @@ filterBtns.forEach(btn => {
   btn.addEventListener('click', () => filterProducts(btn.dataset.filter));
 });
 
-searchInput?.addEventListener('input', () => {
+searchInput?.addEventListener('input', debounce(() => {
   const activeFilter = document.querySelector('.filter-btn.active');
   filterProducts(activeFilter?.dataset.filter || 'todos');
-});
+}, 300));
 
 // ========== LIGHTBOX ==========
 const lightbox = document.getElementById('lightbox');
@@ -1277,8 +1285,17 @@ backToTop?.addEventListener('click', () => {
 // ========== FORMULARIO DE CONTACTO ==========
 function handleContactForm(e) {
   e.preventDefault();
+  const form = e.target;
+  const emailInput = form.querySelector('input[type="email"]');
+  if (emailInput) {
+    const email = emailInput.value.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      showToast('Por favor ingresá un email válido', 'error');
+      return;
+    }
+  }
   showToast('¡Mensaje enviado! Te responderemos pronto.');
-  e.target.reset();
+  form.reset();
 }
 
 // ========== TECLADO ==========
