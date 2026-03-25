@@ -1102,25 +1102,58 @@ async function loadOrders(filter = 'todos') {
         });
         
         if (ordersGrid) {
-            ordersGrid.innerHTML = orders.map(order => `
-                <div class="order-card">
-                    <div class="order-id">#${order.id.slice(0, 8).toUpperCase()}</div>
-                    <div class="order-customer">
-                        <div class="order-customer-name">${order.customer?.name || 'N/A'}</div>
-                        <div class="order-customer-email">${order.customer?.email || ''}</div>
-                    </div>
-                    <div class="order-total">$${(order.total || 0).toLocaleString('es-AR')}</div>
-                    <div class="order-actions">
+            ordersGrid.innerHTML = orders.map(order => {
+                const customer = order.customer || order.payer || {};
+                const customerName = escapeHtml(customer.name || 'Sin nombre');
+                const customerEmail = escapeHtml(customer.email || '');
+                const date = order.created_at?.toDate
+                    ? order.created_at.toDate().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+                    : '';
+                const items = order.items || [];
+                const itemsHtml = items.map(item =>
+                    `<div class="order-item-line">${escapeHtml(item.title || 'Producto')} x${item.quantity || 1} — $${(item.unit_price || 0).toLocaleString('es-AR')}</div>`
+                ).join('');
+                const whatsappMsg = encodeURIComponent(`Hola ${customer.name || ''}, tu pedido #${order.id.slice(0, 8).toUpperCase()} de NYC Designs está siendo procesado. ¿Tenés alguna consulta?`);
+                const trackingCode = order.tracking_code || '';
+
+                return `
+                <div class="order-card order-card-expanded">
+                    <div class="order-header">
+                        <div class="order-id">#${order.id.slice(0, 8).toUpperCase()}</div>
+                        <span class="order-date">${date}</span>
                         <span class="order-status status-${order.status || 'pendiente'}">${order.status || 'pendiente'}</span>
+                    </div>
+                    <div class="order-body">
+                        <div class="order-customer">
+                            <div class="order-customer-name">${customerName}</div>
+                            <div class="order-customer-email">${customerEmail}</div>
+                        </div>
+                        <div class="order-items">${itemsHtml || '<div class="order-item-line">Sin detalle de items</div>'}</div>
+                        <div class="order-total-row">
+                            <span>Total:</span>
+                            <strong>$${(order.total || 0).toLocaleString('es-AR')}</strong>
+                        </div>
+                        <div class="order-shipping">Envío: ${escapeHtml(order.shipping_type || 'Pendiente')}</div>
+                        ${trackingCode ? `<div class="order-tracking">Seguimiento: <strong>${escapeHtml(trackingCode)}</strong></div>` : ''}
+                    </div>
+                    <div class="order-footer">
                         <select onchange="updateOrderStatus('${order.id}', this.value)" class="order-status-select">
                             <option value="pendiente" ${order.status === 'pendiente' ? 'selected' : ''}>Pendiente</option>
+                            <option value="approved" ${order.status === 'approved' ? 'selected' : ''}>Aprobado</option>
                             <option value="pagado" ${order.status === 'pagado' ? 'selected' : ''}>Pagado</option>
                             <option value="enviado" ${order.status === 'enviado' ? 'selected' : ''}>Enviado</option>
                             <option value="entregado" ${order.status === 'entregado' ? 'selected' : ''}>Entregado</option>
                         </select>
+                        <input type="text" placeholder="Código de seguimiento" value="${escapeHtml(trackingCode)}"
+                            onchange="updateOrderTracking('${order.id}', this.value)" class="tracking-input">
+                        ${customerEmail ? `<a href="https://wa.me/?text=${whatsappMsg}" target="_blank" class="btn btn-whatsapp" title="Contactar por WhatsApp">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.625.846 5.059 2.284 7.034L.789 23.492a.5.5 0 00.612.638l4.702-1.232A11.944 11.944 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-2.239 0-4.308-.724-5.993-1.953l-.42-.312-2.791.732.744-2.72-.343-.544A9.936 9.936 0 012 12C2 6.486 6.486 2 12 2s10 4.486 10 10-4.486 10-10 10z"/></svg>
+                            WhatsApp
+                        </a>` : ''}
                     </div>
                 </div>
-            `).join('');
+                `;
+            }).join('');
         }
         
         // Update orders badge
@@ -1142,11 +1175,24 @@ async function updateOrderStatus(orderId, status) {
             status: status,
             updatedAt: new Date()
         });
-        console.log('✅ Order status updated');
+        showToast('Estado del pedido actualizado', 'success');
         loadOrders(document.querySelector('.filter-tab.active')?.dataset.filter || 'todos');
     } catch (error) {
         console.error('❌ Error updating order:', error);
-        alert('Error al actualizar pedido');
+        showToast('Error al actualizar pedido', 'error');
+    }
+}
+
+async function updateOrderTracking(orderId, trackingCode) {
+    try {
+        await db.collection('pedidos').doc(orderId).update({
+            tracking_code: trackingCode,
+            updatedAt: new Date()
+        });
+        showToast('Código de seguimiento guardado', 'success');
+    } catch (error) {
+        console.error('❌ Error updating tracking:', error);
+        showToast('Error al guardar seguimiento', 'error');
     }
 }
 
