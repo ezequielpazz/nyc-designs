@@ -111,7 +111,6 @@ async function signInWithGoogle() {
         }
         
         currentUser = result.user;
-        console.log('✅ Usuario autenticado:', currentUser.email);
         showAdminPanel();
         updateUserInfo();
         await loadProducts();
@@ -525,18 +524,15 @@ async function uploadImage(file) {
     }
     
     try {
-        console.log('📷 Starting image upload...', file.name);
         
         // Comprimir si es necesario
         const MAX_SIZE = 2 * 1024 * 1024;
         let fileToUpload = file;
         
         if (file.size > MAX_SIZE) {
-            console.log('🔄 File size exceeds limit, compressing...');
             fileToUpload = await compressImage(file);
         }
         
-        console.log('📤 Uploading to Cloudinary...');
         const formData = new FormData();
         formData.append('file', fileToUpload);
         formData.append('upload_preset', CLOUDINARY_CONFIG.uploadPreset);
@@ -555,7 +551,6 @@ async function uploadImage(file) {
         }
         
         const data = await response.json();
-        console.log('✅ Image uploaded successfully:', data.secure_url);
         return data.secure_url;
         
     } catch (error) {
@@ -611,7 +606,6 @@ async function compressImage(file) {
    ============================================ */
 
 function openWizardModal() {
-    console.log('🚀 openWizardModal called');
     currentEditingProductId = null;
     currentWizardStep = 1;
     productFormData = {
@@ -631,9 +625,7 @@ function openWizardModal() {
     resetWizardForm();
     showWizardStep(1);
     const modal = document.getElementById('productModal');
-    console.log('📦 Modal element:', modal);
     modal.classList.add('active');
-    console.log('✅ Modal classList after add:', modal.classList);
     document.body.style.overflow = 'hidden';
 }
 
@@ -644,7 +636,6 @@ function openEditModal(productId) {
         return;
     }
     
-    console.log('✏️ Opening edit modal for product:', product.nombre);
     
     currentEditingProductId = productId;
     currentWizardStep = 1;
@@ -676,10 +667,8 @@ function openEditModal(productId) {
 }
 
 function closeWizardModal() {
-    console.log('❌ closeWizardModal called');
     const modal = document.getElementById('productModal');
     modal.classList.remove('active');
-    console.log('✅ Modal classList after remove:', modal.classList);
     document.body.style.overflow = 'auto';
     currentEditingProductId = null;
     currentWizardStep = 1;
@@ -1004,7 +993,6 @@ function confirmDelete() {
    ============================================ */
 
 function switchSection(section) {
-    console.log('🔄 Switching to section:', section);
     
     // Actualizar navegación
     document.querySelectorAll('.nav-item').forEach(item => {
@@ -1294,7 +1282,6 @@ async function saveTestimonial(e) {
             createdAt: new Date()
         });
         
-        console.log('✅ Testimonial saved');
         closeTestimonialModal();
         loadTestimonials();
     } catch (error) {
@@ -1308,7 +1295,6 @@ async function deleteTestimonial(id) {
     
     try {
         await db.collection('testimonios').doc(id).delete();
-        console.log('✅ Testimonial deleted');
         loadTestimonials();
     } catch (error) {
         console.error('❌ Error deleting testimonial:', error);
@@ -1431,7 +1417,6 @@ async function saveCoupon(e) {
             createdAt: new Date()
         });
         
-        console.log('✅ Coupon saved');
         closeCouponModal();
         loadCoupons();
     } catch (error) {
@@ -1446,7 +1431,6 @@ async function toggleCoupon(id, active) {
             active: active,
             updatedAt: new Date()
         });
-        console.log('✅ Coupon toggled');
         loadCoupons();
     } catch (error) {
         console.error('❌ Error toggling coupon:', error);
@@ -1459,7 +1443,6 @@ async function deleteCoupon(id) {
     
     try {
         await db.collection('cupones').doc(id).delete();
-        console.log('✅ Coupon deleted');
         loadCoupons();
     } catch (error) {
         console.error('❌ Error deleting coupon:', error);
@@ -1529,7 +1512,6 @@ async function markAsRead(id) {
         await db.collection('mensajes').doc(id).update({
             read: true
         });
-        console.log('✅ Message marked as read');
         loadMessages();
     } catch (error) {
         console.error('❌ Error marking message as read:', error);
@@ -1539,7 +1521,6 @@ async function markAsRead(id) {
 async function deleteMessage(id) {
     try {
         await db.collection('mensajes').doc(id).delete();
-        console.log('✅ Message deleted');
         loadMessages();
     } catch (error) {
         console.error('❌ Error deleting message:', error);
@@ -1556,7 +1537,6 @@ async function loadSettings() {
         const settingsDoc = await db.collection('configuracion').doc('general').get();
         
         if (!settingsDoc.exists) {
-            console.log('No settings found, using defaults');
             return;
         }
         
@@ -1596,7 +1576,6 @@ async function loadSettings() {
             }
         }
         
-        console.log('✅ Settings loaded');
     } catch (error) {
         console.error('❌ Error loading settings:', error);
     }
@@ -1645,7 +1624,6 @@ async function saveSettings(type) {
             showToast('✅ Información de envíos guardada');
         }
         
-        console.log('✅ Settings saved');
     } catch (error) {
         console.error('❌ Error saving settings:', error);
         showToast('Error al guardar configuración');
@@ -1655,13 +1633,11 @@ async function saveSettings(type) {
 
 
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('🚀 Inicializando admin panel...');
     initFirebase();
     setupEventListeners();
 });
 
 function setupEventListeners() {
-    console.log('🔗 Setting up event listeners...');
     
     // ========== LOGIN ==========
     document.getElementById('googleLoginBtn')?.addEventListener('click', signInWithGoogle);
@@ -2038,4 +2014,3 @@ document.addEventListener('click', (e) => {
     }
 });
 
-console.log('✅ Event listeners configurados correctamente');
