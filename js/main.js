@@ -11,6 +11,16 @@
    Firebase carga productos desde Firestore de cualquier origen.
    ============================================ */
 
+// ========== UTILS ==========
+function escapeHtml(str) {
+  return String(str ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 // ========== CONFIGURACIÓN ==========
 // ⚠️ CAMBIAR ESTOS VALORES POR LOS REALES
 const CONFIG = {
@@ -93,8 +103,6 @@ function initializeFirebase() {
     firebase.initializeApp(firebaseConfig);
     firebaseDb = firebase.firestore();
     firebaseInitialized = true;
-    
-    console.log('✅ Firebase inicializado correctamente');
   } catch (error) {
     console.error('❌ Error inicializando Firebase:', error);
     return false;
@@ -163,7 +171,6 @@ async function loadProductsFromFirebase() {
       });
     });
     
-    console.log(`✅ ${products.length} productos cargados desde Firebase`);
     return products;
     
   } catch (error) {
@@ -175,8 +182,6 @@ async function loadProductsFromFirebase() {
 // ========== CARGAR CONFIGURACIÓN ==========
 // Cargar configuración desde Firestore (en lugar de Google Sheets)
 async function loadConfig() {
-  // La configuración ahora se gestiona desde el panel de admin
-  console.log('ℹ️ Configuración cargada desde valores por defecto');
   return true;
 }
 
@@ -188,9 +193,6 @@ async function loadProducts() {
     const products = await loadProductsFromFirebase();
     
     if (products === false) {
-      if (USE_FIREBASE) {
-        console.log('📦 Firebase no disponible. Usando productos estáticos...');
-      }
       return false; // Usar productos estáticos del HTML
     }
     
@@ -199,7 +201,6 @@ async function loadProducts() {
       .filter(p => sheetConfig.mostrar_agotados === 'si' || (p.stock && p.stock.toLowerCase() !== 'agotado'))
       .sort((a, b) => (a.order || 999) - (b.order || 999));
 
-    console.log(`✅ ${allProducts.length} productos cargados y filtrados`);
     return true;
   }
   
@@ -477,8 +478,6 @@ async function loadTestimonials() {
       .get();
     
     if (snapshot.empty) {
-      // Keep default testimonials if none in Firebase
-      console.log('📝 Using default testimonials');
       return;
     }
     
@@ -488,22 +487,20 @@ async function loadTestimonials() {
     });
     
     container.innerHTML = testimonials.map(t => {
-      const stars = '★'.repeat(t.rating || 5);
+      const stars = '★'.repeat(Math.min(5, Math.max(1, t.rating || 5)));
       return `
         <div class="testimonial-card">
           <div class="testimonial-stars">${stars}</div>
-          <p class="testimonial-text">"${t.text}"</p>
+          <p class="testimonial-text">"${escapeHtml(t.text)}"</p>
           <div class="testimonial-author">
-            <span class="author-name">${t.name}</span>
-            <span class="author-location">${t.location}</span>
+            <span class="author-name">${escapeHtml(t.name)}</span>
+            <span class="author-location">${escapeHtml(t.location)}</span>
           </div>
         </div>
       `;
     }).join('');
-    
-    console.log('✅ Testimonials loaded from Firebase');
   } catch (error) {
-    console.log('⚠️ Using default testimonials:', error.message);
+    // silently fall back to default testimonials
   }
 }
 
@@ -519,12 +516,10 @@ async function loadBannerConfig() {
     
     const doc = await ref.doc('general').get();
     if (!doc.exists) {
-      console.log('⚠️ No config found in Firebase, using defaults');
       return;
     }
-    
+
     const data = doc.data();
-    console.log('📋 Config loaded from Firebase:', data);
     
     // ===== UPDATE BANNER TEXT =====
     if (data.bannerText) {
@@ -580,9 +575,9 @@ async function loadBannerConfig() {
       const footerHours = document.querySelector('.footer-hours');
       if (footerHours) {
         footerHours.innerHTML = `
-          <p><b>Lunes a Viernes:</b> ${data.hours.weekday || '10:00 - 19:00'}</p>
-          <p><b>Sábados:</b> ${data.hours.saturday || '10:00 - 14:00'}</p>
-          <p><b>Domingos:</b> ${data.hours.sunday || 'Cerrado'}</p>
+          <p><b>Lunes a Viernes:</b> ${escapeHtml(data.hours.weekday || '10:00 - 19:00')}</p>
+          <p><b>Sábados:</b> ${escapeHtml(data.hours.saturday || '10:00 - 14:00')}</p>
+          <p><b>Domingos:</b> ${escapeHtml(data.hours.sunday || 'Cerrado')}</p>
         `;
       }
       
@@ -594,10 +589,8 @@ async function loadBannerConfig() {
       }
     }
     
-    console.log('✅ All config applied from Firebase');
-    
   } catch (error) {
-    console.log('⚠️ Using default config:', error.message);
+    // silently fall back to default config
   }
 }
 
@@ -801,7 +794,6 @@ function initShipping() {
     if (e.key === 'Enter') calculateShippingCost();
   });
 
-  console.log('✅ Shipping calculator initialized');
 }
 
 // Event listeners para botones de agregar al carrito
@@ -828,8 +820,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   if (productsLoaded) {
     // Productos cargados dinámicamente desde Firebase
-    console.log('💫 Usando productos desde Firebase');
-    
     // Renderizar productos dinámicos
     renderProductsPage(1, 'todos', '');
     
@@ -847,7 +837,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   } else {
     // Usar productos estáticos del HTML
-    console.log('📦 Usando productos estáticos del HTML');
     document.querySelectorAll('.add-to-cart').forEach(btn => {
       btn.addEventListener('click', function() {
         const product = this.closest('.product') || this.closest('.pinfo');
@@ -1058,7 +1047,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
 
-  console.log('✅ Product modal event listeners attached');
 });
 
 // Cart sidebar
@@ -1646,7 +1634,6 @@ function animateCounters() {
     observer.observe(counter);
   });
 
-  console.log('✅ Counters initialized:', counters.length);
 }
 
 // ========== URGENCIA - POCAS UNIDADES ==========
@@ -1758,7 +1745,6 @@ function trackEvent(eventName, params = {}) {
     gtag('event', eventName, params);
   }
 
-  console.log('📊 Event tracked:', eventName, params);
 }
 
 // Track add to cart

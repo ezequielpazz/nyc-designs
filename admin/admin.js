@@ -16,6 +16,15 @@ const CLOUDINARY_CONFIG = {
     uploadPreset: 'nyc_designs'
 };
 
+function escapeHtml(str) {
+    return String(str ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
 // Authorized admin emails
 const AUTHORIZED_EMAILS = [
     "newyorkcitydesigns4@gmail.com",
@@ -264,7 +273,7 @@ function renderProductsGrid() {
         
         // Badges
         const badgesHTML = (product.badges || []).map(badge => `
-            <span class="product-badge badge-${badge.toLowerCase()}">${badge}</span>
+            <span class="product-badge badge-${escapeHtml(badge.toLowerCase())}">${escapeHtml(badge)}</span>
         `).join('');
         
         card.innerHTML = `
@@ -276,16 +285,16 @@ function renderProductsGrid() {
                 </div>
             </div>
             <div class="product-info">
-                <h3 class="product-name">${product.nombre}</h3>
-                ${product.descripcion ? `<p class="product-description">${product.descripcion}</p>` : ''}
+                <h3 class="product-name">${escapeHtml(product.nombre)}</h3>
+                ${product.descripcion ? `<p class="product-description">${escapeHtml(product.descripcion)}</p>` : ''}
                 <div class="product-meta">
                     <div class="product-price">
                         <span class="price-current">$${product.precio.toLocaleString('es-AR')}</span>
                         ${hasDiscount ? `<span class="price-old">$${product.precio_anterior.toLocaleString('es-AR')}</span>` : ''}
                     </div>
-                    <span class="product-category">${product.categoria}</span>
+                    <span class="product-category">${escapeHtml(product.categoria)}</span>
                 </div>
-                <span class="product-stock ${stockStatus}">${stockText}</span>
+                <span class="product-stock ${stockStatus}">${escapeHtml(stockText)}</span>
                 <div class="product-actions">
                     <button class="action-btn" onclick="openEditModal('${product.id}')">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1853,7 +1862,7 @@ function renderFilteredProducts(products) {
         
         const hasDiscount = product.precio_anterior && product.precio_anterior > product.precio;
         const badgesHTML = (product.badges || []).map(badge => `
-            <span class="product-badge badge-${badge.toLowerCase()}">${badge}</span>
+            <span class="product-badge badge-${escapeHtml(badge.toLowerCase())}">${escapeHtml(badge)}</span>
         `).join('');
         
         card.innerHTML = `
@@ -1865,16 +1874,16 @@ function renderFilteredProducts(products) {
                 </div>
             </div>
             <div class="product-info">
-                <h3 class="product-name">${product.nombre}</h3>
-                ${product.descripcion ? `<p class="product-description">${product.descripcion}</p>` : ''}
+                <h3 class="product-name">${escapeHtml(product.nombre)}</h3>
+                ${product.descripcion ? `<p class="product-description">${escapeHtml(product.descripcion)}</p>` : ''}
                 <div class="product-meta">
                     <div class="product-price">
                         <span class="price-current">$${product.precio.toLocaleString('es-AR')}</span>
                         ${hasDiscount ? `<span class="price-old">$${product.precio_anterior.toLocaleString('es-AR')}</span>` : ''}
                     </div>
-                    <span class="product-category">${product.categoria}</span>
+                    <span class="product-category">${escapeHtml(product.categoria)}</span>
                 </div>
-                <span class="product-stock ${stockStatus}">${stockText}</span>
+                <span class="product-stock ${stockStatus}">${escapeHtml(stockText)}</span>
                 <div class="product-actions">
                     <button class="action-btn" onclick="openEditModal('${product.id}')">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
