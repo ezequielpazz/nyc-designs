@@ -65,7 +65,7 @@ let productFormData = {
     visible: true,
     destacado: false,
     badges: [],
-    imagen: null,
+    imagenes: [null, null, null, null, null],
     material: '',
     medidas: '',
     cuidados: ''
@@ -365,6 +365,9 @@ async function saveProduct() {
         
         showLoading(true);
         
+        // Filter out nulls but keep order
+        const cleanImages = (productFormData.imagenes || []).filter(img => img != null);
+
         const data = {
             nombre: productFormData.nombre,
             descripcion: productFormData.descripcion,
@@ -376,18 +379,20 @@ async function saveProduct() {
             visible: productFormData.visible,
             destacado: productFormData.destacado,
             badges: productFormData.badges,
-            imagen: productFormData.imagen,
+            imagen: cleanImages[0] || null,
+            imagenes: cleanImages,
             material: productFormData.material || '',
             medidas: productFormData.medidas || '',
             cuidados: productFormData.cuidados || '',
             updatedAt: new Date()
         };
-        
+
         if (currentEditingProductId) {
             // Actualizar
             const product = allProducts.find(p => p.id === currentEditingProductId);
-            if (product?.imagen && !productFormData.imagen) {
+            if (product?.imagen && cleanImages.length === 0) {
                 data.imagen = product.imagen;
+                data.imagenes = product.imagenes || [product.imagen];
             }
             
             await db.collection('productos').doc(currentEditingProductId).update(data);
@@ -534,7 +539,7 @@ function openWizardModal() {
         visible: true,
         destacado: false,
         badges: [],
-        imagen: null
+        imagenes: [null, null, null, null, null]
     };
     
     resetWizardForm();
@@ -569,7 +574,7 @@ function openEditModal(productId) {
         visible: product.visible !== false,
         destacado: product.destacado || false,
         badges: product.badges || [],
-        imagen: product.imagen
+        imagenes: product.imagenes || [product.imagen || null, null, null, null, null]
     };
     
     populateWizardForm();
@@ -600,8 +605,11 @@ function resetWizardForm() {
     document.getElementById('productPrecio').value = '';
     document.getElementById('productPrecioAnterior').value = '';
     document.getElementById('productStock').value = '';
-    document.getElementById('productImagen').value = '';
-    
+    // Reset all image slots
+    document.querySelectorAll('.image-slot-input').forEach(input => input.value = '');
+    document.querySelectorAll('.image-slot-preview').forEach(preview => preview.style.display = 'none');
+    document.querySelectorAll('.image-slot-dropzone').forEach(dz => dz.style.display = 'flex');
+
     document.querySelectorAll('input[name="categoria"]').forEach(r => r.checked = false);
     document.querySelectorAll('input[name="stockType"]').forEach(r => r.checked = (r.value === 'ilimitado'));
     document.querySelectorAll('.badge-checkbox').forEach(cb => cb.checked = false);
@@ -642,12 +650,20 @@ function populateWizardForm() {
     document.getElementById('productVisible').checked = productFormData.visible;
     document.getElementById('productDestacado').checked = productFormData.destacado;
     
-    if (productFormData.imagen) {
-        const preview = document.getElementById('imagePreview');
-        preview.innerHTML = `<img id="previewImg" src="${productFormData.imagen}" alt="Preview"><button type="button" class="btn-remove-image">✕</button>`;
-        preview.style.display = 'block';
-    }
-    
+    // Populate image slots
+    (productFormData.imagenes || []).forEach((imgUrl, index) => {
+        if (imgUrl) {
+            const slot = document.querySelector(`.image-slot[data-index="${index}"]`);
+            if (slot) {
+                const preview = slot.querySelector('.image-slot-preview');
+                const dropzone = slot.querySelector('.image-slot-dropzone');
+                preview.querySelector('img').src = imgUrl;
+                preview.style.display = 'block';
+                dropzone.style.display = 'none';
+            }
+        }
+    });
+
     updateCharCount();
     updatePreview();
 }
@@ -816,11 +832,10 @@ function updatePreview() {
     document.getElementById('previewCategory').textContent = productFormData.categoria || 'Categoría';
     document.getElementById('previewStock').textContent = productFormData.stock === 'ilimitado' ? 'Ilimitado' : productFormData.stock;
     
-    if (productFormData.imagen) {
-        if (typeof productFormData.imagen === 'string') {
-            const preview = document.getElementById('previewProductImage');
-            preview.innerHTML = `<img src="${productFormData.imagen}" style="width: 100%; height: 100%; object-fit: cover;">`;
-        }
+    const firstImage = (productFormData.imagenes || []).find(img => img != null);
+    if (firstImage && typeof firstImage === 'string') {
+        const preview = document.getElementById('previewProductImage');
+        preview.innerHTML = `<img src="${firstImage}" style="width: 100%; height: 100%; object-fit: cover;">`;
     }
 }
 
@@ -829,36 +844,35 @@ function updateCharCount() {
     document.getElementById('charCount').textContent = count;
 }
 
-function updateImagePreview() {
-    const imageInput = document.getElementById('productImagen');
-    if (!imageInput) {
-        console.warn('⚠️ Image input element not found');
-        return;
-    }
-    
-    const file = imageInput.files[0];
-    if (!file) {
-        console.log('ℹ️ No file selected');
-        return;
-    }
-    
-    console.log('🖼️ Creating preview for:', file.name);
+function handleSlotImageSelect(index, file) {
+    if (!file || !file.type.startsWith('image/')) return;
+
     const reader = new FileReader();
     reader.onload = (e) => {
-        const preview = document.getElementById('imagePreview');
-        if (!preview) {
-            console.warn('⚠️ Preview element not found (id="imagePreview")');
-            return;
-        }
-        preview.innerHTML = `<img id="previewImg" src="${e.target.result}" alt="Preview"><button type="button" class="btn-remove-image">✕</button>`;
+        const slot = document.querySelector(`.image-slot[data-index="${index}"]`);
+        if (!slot) return;
+        const preview = slot.querySelector('.image-slot-preview');
+        const dropzone = slot.querySelector('.image-slot-dropzone');
+        preview.querySelector('img').src = e.target.result;
         preview.style.display = 'block';
-        productFormData.imagen = e.target.result;
-        console.log('✅ Preview created');
-    };
-    reader.onerror = () => {
-        console.error('❌ Error reading file');
+        dropzone.style.display = 'none';
+        productFormData.imagenes[index] = e.target.result;
+        updatePreview();
     };
     reader.readAsDataURL(file);
+}
+
+function removeSlotImage(index) {
+    const slot = document.querySelector(`.image-slot[data-index="${index}"]`);
+    if (!slot) return;
+    const preview = slot.querySelector('.image-slot-preview');
+    const dropzone = slot.querySelector('.image-slot-dropzone');
+    const input = slot.querySelector('.image-slot-input');
+    preview.style.display = 'none';
+    dropzone.style.display = 'flex';
+    if (input) input.value = '';
+    productFormData.imagenes[index] = null;
+    updatePreview();
 }
 
 function toggleStockInput() {
@@ -1626,97 +1640,51 @@ function setupEventListeners() {
         updatePreview();
     });
     
-    // ========== WIZARD - IMAGE UPLOAD ==========
-    const imageInput = document.getElementById('productImagen');
-    if (imageInput) {
-        imageInput.addEventListener('change', async (e) => {
+    // ========== WIZARD - IMAGE SLOTS (5 images) ==========
+    document.querySelectorAll('.image-slot-input').forEach(input => {
+        input.addEventListener('change', async (e) => {
+            const idx = parseInt(e.target.dataset.index);
             const file = e.target.files[0];
-            if (file) {
-                console.log('📷 File selected:', file.name, `(${(file.size / 1024).toFixed(2)} KB)`);
-                updateImagePreview();
-                // Subir a Cloudinary
+            if (!file) return;
+            handleSlotImageSelect(idx, file);
+            const url = await uploadImage(file);
+            if (url) {
+                productFormData.imagenes[idx] = url;
+                updatePreview();
+                showToast('Imagen subida', 'success');
+            }
+        });
+    });
+
+    // Dropzone click and drag for each slot
+    document.querySelectorAll('.image-slot-dropzone').forEach(dz => {
+        dz.addEventListener('click', () => {
+            const idx = dz.dataset.index;
+            document.querySelector(`.image-slot-input[data-index="${idx}"]`)?.click();
+        });
+        dz.addEventListener('dragover', (e) => { e.preventDefault(); dz.classList.add('drag-over'); });
+        dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
+        dz.addEventListener('drop', async (e) => {
+            e.preventDefault();
+            dz.classList.remove('drag-over');
+            const idx = parseInt(dz.dataset.index);
+            const file = e.dataTransfer.files[0];
+            if (file && file.type.startsWith('image/')) {
+                handleSlotImageSelect(idx, file);
                 const url = await uploadImage(file);
                 if (url) {
-                    productFormData.imagen = url;
+                    productFormData.imagenes[idx] = url;
                     updatePreview();
-                    showToast('✅ Imagen subida', 'success');
-                } else {
-                    console.warn('⚠️ Image upload returned null URL');
+                    showToast('Imagen subida', 'success');
                 }
             }
         });
-    } else {
-        console.warn('⚠️ Image input element not found (id="productImagen")');
-    }
-    
-    // ========== WIZARD - DROPZONE ==========
-    const dropzone = document.getElementById('imageDropzone');
-    if (dropzone) {
-        console.log('✅ Dropzone found, setting up listeners');
-        
-        dropzone.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            dropzone.classList.add('dragging');
-        });
-        
-        dropzone.addEventListener('dragleave', () => {
-            dropzone.classList.remove('dragging');
-        });
-        
-        dropzone.addEventListener('drop', async (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            dropzone.classList.remove('dragging');
-            
-            const files = e.dataTransfer.files;
-            console.log('📦 File dropped, count:', files.length);
-            if (files.length > 0) {
-                const file = files[0];
-                console.log('📷 Processing file:', file.name, file.type);
-                if (file.type.startsWith('image/')) {
-                    const url = await uploadImage(file);
-                    if (url) {
-                        productFormData.imagen = url;
-                        const preview = document.getElementById('imagePreview');
-                        if (preview) {
-                            preview.innerHTML = `<img src="${url}" style="max-width: 100%; max-height: 200px;"><button type="button" class="btn-remove-image">✕</button>`;
-                            preview.style.display = 'block';
-                        }
-                        updatePreview();
-                        showToast('✅ Imagen subida', 'success');
-                    }
-                } else {
-                    showToast('Por favor sube una imagen válida', 'error');
-                }
-            }
-        });
-        
-        // Click to upload
-        dropzone.addEventListener('click', (e) => {
-            console.log('🖱️ Dropzone clicked, opening file picker');
-            const imageInput = document.getElementById('productImagen');
-            if (imageInput) {
-                imageInput.click();
-            } else {
-                console.error('❌ File input element not found');
-            }
-        });
-    }
-    
-    // Remove image button
+    });
+
+    // Remove image from slot
     document.addEventListener('click', (e) => {
-        if (e.target && e.target.classList && e.target.classList.contains('btn-remove-image')) {
-            const preview = document.getElementById('imagePreview');
-            const imageInput = document.getElementById('productImagen');
-            if (preview) {
-                preview.innerHTML = '';
-                preview.style.display = 'none';
-            }
-            if (imageInput) {
-                imageInput.value = '';
-            }
-            productFormData.imagen = null;
+        if (e.target?.classList?.contains('btn-remove-slot-image')) {
+            removeSlotImage(parseInt(e.target.dataset.index));
         }
     });
     

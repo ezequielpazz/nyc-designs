@@ -2189,16 +2189,45 @@ footer {
 .product-modal-image {
   background: white;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: 40px;
   border-radius: 16px 0 0 16px;
+  gap: 12px;
 }
 
-.product-modal-image img {
+.product-modal-image > img {
   max-width: 100%;
-  max-height: 400px;
+  max-height: 360px;
   object-fit: contain;
+}
+
+.product-modal-thumbs {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.product-modal-thumbs .modal-thumb {
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 0.2s, border-color 0.2s;
+}
+
+.product-modal-thumbs .modal-thumb:hover {
+  opacity: 0.9;
+}
+
+.product-modal-thumbs .modal-thumb.active {
+  border-color: var(--rose);
+  opacity: 1;
 }
 
 .product-modal-info {

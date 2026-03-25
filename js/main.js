@@ -183,9 +183,8 @@ async function loadProductsFromFirebase() {
         old_price: data.precio_anterior || 0,
         category: data.categoria,
         description: data.descripcion,
-        image1: data.imagen,
-        image2: '',
-        image3: '',
+        images: data.imagenes || [data.imagen].filter(Boolean),
+        image1: (data.imagenes && data.imagenes[0]) || data.imagen,
         stock: data.stock,
         featured: data.destacado,
         badges: data.badges || [],
@@ -404,7 +403,24 @@ function openProductModal(productData) {
   const modal = document.getElementById('productModal');
   
   // Populate modal with product data
-  document.getElementById('modalProductImage').src = productData.image1 || 'assets/img/logo.jpg';
+  const images = productData.images || [productData.image1].filter(Boolean);
+  const mainImg = document.getElementById('modalProductImage');
+  mainImg.src = images[0] || 'assets/img/logo.jpg';
+
+  // Build thumbnail gallery if multiple images
+  const thumbsContainer = document.getElementById('modalProductThumbs');
+  if (thumbsContainer) {
+    if (images.length > 1) {
+      thumbsContainer.innerHTML = images.map((img, i) =>
+        `<img src="${escapeHtml(img)}" alt="Foto ${i + 1}" class="modal-thumb${i === 0 ? ' active' : ''}" onclick="document.getElementById('modalProductImage').src=this.src; document.querySelectorAll('.modal-thumb').forEach(t=>t.classList.remove('active')); this.classList.add('active');">`
+      ).join('');
+      thumbsContainer.style.display = 'flex';
+    } else {
+      thumbsContainer.innerHTML = '';
+      thumbsContainer.style.display = 'none';
+    }
+  }
+
   document.getElementById('modalProductName').textContent = productData.name;
   document.getElementById('modalProductPrice').textContent = '$' + productData.price.toLocaleString('es-AR');
   

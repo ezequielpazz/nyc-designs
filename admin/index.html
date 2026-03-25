@@ -791,27 +791,86 @@
                     </div>
                 </div>
 
-                <!-- Step 4: Image -->
+                <!-- Step 4: Images (up to 5) -->
                 <div class="wizard-step" data-step="4">
-                    <h2>Imagen</h2>
-                    <p class="step-subtitle">Sube una foto del producto</p>
+                    <h2>Imágenes</h2>
+                    <p class="step-subtitle">Subí hasta 5 fotos del producto (la primera será la principal)</p>
 
-                    <div class="image-upload">
-                        <div class="dropzone" id="imageDropzone">
-                            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                                <polyline points="17 8 12 3 7 8"></polyline>
-                                <line x1="12" y1="3" x2="12" y2="15"></line>
-                            </svg>
-                            <h3>Arrastrá una imagen</h3>
-                            <p>o hacé click para buscar</p>
+                    <div class="image-gallery-upload">
+                        <div class="image-slots" id="imageSlots">
+                            <div class="image-slot" data-index="0">
+                                <div class="image-slot-dropzone" data-index="0">
+                                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                        <polyline points="17 8 12 3 7 8"></polyline>
+                                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                                    </svg>
+                                    <span>Principal</span>
+                                </div>
+                                <div class="image-slot-preview" style="display:none;">
+                                    <img src="" alt="Foto 1">
+                                    <button type="button" class="btn-remove-slot-image" data-index="0">✕</button>
+                                </div>
+                                <input type="file" class="image-slot-input" data-index="0" accept="image/*" style="display:none;">
+                            </div>
+                            <div class="image-slot" data-index="1">
+                                <div class="image-slot-dropzone" data-index="1">
+                                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                                    </svg>
+                                    <span>Foto 2</span>
+                                </div>
+                                <div class="image-slot-preview" style="display:none;">
+                                    <img src="" alt="Foto 2">
+                                    <button type="button" class="btn-remove-slot-image" data-index="1">✕</button>
+                                </div>
+                                <input type="file" class="image-slot-input" data-index="1" accept="image/*" style="display:none;">
+                            </div>
+                            <div class="image-slot" data-index="2">
+                                <div class="image-slot-dropzone" data-index="2">
+                                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                                    </svg>
+                                    <span>Foto 3</span>
+                                </div>
+                                <div class="image-slot-preview" style="display:none;">
+                                    <img src="" alt="Foto 3">
+                                    <button type="button" class="btn-remove-slot-image" data-index="2">✕</button>
+                                </div>
+                                <input type="file" class="image-slot-input" data-index="2" accept="image/*" style="display:none;">
+                            </div>
+                            <div class="image-slot" data-index="3">
+                                <div class="image-slot-dropzone" data-index="3">
+                                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                                    </svg>
+                                    <span>Foto 4</span>
+                                </div>
+                                <div class="image-slot-preview" style="display:none;">
+                                    <img src="" alt="Foto 4">
+                                    <button type="button" class="btn-remove-slot-image" data-index="3">✕</button>
+                                </div>
+                                <input type="file" class="image-slot-input" data-index="3" accept="image/*" style="display:none;">
+                            </div>
+                            <div class="image-slot" data-index="4">
+                                <div class="image-slot-dropzone" data-index="4">
+                                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                                    </svg>
+                                    <span>Foto 5</span>
+                                </div>
+                                <div class="image-slot-preview" style="display:none;">
+                                    <img src="" alt="Foto 5">
+                                    <button type="button" class="btn-remove-slot-image" data-index="4">✕</button>
+                                </div>
+                                <input type="file" class="image-slot-input" data-index="4" accept="image/*" style="display:none;">
+                            </div>
                         </div>
-                        <input type="file" id="productImagen" accept="image/*" style="display: none;">
-                        <div id="imagePreview" class="image-preview" style="display: none;">
-                            <img id="previewImg" src="" alt="Preview">
-                            <button type="button" class="btn-remove-image">✕</button>
-                        </div>
-                        <small>Recomendado: 800x800px, JPG o PNG</small>
+                        <small>Recomendado: 800x800px, JPG o PNG. La primera imagen será la portada del producto.</small>
                     </div>
                 </div>
 
