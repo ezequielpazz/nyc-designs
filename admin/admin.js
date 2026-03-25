@@ -1231,13 +1231,13 @@ async function loadTestimonials() {
                 <div class="testimonial-admin-card">
                     <div class="testimonial-header">
                         <div class="testimonial-info">
-                            <div class="testimonial-author">${t.name || 'Anónimo'}</div>
-                            <div class="testimonial-location">${t.location || 'Ubicación no especificada'}</div>
+                            <div class="testimonial-author">${escapeHtml(t.name || 'Anónimo')}</div>
+                            <div class="testimonial-location">${escapeHtml(t.location || 'Ubicación no especificada')}</div>
                             <div class="testimonial-rating">${'⭐'.repeat(t.rating || 5)}</div>
                         </div>
                         ${t.visible ? '<span class="testimonial-visible-badge">Visible</span>' : ''}
                     </div>
-                    <div class="testimonial-text">"${t.text || ''}"</div>
+                    <div class="testimonial-text">"${escapeHtml(t.text || '')}"</div>
                     <div class="testimonial-actions">
                         <button class="btn btn-secondary" onclick="deleteTestimonial('${t.id}')">Eliminar</button>
                     </div>
@@ -1328,9 +1328,9 @@ async function loadCoupons() {
         if (couponsGrid) {
             couponsGrid.innerHTML = coupons.map(coupon => `
                 <div class="coupon-card">
-                    <div class="coupon-code">${coupon.code}</div>
+                    <div class="coupon-code">${escapeHtml(coupon.code)}</div>
                     <div class="coupon-discount-badge">
-                        ${coupon.type === 'percentage' ? coupon.value + '%' : '$' + coupon.value}
+                        ${coupon.type === 'percentage' ? escapeHtml(String(coupon.value)) + '%' : '$' + escapeHtml(String(coupon.value))}
                     </div>
                     <div class="coupon-details">
                         <div class="coupon-detail-item">
@@ -1481,13 +1481,13 @@ async function loadMessages() {
                 <div class="message-card ${!msg.read ? 'unread' : ''}">
                     <div class="message-header">
                         <div class="message-sender">
-                            <div class="message-from">${msg.name || 'Anónimo'}</div>
-                            <div class="message-email">${msg.email || ''}</div>
+                            <div class="message-from">${escapeHtml(msg.name || 'Anónimo')}</div>
+                            <div class="message-email">${escapeHtml(msg.email || '')}</div>
                         </div>
                         <div class="message-date">${new Date(msg.createdAt?.toDate()).toLocaleDateString('es-AR')}</div>
                     </div>
-                    <div class="message-subject">${msg.subject || 'Sin asunto'}</div>
-                    <div class="message-text">${msg.message || ''}</div>
+                    <div class="message-subject">${escapeHtml(msg.subject || 'Sin asunto')}</div>
+                    <div class="message-text">${escapeHtml(msg.message || '')}</div>
                     <div class="message-actions">
                         ${!msg.read ? `<button onclick="markAsRead('${msg.id}')">Marcar como leído</button>` : ''}
                         <button onclick="deleteMessage('${msg.id}')">Eliminar</button>
@@ -1986,11 +1986,6 @@ function renderFilteredProducts(products) {
    UTILITY FUNCTIONS
    ============================================ */
 
-// Alias function for typo fix
-function saveFewizardStepData(step) {
-    // This is a fix for the typo in updatePreview()
-    saveWizardStepData(step);
-}
 
 /* ============================================
    MODAL OVERLAY CLOSE
