@@ -423,14 +423,19 @@ async function loadRecentOrders() {
 
 function updateFilterTabs() {
     const categories = ['fotos-recuerdos', 'decoracion', 'tazas-vasos', 'accesorios', 'stickers', 'imprimibles-plantillas', 'fiestas-eventos'];
-    
+
     document.getElementById('tabTodos').textContent = allProducts.length;
-    
+
     categories.forEach(cat => {
         const count = allProducts.filter(p => p.categoria === cat).length;
         const element = document.getElementById(`tab${cat.charAt(0).toUpperCase()}${cat.slice(1)}`);
         if (element) element.textContent = count;
     });
+}
+
+function navigateTo(section) {
+    const navItem = document.querySelector(`.nav-item[data-section="${section}"]`);
+    if (navItem) navItem.click();
 }
 
 /* ============================================
