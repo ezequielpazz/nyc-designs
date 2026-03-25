@@ -50,6 +50,55 @@
     });
   </script>
 
+  <!-- JSON-LD Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Store",
+    "name": "New York City Designs",
+    "url": "https://nyc-designs.vercel.app",
+    "logo": "https://nyc-designs.vercel.app/assets/img/logo.jpg",
+    "description": "Tienda de tazas sublimadas, regalos personalizados y calendarios con estética NYC.",
+    "telephone": "+5491123199122",
+    "address": {
+      "@type": "PostalAddress",
+      "addressCountry": "AR"
+    },
+    "sameAs": [
+      "https://www.instagram.com/newyorkcitydesigns"
+    ],
+    "priceRange": "$$",
+    "paymentAccepted": "MercadoPago, Credit Card, Debit Card, Bank Transfer",
+    "currenciesAccepted": "ARS",
+    "hasOfferCatalog": {
+      "@type": "OfferCatalog",
+      "name": "Productos NYC Designs",
+      "itemListElement": [
+        {
+          "@type": "OfferCatalog",
+          "name": "Tazas & Vasos",
+          "description": "Tazas sublimadas y vasos personalizados"
+        },
+        {
+          "@type": "OfferCatalog",
+          "name": "Fotos & Recuerdos",
+          "description": "Polaroids, álbumes y recuerdos personalizados"
+        },
+        {
+          "@type": "OfferCatalog",
+          "name": "Decoración",
+          "description": "Cuadros, carteles y decoración para tu hogar"
+        },
+        {
+          "@type": "OfferCatalog",
+          "name": "Fiestas & Eventos",
+          "description": "Kits completos para cumpleaños y eventos"
+        }
+      ]
+    }
+  }
+  </script>
+
 </head>
 <body>
 
