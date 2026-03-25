@@ -260,12 +260,12 @@ function renderProductsGrid() {
         let stockStatus = 'stock-in';
         let stockText = product.stock === 'ilimitado' ? 'Ilimitado' : product.stock;
         
-        if (product.stock === 'ilimitado' || product.stock === 0 || product.stock === '0') {
+        if (product.stock === 0 || product.stock === '0') {
             stockStatus = 'stock-out';
             stockText = 'Sin stock';
-        } else if (product.stock <= 5) {
+        } else if (product.stock !== 'ilimitado' && product.stock <= 5) {
             stockStatus = 'stock-low';
-            stockText = `${product.stock} left`;
+            stockText = `${product.stock} restantes`;
         }
         
         // Descuento
@@ -752,9 +752,9 @@ function validateWizardStep(step) {
             }
             return true;
         case 2:
-            const precio = document.getElementById('productPrecio').value;
-            if (!precio) {
-                showToast('Por favor ingresa un precio', 'error');
+            const precio = parseFloat(document.getElementById('productPrecio').value);
+            if (isNaN(precio) || precio <= 0) {
+                showToast('Por favor ingresa un precio válido (número mayor a 0)', 'error');
                 return false;
             }
             return true;
@@ -1852,12 +1852,12 @@ function renderFilteredProducts(products) {
         let stockStatus = 'stock-in';
         let stockText = product.stock === 'ilimitado' ? 'Ilimitado' : product.stock;
         
-        if (product.stock === 'ilimitado' || product.stock === 0 || product.stock === '0') {
+        if (product.stock === 0 || product.stock === '0') {
             stockStatus = 'stock-out';
             stockText = 'Sin stock';
-        } else if (product.stock <= 5) {
+        } else if (product.stock !== 'ilimitado' && product.stock <= 5) {
             stockStatus = 'stock-low';
-            stockText = `${product.stock} left`;
+            stockText = `${product.stock} restantes`;
         }
         
         const hasDiscount = product.precio_anterior && product.precio_anterior > product.precio;

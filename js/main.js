@@ -1001,33 +1001,28 @@ document.addEventListener('DOMContentLoaded', async () => {
       processPayment();
     });
   }
-});
 
-// ========== PRODUCT MODAL EVENT LISTENERS ==========
-document.addEventListener('DOMContentLoaded', function() {
-  // Close button
-  const closeBtn = document.getElementById('closeProductModal');
-  if (closeBtn) {
-    closeBtn.addEventListener('click', function(e) {
+  // ========== PRODUCT MODAL EVENT LISTENERS ==========
+  const closeModalBtn = document.getElementById('closeProductModal');
+  if (closeModalBtn) {
+    closeModalBtn.addEventListener('click', function(e) {
       e.preventDefault();
       e.stopPropagation();
       closeProductModal();
     });
   }
 
-  // Overlay click to close
-  const overlay = document.querySelector('.product-modal-overlay');
-  if (overlay) {
-    overlay.addEventListener('click', function(e) {
+  const modalOverlay = document.querySelector('.product-modal-overlay');
+  if (modalOverlay) {
+    modalOverlay.addEventListener('click', function(e) {
       e.preventDefault();
       closeProductModal();
     });
   }
 
-  // Add to cart from modal
-  const addBtn = document.getElementById('modalAddToCart');
-  if (addBtn) {
-    addBtn.addEventListener('click', function(e) {
+  const modalAddBtn = document.getElementById('modalAddToCart');
+  if (modalAddBtn) {
+    modalAddBtn.addEventListener('click', function(e) {
       e.preventDefault();
       if (currentModalProduct) {
         addToCart(currentModalProduct.id, currentModalProduct.name, currentModalProduct.price);
@@ -1037,16 +1032,14 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // ESC key to close
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
-      const modal = document.getElementById('productModal');
-      if (modal && modal.classList.contains('active')) {
+      const pModal = document.getElementById('productModal');
+      if (pModal && pModal.classList.contains('active')) {
         closeProductModal();
       }
     }
   });
-
 });
 
 // Cart sidebar
@@ -1070,16 +1063,6 @@ function closeCart() {
 cartBtn?.addEventListener('click', openCart);
 cartOverlay?.addEventListener('click', closeCart);
 cartClose?.addEventListener('click', closeCart);
-
-// ========== COUPON LISTENERS ==========
-document.getElementById('applyCouponBtn')?.addEventListener('click', applyCoupon);
-document.getElementById('removeCouponBtn')?.addEventListener('click', removeCoupon);
-document.getElementById('couponInput')?.addEventListener('keypress', (e) => {
-  if (e.key === 'Enter') {
-    e.preventDefault();
-    applyCoupon();
-  }
-});
 
 // ========== MENÚ MÓVIL ==========
 const hamburger = document.querySelector('.hamburger');
