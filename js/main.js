@@ -21,6 +21,24 @@ function escapeHtml(str) {
     .replace(/'/g, '&#039;');
 }
 
+function trapFocus(modal) {
+  const focusable = modal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+  if (focusable.length === 0) return null;
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  first.focus();
+  function handler(e) {
+    if (e.key !== 'Tab') return;
+    if (e.shiftKey) {
+      if (document.activeElement === first) { e.preventDefault(); last.focus(); }
+    } else {
+      if (document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+  }
+  modal.addEventListener('keydown', handler);
+  return () => modal.removeEventListener('keydown', handler);
+}
+
 function debounce(fn, delay) {
   let timer;
   return function(...args) {
@@ -246,7 +264,7 @@ function renderProductsPage(page = 1, category = 'todos', searchTerm = '') {
   if (!grid) return;
 
   grid.innerHTML = pageProducts.map(p => `
-    <article class="product" data-id="${p.id}" data-name="${String(p.name).replace(/"/g, '&quot;')}" data-price="${p.price}" data-category="${p.category}">
+    <article class="product" data-id="${p.id}" data-name="${String(p.name).replace(/"/g, '&quot;')}" data-price="${p.price}" data-category="${p.category}" role="article" aria-label="${String(p.name).replace(/"/g, '&quot;')} - $${p.price.toLocaleString('es-AR')}">
       <div class="pimg" onclick="openProductModal(${JSON.stringify(p).replace(/"/g, '&quot;')})">
         ${p.old_price && p.old_price > p.price ? `<span class="discount-badge">-${Math.round((1 - p.price/p.old_price) * 100)}%</span>` : ''}
         <img src="${p.image1}" alt="${p.name}" loading="lazy" onerror="this.src='assets/img/logo.jpg'">
@@ -455,12 +473,15 @@ function openProductModal(productData) {
   // Show modal
   modal.classList.add('active');
   document.body.style.overflow = 'hidden';
+  modal._releaseFocus = trapFocus(modal);
 }
 
+let _releaseFocusTrap = null;
 function closeProductModal() {
   const modal = document.getElementById('productModal');
   if (modal) {
     modal.classList.remove('active');
+    if (modal._releaseFocus) { modal._releaseFocus(); modal._releaseFocus = null; }
   }
   document.body.style.overflow = '';
   currentModalProduct = null;
@@ -1056,16 +1077,19 @@ const cartSidebar = document.getElementById('cartSidebar');
 const cartOverlay = document.getElementById('cartOverlay');
 const cartClose = document.getElementById('cartClose');
 
+let _releaseCartFocus = null;
 function openCart() {
   cartSidebar.classList.add('active');
   cartOverlay.classList.add('active');
   document.body.style.overflow = 'hidden';
+  _releaseCartFocus = trapFocus(cartSidebar);
 }
 
 function closeCart() {
   cartSidebar.classList.remove('active');
   cartOverlay.classList.remove('active');
   document.body.style.overflow = '';
+  if (_releaseCartFocus) { _releaseCartFocus(); _releaseCartFocus = null; }
 }
 
 cartBtn?.addEventListener('click', openCart);
