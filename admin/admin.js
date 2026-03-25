@@ -321,23 +321,96 @@ function updateDashboard() {
     // Total
     const total = allProducts.length;
     document.getElementById('statTotal').textContent = total;
-    
+
     // Visible
     const visible = allProducts.filter(p => p.visible !== false).length;
     document.getElementById('statVisible').textContent = visible;
-    
+
     // Sin stock
-    const outOfStock = allProducts.filter(p => 
+    const outOfStock = allProducts.filter(p =>
         p.stock === 0 || p.stock === '0' || (typeof p.stock === 'string' && p.stock.toLowerCase() === 'agotado')
     ).length;
     document.getElementById('statOutOfStock').textContent = outOfStock;
-    
+
     // Destacados
     const featured = allProducts.filter(p => p.destacado).length;
     document.getElementById('statFeatured').textContent = featured;
-    
+
     // Actualizar nav badge
     document.getElementById('navProductBadge').textContent = total;
+
+    // Low stock alerts (stock <= 5 and not unlimited)
+    const lowStock = allProducts.filter(p => {
+        const s = parseInt(p.stock, 10);
+        return !isNaN(s) && s > 0 && s <= 5;
+    });
+    const lowStockSection = document.getElementById('lowStockSection');
+    const lowStockList = document.getElementById('lowStockList');
+    if (lowStockSection && lowStockList) {
+        if (lowStock.length > 0) {
+            lowStockSection.style.display = 'block';
+            lowStockList.innerHTML = lowStock.map(p => `
+                <div class="low-stock-item">
+                    <span class="low-stock-name">${escapeHtml(p.nombre)}</span>
+                    <span class="low-stock-count">${p.stock} restantes</span>
+                </div>
+            `).join('');
+        } else {
+            lowStockSection.style.display = 'none';
+        }
+    }
+
+    // Load recent orders for dashboard
+    loadRecentOrders();
+}
+
+async function loadRecentOrders() {
+    try {
+        const snapshot = await db.collection('pedidos')
+            .orderBy('created_at', 'desc')
+            .limit(5)
+            .get();
+
+        const section = document.getElementById('recentOrdersSection');
+        const list = document.getElementById('recentOrdersList');
+        if (!section || !list) return;
+
+        if (snapshot.empty) {
+            section.style.display = 'none';
+            return;
+        }
+
+        section.style.display = 'block';
+        const orders = [];
+        snapshot.forEach(doc => orders.push({ id: doc.id, ...doc.data() }));
+
+        list.innerHTML = orders.map(order => {
+            const date = order.created_at?.toDate ? order.created_at.toDate().toLocaleDateString('es-AR') : '';
+            const name = order.customer?.name || order.payer?.name || 'Sin nombre';
+            return `
+                <div class="recent-order-item">
+                    <div class="recent-order-info">
+                        <span class="recent-order-id">#${order.id.slice(0, 8).toUpperCase()}</span>
+                        <span class="recent-order-name">${escapeHtml(name)}</span>
+                    </div>
+                    <div class="recent-order-meta">
+                        <span class="order-status status-${order.status || 'pendiente'}">${order.status || 'pendiente'}</span>
+                        <span class="recent-order-total">$${(order.total || 0).toLocaleString('es-AR')}</span>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        // Update pending orders count on stat card
+        const pendingCount = orders.filter(o => o.status === 'pendiente' || o.status === 'approved').length;
+        const badge = document.getElementById('navOrdersBadge');
+        if (badge) {
+            badge.textContent = pendingCount;
+            badge.style.display = pendingCount > 0 ? 'flex' : 'none';
+        }
+    } catch (error) {
+        console.error('Error loading recent orders:', error);
+    }
 }
 
 function updateFilterTabs() {
