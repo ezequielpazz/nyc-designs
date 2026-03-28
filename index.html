@@ -10,23 +10,27 @@
   <meta name="keywords" content="tazas personalizadas, regalos, sublimación, NYC, calendarios, packaging, personalizados, newyorkcitydesigns">
   <meta name="author" content="New York City Designs">
   <meta name="robots" content="index, follow">
-  
+  <link rel="canonical" href="https://nyc-designs.vercel.app/">
+
   <!-- OPEN GRAPH (para compartir en redes) -->
   <meta property="og:type" content="website">
   <meta property="og:title" content="New York City Designs — Personalizados con estilo NYC">
   <meta property="og:description" content="Tazas, regalos y personalizados con estética minimal. Envíos por E-Pick.">
-  <meta property="og:image" content="assets/img/logo.jpg">
+  <meta property="og:image" content="https://nyc-designs.vercel.app/assets/img/logo.jpg">
   <meta property="og:url" content="https://nyc-designs.vercel.app">
   <meta property="og:site_name" content="New York City Designs">
-  
+
   <!-- TWITTER CARD -->
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="New York City Designs">
   <meta name="twitter:description" content="Tazas, regalos y personalizados con estética NYC">
+  <meta name="twitter:image" content="https://nyc-designs.vercel.app/assets/img/logo.jpg">
+  <meta name="twitter:url" content="https://nyc-designs.vercel.app">
   
-  <!-- FAVICON -->
+  <!-- FAVICON & PWA -->
   <link rel="icon" type="image/jpeg" href="assets/img/logo.jpg">
   <link rel="apple-touch-icon" href="assets/img/logo.jpg">
+  <link rel="manifest" href="/manifest.json">
   
   <!-- THEME COLOR -->
   <meta name="theme-color" content="#B8777F">
@@ -651,11 +655,11 @@
             <h3 style="margin:0 0 12px; font-size:18px;">Escribinos un mensaje</h3>
             <form class="contact-form" onsubmit="handleContactForm(event)">
               <div class="form-row">
-                <input type="text" class="form-input" placeholder="Tu nombre" required>
-                <input type="email" class="form-input" placeholder="Tu email" required>
+                <input type="text" name="nombre" class="form-input" placeholder="Tu nombre" required>
+                <input type="email" name="email" class="form-input" placeholder="Tu email" required>
               </div>
-              <input type="text" class="form-input" placeholder="Asunto">
-              <textarea class="form-input form-textarea" placeholder="Tu mensaje..." required></textarea>
+              <input type="text" name="subject" class="form-input" placeholder="Asunto">
+              <textarea name="message" class="form-input form-textarea" placeholder="Tu mensaje..." required></textarea>
               <button type="submit" class="btn primary">Enviar mensaje</button>
             </form>
           </div>
@@ -1127,5 +1131,4 @@
   <script src="js/main.js"></script>
 
 </body>
-</html>
 </html>

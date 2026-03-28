@@ -256,26 +256,27 @@ function renderProductsPage(page = 1, category = 'todos', searchTerm = '') {
   const start = (currentPage - 1) * productsPerPage;
   const end = start + productsPerPage;
   const pageProducts = filteredProducts.slice(start, end);
+  _currentPageProducts = pageProducts;
   const hasMore = end < filteredProducts.length;
 
   // Renderizar HTML
   const grid = document.getElementById('productGrid');
   if (!grid) return;
 
-  grid.innerHTML = pageProducts.map(p => `
-    <article class="product" data-id="${p.id}" data-name="${String(p.name).replace(/"/g, '&quot;')}" data-price="${p.price}" data-category="${p.category}" role="article" aria-label="${String(p.name).replace(/"/g, '&quot;')} - $${p.price.toLocaleString('es-AR')}">
-      <div class="pimg" onclick="openProductModal(${JSON.stringify(p).replace(/"/g, '&quot;')})">
+  grid.innerHTML = pageProducts.map((p, idx) => `
+    <article class="product" data-id="${escapeHtml(p.id)}" data-product-index="${idx}" data-name="${escapeHtml(p.name)}" data-price="${p.price}" data-category="${escapeHtml(p.category)}" role="article" aria-label="${escapeHtml(p.name)} - $${p.price.toLocaleString('es-AR')}">
+      <div class="pimg" onclick="openProductByIndex(${idx})">
         ${p.old_price && p.old_price > p.price ? `<span class="discount-badge">-${Math.round((1 - p.price/p.old_price) * 100)}%</span>` : ''}
-        <img src="${p.image1}" alt="${p.name}" loading="lazy" onerror="this.src='assets/img/logo.jpg'">
+        <img src="${escapeHtml(p.image1)}" alt="${escapeHtml(p.name)}" loading="lazy" onerror="this.src='assets/img/logo.jpg'">
         <div class="pimg-overlay">
           <span>Ver detalles</span>
         </div>
       </div>
       <div class="pbody">
         <div class="badges">
-          ${p.badges.map(b => `<span class="badge${b === 'Popular' || b === 'Nuevo' ? ' strong' : ''}">${b}</span>`).join('')}
+          ${p.badges.map(b => `<span class="badge${b === 'Popular' || b === 'Nuevo' ? ' strong' : ''}">${escapeHtml(b)}</span>`).join('')}
         </div>
-        <strong onclick="openProductModal(${JSON.stringify(p).replace(/"/g, '&quot;')})" style="cursor:pointer;">${p.name}</strong>
+        <strong onclick="openProductByIndex(${idx})" style="cursor:pointer;">${escapeHtml(p.name)}</strong>
         <div class="price">
           <div>
             <strong>$${p.price.toLocaleString('es-AR')}</strong>
@@ -414,6 +415,13 @@ function clearCart() {
 
 // ========== PRODUCT MODAL ==========
 let currentModalProduct = null;
+let _currentPageProducts = [];
+
+function openProductByIndex(idx) {
+  if (_currentPageProducts[idx]) {
+    openProductModal(_currentPageProducts[idx]);
+  }
+}
 
 function openProductModal(productData) {
   currentModalProduct = productData;
@@ -456,8 +464,8 @@ function openProductModal(productData) {
   // Badges
   const badgesContainer = document.getElementById('modalProductBadges');
   if (productData.badges && productData.badges.length > 0) {
-    badgesContainer.innerHTML = productData.badges.map(b => 
-      `<span class="badge${b === 'Popular' || b === 'Nuevo' ? ' strong' : ''}">${b}</span>`
+    badgesContainer.innerHTML = productData.badges.map(b =>
+      `<span class="badge${b === 'Popular' || b === 'Nuevo' ? ' strong' : ''}">${escapeHtml(b)}</span>`
     ).join('');
   } else {
     badgesContainer.innerHTML = '';
@@ -500,7 +508,7 @@ function openProductModal(productData) {
   const whatsappBtn = document.querySelector('.product-modal-whatsapp');
   if (whatsappBtn) {
     const msg = `Hola! Quiero consultar sobre: ${productData.name}`;
-    whatsappBtn.href = `https://wa.me/5491123199122?text=${encodeURIComponent(msg)}`;
+    whatsappBtn.href = `https://wa.me/${CONFIG.WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`;
   }
   
   // Show modal
@@ -598,7 +606,7 @@ async function loadBannerConfig() {
       // Banner pill
       const pill = document.querySelector('.announce .pill');
       if (pill) {
-        pill.innerHTML = `<span class="dot"></span> Personalizados: ${productionTime}`;
+        pill.innerHTML = `<span class="dot"></span> Personalizados: ${escapeHtml(productionTime)}`;
       }
       
       // Hero mini-info
@@ -611,7 +619,7 @@ async function loadBannerConfig() {
       const faqAnswers = document.querySelectorAll('.faq-answer p');
       faqAnswers.forEach(p => {
         if (p.textContent.includes('días hábiles')) {
-          p.innerHTML = p.innerHTML.replace(/\d+[-–]\d+\s*días\s*hábiles/gi, productionTime);
+          p.innerHTML = p.innerHTML.replace(/\d+[-–]\d+\s*días\s*hábiles/gi, escapeHtml(productionTime));
         }
       });
       
@@ -1006,7 +1014,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
       message += `\n_Adjunto las imágenes por separado si las tengo._`;
       
-      const whatsappUrl = `https://wa.me/5491123199122?text=${encodeURIComponent(message)}`;
+      const whatsappUrl = `https://wa.me/${CONFIG.WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
       window.open(whatsappUrl, '_blank');
       
       // Close modal and reset form
@@ -1693,17 +1701,19 @@ function animateCounters() {
 
 }
 
-// ========== URGENCIA - POCAS UNIDADES ==========
+// ========== STOCK WARNINGS (real data only) ==========
 function updateStockWarnings() {
   document.querySelectorAll('.product').forEach(product => {
-    const stockEl = product.querySelector('.price span:last-child');
-    if (stockEl) {
-      const stockText = stockEl.textContent.toLowerCase();
-      if (!stockText.includes('sin stock') && Math.random() < 0.3) {
-        const units = Math.floor(Math.random() * 5) + 1;
+    const id = product.dataset.id;
+    const p = allProducts.find(prod => prod.id === id);
+    if (!p) return;
+    const stock = parseInt(p.stock, 10);
+    if (!isNaN(stock) && stock > 0 && stock <= 5) {
+      const stockEl = product.querySelector('.price span:last-child');
+      if (stockEl) {
         const warning = document.createElement('span');
         warning.className = 'stock-warning';
-        warning.textContent = `¡Solo ${units} disponibles!`;
+        warning.textContent = `¡Solo ${stock} disponibles!`;
         stockEl.parentNode.insertBefore(warning, stockEl);
         stockEl.style.display = 'none';
       }
@@ -1940,6 +1950,10 @@ async function processPayment() {
       })
     });
 
+    if (!response.ok) {
+      throw new Error(`Error del servidor: ${response.status}`);
+    }
+
     const data = await response.json();
 
     if (data.error) {
@@ -1947,13 +1961,12 @@ async function processPayment() {
     }
 
     if (data.init_point) {
-      await saveOrderToFirebase({
-        items,
-        total,
-        customer: { name, email, phone },
-        shipping: { type: shippingType, cost: shippingCost },
-        external_reference
-      });
+      // Validate URL points to MercadoPago
+      const payUrl = new URL(data.init_point);
+      if (!payUrl.hostname.endsWith('mercadopago.com') && !payUrl.hostname.endsWith('mercadopago.com.ar')) {
+        throw new Error('URL de pago no válida');
+      }
+      // Order is saved by the webhook after payment confirmation (not here)
       window.location.href = data.init_point;
     } else {
       throw new Error('No se recibió URL de pago');
@@ -1993,6 +2006,7 @@ window.handleContactForm = handleContactForm;
 window.applyCoupon = applyCoupon;
 window.removeCoupon = removeCoupon;
 window.openProductModal = openProductModal;
+window.openProductByIndex = openProductByIndex;
 window.closeProductModal = closeProductModal;
 window.showPersonalizationSection = showPersonalizationSection;
 window.showExitPopup = showExitPopup;
