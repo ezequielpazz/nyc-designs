@@ -693,7 +693,6 @@ function resetWizardForm() {
     document.getElementById('productDestacado').checked = false;
     
     updateCharCount();
-    updateImagePreview();
     updatePreview();
 }
 

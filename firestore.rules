@@ -1,0 +1,56 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Products: anyone can read, only admin can write
+    match /productos/{productId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Testimonials: anyone can read, only admin can write
+    match /testimonios/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Coupons: anyone can read (needed for validation), only admin can write
+    match /cupones/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Configuration: anyone can read, only admin can write
+    match /configuracion/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Messages (contact form): anyone can create, only admin can read/update/delete
+    match /mensajes/{docId} {
+      allow create: if true;
+      allow read, update, delete: if isAdmin();
+    }
+
+    // Orders: only admin and backend (via API key) can read/write
+    // Frontend does NOT write orders - webhook handles it
+    match /pedidos/{docId} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+    }
+
+    // Block everything else
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper: check if user is an authorized admin
+    function isAdmin() {
+      return request.auth != null &&
+        request.auth.token.email in [
+          'newyorkcitydesigns4@gmail.com',
+          'javierituarte20@gmail.com'
+        ];
+    }
+  }
+}
