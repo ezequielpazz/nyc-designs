@@ -1,199 +1,110 @@
-# 🗽 NYC Designs - Tienda Online
+# NYC Designs - E-commerce
 
-Tienda online para venta de tazas sublimadas, regalos personalizados y calendarios con estética NYC.
+Tienda online de productos personalizados con estilo NYC. Proyecto full-stack con panel de administración, pagos integrados y gestión de pedidos.
 
----
-
-## 📁 ESTRUCTURA DEL PROYECTO
-
-```
-nyc_designs_proyecto/
-│
-├── index.html              ← Página principal (ABRIR ESTE)
-│
-├── assets/
-│   ├── img/
-│   │   ├── logo.jpg        ← Logo de la marca ✅
-│   │   ├── hero.jpg        ← Imagen principal (AGREGAR)
-│   │   ├── producto-1.jpg  ← Fotos de productos (AGREGAR)
-│   │   ├── producto-2.jpg
-│   │   └── ...
-│   │
-│   └── icons/
-│       └── favicon.png     ← Icono de pestaña (opcional)
-│
-├── css/
-│   └── styles.css          ← Todos los estilos ✅
-│
-├── js/
-│   └── main.js             ← Toda la funcionalidad ✅
-│
-└── docs/
-    └── README.md           ← Este archivo
-```
+**Live:** [nyc-designs.vercel.app](https://nyc-designs.vercel.app)
 
 ---
 
-## 🛠️ TECNOLOGÍAS UTILIZADAS
+## Stack Tecnologico
 
-| Tecnología | Uso |
+| Tecnologia | Uso |
 |------------|-----|
-| **HTML5** | Estructura semántica de la página |
-| **CSS3** | Estilos, animaciones, responsive design |
-| **JavaScript ES6+** | Interactividad, carrito, chatbot |
-| **LocalStorage** | Persistencia del carrito de compras |
-
-### Características CSS:
-- Variables CSS (custom properties)
-- CSS Grid y Flexbox
-- Animaciones y transiciones
-- Media queries (responsive)
-- Backdrop filter (efecto blur)
-
-### Características JavaScript:
-- Carrito de compras con persistencia
-- Chatbot con respuestas automáticas
-- Filtros y buscador en tiempo real
-- Galería con lightbox
-- FAQ tipo acordeón
-- Animaciones de scroll (Intersection Observer)
+| **HTML5 / CSS3** | Maquetado semantico, responsive, animaciones |
+| **JavaScript ES6+** | Logica de tienda, carrito, chatbot |
+| **Firebase Firestore** | Base de datos de productos, pedidos, cupones |
+| **Firebase Auth** | Autenticacion admin via Google |
+| **MercadoPago API** | Checkout de pagos (preferencias + webhooks) |
+| **Cloudinary** | Hosting de imagenes de productos |
+| **Vercel** | Deploy + serverless functions |
 
 ---
 
-## ⚙️ CONFIGURACIÓN RÁPIDA
-**Backend de MercadoPago**
-Se creó una carpeta `server/` con un micro‑servicio en Node.js que genera
-preferencias de pago. Consulta `server/README.md` para la instalación y
-uso. Asegurate de ejecutar `npm install` y `npm start` dentro de `server` si
-utilizás MercadoPago.
+## Funcionalidades
 
-### ⚙️ CONFIGURACIÓN RÁPIDA
-### 1. Editar datos de contacto
+### Tienda
+- Catalogo dinamico desde Firebase con busqueda y filtros por categoria
+- Carrito persistente (localStorage) con cupones de descuento
+- Checkout con MercadoPago (tarjeta, debito, transferencia)
+- Calculadora de envios por codigo postal (zonas CABA, GBA, Interior)
+- Galeria de producto con multiples imagenes y lightbox
+- Chatbot con respuestas automaticas
+- Seccion de shorts/videos de productos
+- FAQ acordeon, animaciones de scroll, notificaciones toast
+- PWA ready (manifest.json)
+- SEO optimizado (meta tags, Open Graph, sitemap, robots.txt)
+- 100% responsive (mobile-first)
 
-Abrir `js/main.js` y cambiar las líneas 8-11:
+### Panel Admin (/admin)
+- Dashboard con metricas y alertas
+- CRUD completo de productos (wizard multi-paso, hasta 5 imagenes)
+- Gestion de pedidos con estados y tracking
+- Sistema de stock automatico
+- Cupones de descuento
+- Testimonios y mensajes de contacto
+- Autenticacion Google con roles
 
-```javascript
-const CONFIG = {
-  WHATSAPP_NUMBER: '5491112345678',     // ← TU NÚMERO
-  INSTAGRAM_USER: 'newyorkcitydesingns', // ← TU USUARIO
-  STORE_NAME: 'NYC Designs'
-};
+### Seguridad
+- Validacion de precios server-side (Firebase vs frontend)
+- Proteccion XSS en renderizado de productos
+- Sanitizacion de inputs con escapeHtml()
+- Validacion de URLs de pago (dominio MercadoPago)
+- Headers de seguridad (Referrer-Policy, Permissions-Policy)
+- Firestore rules con roles de admin
+
+### API (Serverless)
+- `POST /api/create-preference` - Crea preferencia de pago MercadoPago con validacion de precios contra Firebase
+- `POST /api/webhook` - Recibe notificaciones de pago y registra pedidos en Firestore
+
+---
+
+## Estructura
+
+```
+├── index.html            # Tienda principal
+├── css/styles.css        # Estilos + responsive
+├── js/main.js            # Logica tienda + carrito
+├── admin/
+│   ├── index.html        # Panel admin
+│   ├── admin.js          # Logica admin (7 secciones)
+│   └── admin.css         # Estilos admin
+├── api/
+│   ├── create-preference.js  # Serverless MercadoPago
+│   └── webhook.js            # Webhook de pagos
+├── videos/               # Shorts de productos
+├── firestore.rules       # Reglas de seguridad Firestore
+├── manifest.json         # PWA manifest
+├── vercel.json           # Config deploy + headers
+├── robots.txt            # SEO
+└── sitemap.xml           # SEO
 ```
 
-### 2. Agregar imágenes
+---
 
-Colocar las imágenes en `assets/img/`:
+## Variables de Entorno (Vercel)
 
-| Archivo | Tamaño recomendado | Uso |
-|---------|-------------------|-----|
-| `logo.jpg` | 200x200 px | Logo en header ✅ Ya está |
-| `hero.jpg` | 800x600 px | Imagen principal hero |
-| `producto-1.jpg` | 600x400 px | Foto de producto |
-| `producto-2.jpg` | 600x400 px | Foto de producto |
-| etc. | | |
-
-### 3. Editar productos
-
-En `index.html`, buscar la sección de productos y editar:
-
-```html
-<article class="product" 
-         data-id="1" 
-         data-name="Nombre del Producto" 
-         data-price="4500" 
-         data-category="tazas">
 ```
-### 5. Categorías dinámicas
-
-Las categorías (y los botones de filtro) se generan automáticamente desde un array en `js/main.js`.
-Para agregar una nueva categoría basta con añadir un objeto al array `CATEGORIES` (mira los ejemplos ya incluidos como "Día de la Madre", "Navidad" y "Empresas"). Cada objeto necesita `id`, `label`, `emoji` y `description`.
-
-### 6. Integración MercadoPago
-
-Se incluyó un ejemplo de cómo sumar MercadoPago en el checkout.
-
-1. Sacá las credenciales en el panel de desarrolladores de MercadoPago (públicas y token de acceso).
-2. En `index.html` el `<script src="https://sdk.mercadopago.com/js/v2"></script>` usa tu `PUBLIC_KEY` (reemplazar en el comentario). **No pongas el access token en el frontend.**
-3. Implementa en tu servidor un endpoint que cree una "preferencia" o un link de pago usando el access token y devuelva la URL.
-4. En `js/main.js` la función que atiende el botón `#mpPayBtn` muestra un ejemplo comentado; Cámbialo para llamar a tu endpoint.
-5. Si no tenés backend, el botón por ahora abre WhatsApp como fallback.
-
-Recuerda configurar correctamente las rutas y probar en modo desarrollador de MercadoPago.
-
-### 4. Editar precios del chatbot
-
-En `js/main.js`, buscar `botKnowledge` y actualizar los precios en las respuestas.
+MP_ACCESS_TOKEN=        # MercadoPago Access Token (produccion)
+FIREBASE_API_KEY=       # Firebase API Key (validacion server-side)
+MP_WEBHOOK_SECRET=      # Secret para validar webhooks (opcional)
+```
 
 ---
 
-## 🚀 CÓMO USAR
+## Deploy
 
-### Opción A: Abrir local
-1. Descomprimir el ZIP
-2. Abrir `index.html` en el navegador
+El proyecto se deploya automaticamente en Vercel al pushear a `main`.
 
-### Opción B: Subir a hosting
-1. Subir toda la carpeta a tu hosting (Netlify, Vercel, GitHub Pages, etc.)
-2. El archivo `index.html` es el punto de entrada
+```bash
+# Desarrollo local
+npx serve -l 5000
 
-### Opción C: Integrar con Tiendanube
-Para usar como template de Tiendanube, se necesita convertir a su sistema de templates Liquid. Contactar a un desarrollador.
-
----
-
-## 📱 FUNCIONALIDADES
-
-### ✅ Implementadas
-- [x] Pantalla de carga (loader) con el logo
-- [x] Carrito de compras con localStorage
-- [x] Checkout por WhatsApp
-- [x] Integración parcial MercadoPago (botón y modal)
-- [x] Sección de videos TikTok/Reels
-- [x] Calculadora de precio interactiva
-- [x] Categorías dinámicas desde JS
-- [x] Chatbot con respuestas automáticas
-- [x] Buscador de productos
-- [x] Filtros por categoría
-- [x] Galería con lightbox
-- [x] FAQ acordeón
-- [x] Menú hamburguesa móvil
-- [x] Animaciones de scroll
-- [x] Botón volver arriba
-- [x] Toast de notificaciones
-- [x] Diseño 100% responsive
-- [x] SEO básico (meta tags)
-
-### ❌ Pendientes (necesitan datos)
-- [ ] Imágenes reales de productos
-- [ ] Precios actualizados
-- [ ] WhatsApp real configurado
-- [ ] Instagram real configurado
-- [ ] Google Analytics (opcional)
-- [ ] Pixel de Meta (opcional)
+# O con Vercel CLI (para probar serverless functions)
+npx vercel dev --listen 3000
+```
 
 ---
 
-## 🎨 PALETA DE COLORES
+## Autor
 
-| Variable | Color | Uso |
-|----------|-------|-----|
-| `--blush` | #F6D6D8 | Fondo rosado claro |
-| `--offwhite` | #FAF7F5 | Fondo principal |
-| `--taupe` | #8A6F6A | Texto secundario |
-| `--charcoal` | #2B2B2B | Texto principal |
-| `--dusty` | #D9A1A7 | Acentos |
-| `--rose` | #B8777F | Color principal/botones |
-
----
-
-## 📞 SOPORTE
-
-¿Necesitás ayuda con la configuración?
-- WhatsApp: [Agregar número]
-- Instagram: @newyorkcitydesingns
-
----
-
-## 📄 LICENCIA
-
-© 2025 New York City Designs. Todos los derechos reservados.
+Desarrollado por **Ezequiel Paz**

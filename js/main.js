@@ -1375,6 +1375,24 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
+// ========== SHORTS PLAY/PAUSE ==========
+document.querySelectorAll('.short-card').forEach(card => {
+  const video = card.querySelector('video');
+  const btn = card.querySelector('.short-play-btn');
+  if (!video || !btn) return;
+  function toggle() {
+    if (video.paused) {
+      video.play();
+      btn.classList.add('hidden');
+    } else {
+      video.pause();
+      btn.classList.remove('hidden');
+    }
+  }
+  card.addEventListener('click', toggle);
+  video.addEventListener('ended', () => btn.classList.remove('hidden'));
+});
+
 // ========== LOADER ==========
 window.addEventListener('load', () => {
   const loader = document.getElementById('loader');
