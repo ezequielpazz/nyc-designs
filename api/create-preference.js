@@ -24,8 +24,17 @@ async function getProductPrice(productId) {
   return parseFloat(price.doubleValue ?? price.integerValue ?? price.stringValue);
 }
 
+const ALLOWED_ORIGINS = [
+  'https://nycdesigns.com.ar',
+  'https://www.nycdesigns.com.ar',
+  'https://nyc-designs.vercel.app'
+];
+
 module.exports = async (req, res) => {
-  res.setHeader('Access-Control-Allow-Origin', 'https://nyc-designs.vercel.app');
+  const origin = req.headers.origin;
+  if (ALLOWED_ORIGINS.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
@@ -108,9 +117,9 @@ module.exports = async (req, res) => {
         phone: payer.phone ? { number: payer.phone } : undefined
       } : undefined,
       back_urls: {
-        success: 'https://nyc-designs.vercel.app/?status=approved',
-        failure: 'https://nyc-designs.vercel.app/?status=failure',
-        pending: 'https://nyc-designs.vercel.app/?status=pending'
+        success: 'https://nycdesigns.com.ar/?status=approved',
+        failure: 'https://nycdesigns.com.ar/?status=failure',
+        pending: 'https://nycdesigns.com.ar/?status=pending'
       },
       auto_return: 'approved',
       external_reference: external_reference || `order_${Date.now()}`,
