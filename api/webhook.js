@@ -108,8 +108,17 @@ function validateSignature(req) {
 }
 
 module.exports = async (req, res) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Cache-Control', 'no-store');
+
   if (req.method !== 'POST') {
     return res.status(200).json({ message: 'Webhook endpoint ready' });
+  }
+
+  // Reject oversized payloads
+  const bodyStr = JSON.stringify(req.body || {});
+  if (bodyStr.length > 50_000) {
+    return res.status(413).json({ error: 'Payload too large' });
   }
 
   try {

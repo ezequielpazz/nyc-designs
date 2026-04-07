@@ -6,8 +6,8 @@
   
   <!-- SEO BÁSICO -->
   <title>NYC Designs Argentina | Tazas, Regalos Personalizados y Decoración con estilo NYC</title>
-  <meta name="description" content="NYC Designs Argentina: tazas sublimadas, regalos personalizados, totebags, stickers y decoración con estética NYC. Envíos a todo el país por E-Pick. Producción 3-7 días.">
-  <meta name="keywords" content="tazas personalizadas Argentina, regalos personalizados CABA, sublimación, totebags, stickers, decoración hogar, NYC Designs, newyorkcitydesigns, regalos originales, fiestas y eventos, regalos cumpleaños">
+  <meta name="description" content="NYC Designs CABA: tazas sublimadas, regalos personalizados, totebags, stickers y kits para emprendedores. Regalos corporativos, eventos y fiestas. Envíos en Capital Federal y todo el país. Producción 3-7 días.">
+  <meta name="keywords" content="tazas personalizadas Buenos Aires, regalos personalizados CABA, regalos para emprendedores, regalos corporativos Argentina, packaging emprendedores, sublimación CABA, totebags personalizados, stickers Buenos Aires, kits emprendedores, regalos empresariales, branding emprendedores, NYC Designs, newyorkcitydesigns, regalos originales Capital Federal, fiestas y eventos CABA, kits cumpleaños Buenos Aires">
   <meta name="author" content="New York City Designs">
   <meta name="robots" content="index, follow, max-image-preview:large">
   <meta name="geo.region" content="AR-C">
@@ -58,51 +58,84 @@
     });
   </script>
 
-  <!-- JSON-LD Structured Data -->
+  <!-- JSON-LD Structured Data: LocalBusiness + Store -->
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
-    "@type": "Store",
-    "name": "New York City Designs",
+    "@type": ["LocalBusiness", "Store"],
+    "@id": "https://nycdesigns.com.ar/#business",
+    "name": "NYC Designs",
+    "alternateName": "New York City Designs",
     "url": "https://nycdesigns.com.ar",
     "logo": "https://nycdesigns.com.ar/assets/img/logo.jpg",
-    "description": "Tienda de tazas sublimadas, regalos personalizados y calendarios con estética NYC.",
+    "image": "https://nycdesigns.com.ar/assets/img/logo.jpg",
+    "description": "NYC Designs: tazas sublimadas, regalos personalizados, kits para emprendedores y regalos corporativos en Capital Federal. Envíos a todo el país.",
     "telephone": "+5491123199122",
+    "email": "newyorkcitydesigns4@gmail.com",
+    "priceRange": "$$",
+    "paymentAccepted": ["MercadoPago", "Credit Card", "Debit Card", "Bank Transfer"],
+    "currenciesAccepted": "ARS",
     "address": {
       "@type": "PostalAddress",
+      "addressLocality": "Buenos Aires",
+      "addressRegion": "CABA",
       "addressCountry": "AR"
+    },
+    "areaServed": [
+      {
+        "@type": "City",
+        "name": "Ciudad Autónoma de Buenos Aires"
+      },
+      {
+        "@type": "AdministrativeArea",
+        "name": "Gran Buenos Aires"
+      },
+      {
+        "@type": "Country",
+        "name": "Argentina"
+      }
+    ],
+    "audience": {
+      "@type": "BusinessAudience",
+      "audienceType": "Emprendedores, pymes y consumidores finales"
     },
     "sameAs": [
       "https://www.instagram.com/newyorkcitydesigns"
     ],
-    "priceRange": "$$",
-    "paymentAccepted": "MercadoPago, Credit Card, Debit Card, Bank Transfer",
-    "currenciesAccepted": "ARS",
+    "openingHoursSpecification": {
+      "@type": "OpeningHoursSpecification",
+      "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+      "opens": "09:00",
+      "closes": "18:00"
+    },
     "hasOfferCatalog": {
       "@type": "OfferCatalog",
-      "name": "Productos NYC Designs",
+      "name": "Catálogo NYC Designs",
       "itemListElement": [
-        {
-          "@type": "OfferCatalog",
-          "name": "Tazas & Vasos",
-          "description": "Tazas sublimadas y vasos personalizados"
-        },
-        {
-          "@type": "OfferCatalog",
-          "name": "Fotos & Recuerdos",
-          "description": "Polaroids, álbumes y recuerdos personalizados"
-        },
-        {
-          "@type": "OfferCatalog",
-          "name": "Decoración",
-          "description": "Cuadros, carteles y decoración para tu hogar"
-        },
-        {
-          "@type": "OfferCatalog",
-          "name": "Fiestas & Eventos",
-          "description": "Kits completos para cumpleaños y eventos"
-        }
+        {"@type":"OfferCatalog","name":"Tazas & Vasos","description":"Tazas sublimadas y vasos personalizados"},
+        {"@type":"OfferCatalog","name":"Fotos & Recuerdos","description":"Polaroids, álbumes y recuerdos personalizados"},
+        {"@type":"OfferCatalog","name":"Decoración","description":"Cuadros, carteles y decoración para tu hogar"},
+        {"@type":"OfferCatalog","name":"Accesorios","description":"Totebags, llaveros y accesorios"},
+        {"@type":"OfferCatalog","name":"Stickers","description":"Stickers para celular, notebook y branding"},
+        {"@type":"OfferCatalog","name":"Imprimibles & Plantillas","description":"Plantillas digitales para emprendedores"},
+        {"@type":"OfferCatalog","name":"Fiestas & Eventos","description":"Kits completos para cumpleaños y eventos"}
       ]
+    }
+  }
+  </script>
+
+  <!-- JSON-LD: WebSite con SearchAction -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "NYC Designs",
+    "url": "https://nycdesigns.com.ar",
+    "inLanguage": "es-AR",
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": "https://nycdesigns.com.ar/?q={search_term_string}",
+      "query-input": "required name=search_term_string"
     }
   }
   </script>

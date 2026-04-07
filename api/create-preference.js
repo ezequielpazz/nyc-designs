@@ -30,6 +30,28 @@ const ALLOWED_ORIGINS = [
   'https://nyc-designs.vercel.app'
 ];
 
+// Simple in-memory rate limiter (per Vercel function instance)
+// 10 requests per minute per IP
+const RATE_LIMIT_WINDOW_MS = 60 * 1000;
+const RATE_LIMIT_MAX = 10;
+const rateBucket = new Map();
+
+function rateLimit(ip) {
+  const now = Date.now();
+  const entry = rateBucket.get(ip) || { count: 0, reset: now + RATE_LIMIT_WINDOW_MS };
+  if (now > entry.reset) {
+    entry.count = 0;
+    entry.reset = now + RATE_LIMIT_WINDOW_MS;
+  }
+  entry.count++;
+  rateBucket.set(ip, entry);
+  // Cleanup occasionally
+  if (rateBucket.size > 1000) {
+    for (const [k, v] of rateBucket) if (now > v.reset) rateBucket.delete(k);
+  }
+  return entry.count <= RATE_LIMIT_MAX;
+}
+
 module.exports = async (req, res) => {
   const origin = req.headers.origin;
   if (ALLOWED_ORIGINS.includes(origin)) {
@@ -37,6 +59,7 @@ module.exports = async (req, res) => {
   }
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
 
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
@@ -44,6 +67,24 @@ module.exports = async (req, res) => {
 
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  // Reject requests from unknown origins (defense in depth, beyond CORS)
+  if (origin && !ALLOWED_ORIGINS.includes(origin)) {
+    return res.status(403).json({ error: 'Origen no permitido' });
+  }
+
+  // Rate limit per IP
+  const ip = (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.socket?.remoteAddress || 'unknown';
+  if (!rateLimit(ip)) {
+    res.setHeader('Retry-After', '60');
+    return res.status(429).json({ error: 'Demasiadas solicitudes. Intentá en un minuto.' });
+  }
+
+  // Limit body size implicitly: reject obviously malicious payloads
+  const bodyStr = JSON.stringify(req.body || {});
+  if (bodyStr.length > 50_000) {
+    return res.status(413).json({ error: 'Payload demasiado grande' });
   }
 
   try {
