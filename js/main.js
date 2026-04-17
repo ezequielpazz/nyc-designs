@@ -531,31 +531,33 @@ function closeProductModal() {
 // ========== LOAD TESTIMONIALS FROM FIREBASE ==========
 async function loadTestimonials() {
   const container = document.querySelector('.testimonials-grid');
+  const section = document.getElementById('testimonios');
   if (!container) return;
-  
+
   try {
     if (!firebaseDb) {
       initializeFirebase();
     }
-    
+
     const { testimonialsRef: ref } = getFirebaseCollections();
     if (!ref) return;
-    
+
     const snapshot = await ref
       .where('visible', '==', true)
       .orderBy('createdAt', 'desc')
       .limit(6)
       .get();
-    
+
     if (snapshot.empty) {
+      if (section) section.style.display = 'none';
       return;
     }
-    
+
     const testimonials = [];
     snapshot.forEach(doc => {
       testimonials.push(doc.data());
     });
-    
+
     container.innerHTML = testimonials.map(t => {
       const stars = '★'.repeat(Math.min(5, Math.max(1, t.rating || 5)));
       return `
@@ -569,8 +571,9 @@ async function loadTestimonials() {
         </div>
       `;
     }).join('');
+    if (section) section.style.display = '';
   } catch (error) {
-    // silently fall back to default testimonials
+    if (section) section.style.display = 'none';
   }
 }
 
@@ -592,11 +595,15 @@ async function loadBannerConfig() {
     const data = doc.data();
     
     // ===== UPDATE BANNER TEXT =====
-    if (data.bannerText) {
+    const announceEl = document.querySelector('.announce');
+    if (data.bannerText && String(data.bannerText).trim()) {
       const bannerSpan = document.querySelector('.announce .inner > span:not(.pill)');
       if (bannerSpan) {
         bannerSpan.textContent = data.bannerText;
       }
+      if (announceEl) announceEl.style.display = '';
+    } else if (announceEl) {
+      announceEl.style.display = 'none';
     }
     
     // ===== UPDATE PRODUCTION TIME EVERYWHERE =====
