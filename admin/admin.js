@@ -1084,7 +1084,19 @@ async function loadOrders(filter = 'todos') {
             query = ordersRef.where('status', '==', filter);
         }
         
-        const snapshot = await query.orderBy('createdAt', 'desc').get();
+        // Some legacy orders stored only `created_at`. Try the camelCase field first,
+        // then fall back to snake_case so nothing gets hidden.
+        let snapshot;
+        try {
+            snapshot = await query.orderBy('createdAt', 'desc').get();
+        } catch (_) {
+            snapshot = await query.get();
+        }
+        if (snapshot.empty && filter === 'todos') {
+            try {
+                snapshot = await db.collection('pedidos').orderBy('created_at', 'desc').get();
+            } catch (_) { /* keep empty */ }
+        }
         const ordersGrid = document.getElementById('ordersGrid');
         const ordersEmpty = document.getElementById('ordersEmpty');
         
@@ -1106,15 +1118,28 @@ async function loadOrders(filter = 'todos') {
                 const customer = order.customer || order.payer || {};
                 const customerName = escapeHtml(customer.name || 'Sin nombre');
                 const customerEmail = escapeHtml(customer.email || '');
-                const date = order.created_at?.toDate
-                    ? order.created_at.toDate().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-                    : '';
+                const customerPhone = escapeHtml(customer.phone || '');
+                const dateRaw = order.createdAt || order.created_at;
+                const date = dateRaw?.toDate
+                    ? dateRaw.toDate().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+                    : (typeof dateRaw === 'string' ? new Date(dateRaw).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '');
                 const items = order.items || [];
                 const itemsHtml = items.map(item =>
                     `<div class="order-item-line">${escapeHtml(item.title || 'Producto')} x${item.quantity || 1} — $${(item.unit_price || 0).toLocaleString('es-AR')}</div>`
                 ).join('');
                 const whatsappMsg = encodeURIComponent(`Hola ${customer.name || ''}, tu pedido #${order.id.slice(0, 8).toUpperCase()} de NYC Designs está siendo procesado. ¿Tenés alguna consulta?`);
                 const trackingCode = order.tracking_code || '';
+
+                // Shipping / delivery block
+                const shippingType = order.shipping_type || 'pickup';
+                const shippingLabel = order.shipping_label ||
+                    (shippingType === 'delivery' ? 'Envío a domicilio (E-Pick)' : 'Retiro en Acassuso 5268, CABA');
+                const addr = order.shipping_address || {};
+                const addrLine = shippingType === 'delivery'
+                    ? [addr.street, addr.city, addr.province].filter(Boolean).map(escapeHtml).join(', ')
+                    : '';
+                const postal = order.postal_code ? ` · CP ${escapeHtml(order.postal_code)}` : '';
+                const whatsappPhone = customer.phone ? `<a href="https://wa.me/${String(customer.phone).replace(/\D/g, '')}" target="_blank">${customerPhone}</a>` : '';
 
                 return `
                 <div class="order-card order-card-expanded">
@@ -1127,13 +1152,15 @@ async function loadOrders(filter = 'todos') {
                         <div class="order-customer">
                             <div class="order-customer-name">${customerName}</div>
                             <div class="order-customer-email">${customerEmail}</div>
+                            ${whatsappPhone ? `<div class="order-customer-phone">Tel: ${whatsappPhone}</div>` : ''}
                         </div>
                         <div class="order-items">${itemsHtml || '<div class="order-item-line">Sin detalle de items</div>'}</div>
                         <div class="order-total-row">
                             <span>Total:</span>
                             <strong>$${(order.total || 0).toLocaleString('es-AR')}</strong>
                         </div>
-                        <div class="order-shipping">Envío: ${escapeHtml(order.shipping_type || 'Pendiente')}</div>
+                        <div class="order-shipping"><strong>Entrega:</strong> ${escapeHtml(shippingLabel)}${postal}</div>
+                        ${addrLine ? `<div class="order-shipping-address">📍 ${addrLine}</div>` : ''}
                         ${trackingCode ? `<div class="order-tracking">Seguimiento: <strong>${escapeHtml(trackingCode)}</strong></div>` : ''}
                     </div>
                     <div class="order-footer">

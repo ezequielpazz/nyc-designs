@@ -43,29 +43,48 @@ async function decrementStock(productId, quantity) {
 async function saveOrderToFirestore(orderData) {
   const url = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT}/databases/(default)/documents/pedidos?key=${FIREBASE_API_KEY}`;
 
-  const firestoreDoc = {
-    fields: {
-      id: { stringValue: orderData.id },
-      payment_id: { stringValue: String(orderData.payment_id) },
-      status: { stringValue: orderData.status },
-      total: { doubleValue: orderData.total },
-      customer: { mapValue: { fields: {
-        email: { stringValue: orderData.payer.email || '' },
-        name: { stringValue: orderData.payer.name || '' }
-      }}},
-      items: { arrayValue: { values: orderData.items.map(item => ({
-        mapValue: { fields: {
-          title: { stringValue: item.title || '' },
-          quantity: { integerValue: String(item.quantity || 1) },
-          unit_price: { doubleValue: item.unit_price || 0 },
-          product_id: { stringValue: item.id || '' }
-        }}
-      })) }},
-      shipping_type: { stringValue: orderData.shipping_type || 'pending' },
-      external_reference: { stringValue: orderData.external_reference || '' },
-      created_at: { timestampValue: new Date().toISOString() }
-    }
+  const nowIso = new Date().toISOString();
+
+  const customerFields = {
+    email: { stringValue: orderData.payer.email || '' },
+    name: { stringValue: orderData.payer.name || '' }
   };
+  if (orderData.payer.phone) customerFields.phone = { stringValue: String(orderData.payer.phone) };
+
+  const fields = {
+    id: { stringValue: orderData.id },
+    payment_id: { stringValue: String(orderData.payment_id) },
+    status: { stringValue: orderData.status },
+    total: { doubleValue: orderData.total },
+    customer: { mapValue: { fields: customerFields }},
+    items: { arrayValue: { values: orderData.items.map(item => ({
+      mapValue: { fields: {
+        title: { stringValue: item.title || '' },
+        quantity: { integerValue: String(item.quantity || 1) },
+        unit_price: { doubleValue: item.unit_price || 0 },
+        product_id: { stringValue: item.product_id || '' }
+      }}
+    })) }},
+    shipping_type: { stringValue: orderData.shipping_type || 'pickup' },
+    shipping_label: { stringValue: orderData.shipping_label || '' },
+    external_reference: { stringValue: orderData.external_reference || '' },
+    created_at: { timestampValue: nowIso },
+    createdAt: { timestampValue: nowIso }
+  };
+
+  if (orderData.postal_code) {
+    fields.postal_code = { stringValue: String(orderData.postal_code) };
+  }
+
+  if (orderData.address) {
+    fields.shipping_address = { mapValue: { fields: {
+      street: { stringValue: orderData.address.street || '' },
+      city: { stringValue: orderData.address.city || '' },
+      province: { stringValue: orderData.address.province || '' }
+    }}};
+  }
+
+  const firestoreDoc = { fields };
 
   const response = await fetch(url, {
     method: 'POST',
@@ -135,14 +154,30 @@ module.exports = async (req, res) => {
       const paymentData = await payment.get({ id: data.id });
 
       if (paymentData.status === 'approved') {
+        // external_reference is JSON-encoded from front: { timestamp, shipping_type, postal_code, address }
+        let extra = {};
+        try {
+          if (paymentData.external_reference) {
+            extra = JSON.parse(paymentData.external_reference);
+          }
+        } catch (_) {
+          extra = {};
+        }
+
+        const shippingType = extra.shipping_type === 'delivery' ? 'delivery' : 'pickup';
+        const shippingLabel = shippingType === 'delivery'
+          ? 'Envío a domicilio (E-Pick)'
+          : 'Retiro en Acassuso 5268, CABA';
+
         const orderData = {
-          id: paymentData.external_reference || `order_${data.id}`,
+          id: `order_${data.id}`,
           payment_id: data.id,
           status: 'approved',
           total: paymentData.transaction_amount,
           payer: {
             email: paymentData.payer?.email || '',
-            name: `${paymentData.payer?.first_name || ''} ${paymentData.payer?.last_name || ''}`.trim()
+            name: `${paymentData.payer?.first_name || ''} ${paymentData.payer?.last_name || ''}`.trim(),
+            phone: paymentData.payer?.phone?.number || ''
           },
           items: (paymentData.additional_info?.items || []).map(item => ({
             title: item.title,
@@ -150,7 +185,10 @@ module.exports = async (req, res) => {
             unit_price: Number(item.unit_price),
             product_id: item.id || ''
           })),
-          shipping_type: 'pending',
+          shipping_type: shippingType,
+          shipping_label: shippingLabel,
+          postal_code: extra.postal_code || '',
+          address: extra.address || null,
           external_reference: paymentData.external_reference || ''
         };
 
