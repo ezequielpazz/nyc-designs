@@ -100,10 +100,17 @@ async function saveOrderToFirestore(orderData) {
   return await response.json();
 }
 
-// Validate MercadoPago webhook signature
+// Validate MercadoPago webhook signature.
+// In production the secret MUST be configured — otherwise every webhook is
+// rejected so nobody can forge approved orders and drain stock.
 function validateSignature(req) {
   const secret = process.env.MP_WEBHOOK_SECRET;
-  if (!secret) return true; // Skip if not configured
+  if (!secret) {
+    if (process.env.VERCEL_ENV === 'production' || process.env.NODE_ENV === 'production') {
+      return false;
+    }
+    return true; // allow only in dev/preview without secret
+  }
 
   const xSignature = req.headers['x-signature'];
   const xRequestId = req.headers['x-request-id'];
@@ -119,11 +126,21 @@ function validateSignature(req) {
   const v1 = parts['v1'];
   if (!ts || !v1) return false;
 
+  // Replay protection: reject if timestamp older than 5 minutes
+  const tsNum = Number(ts);
+  if (!Number.isFinite(tsNum)) return false;
+  const skewMs = Math.abs(Date.now() - tsNum);
+  if (skewMs > 5 * 60 * 1000) return false;
+
   const dataId = req.query?.['data.id'] || req.body?.data?.id || '';
   const manifest = `id:${dataId};request-id:${xRequestId};ts:${ts};`;
   const hmac = crypto.createHmac('sha256', secret).update(manifest).digest('hex');
 
-  return hmac === v1;
+  // Constant-time comparison to avoid timing attacks
+  const a = Buffer.from(hmac, 'utf8');
+  const b = Buffer.from(v1, 'utf8');
+  if (a.length !== b.length) return false;
+  return crypto.timingSafeEqual(a, b);
 }
 
 module.exports = async (req, res) => {
