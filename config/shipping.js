@@ -44,12 +44,14 @@ const EPICK_CONFIG = {
   SANDBOX_MODE: !(process.env.EPICK_LIVE === '1' && (process.env.EPICK_API_KEY || '').length > 0),
 
   // ----- DEFAULT PACKAGE -----
-  // Most NYC Designs orders are small: mug + sticker pack + bag.
+  // Most NYC Designs orders are small: stickers / accessories.
+  // Sized to keep the E-Pick quote in the cheapest tier; large products
+  // (tazas, totebags) should override these per-product when added.
   DEFAULT_PACKAGE: {
-    sizeWidth: 20,
-    sizeHeight: 15,
-    sizeDepth: 10,
-    weight: 0.5
+    sizeWidth: 15,
+    sizeHeight: 10,
+    sizeDepth: 5,
+    weight: 0.25
   },
 
   // ----- FALLBACK PRICES (used by sandbox + when API is unavailable) -----

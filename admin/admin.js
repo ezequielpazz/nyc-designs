@@ -445,8 +445,8 @@ function navigateTo(section) {
 
 async function saveProduct() {
     try {
+        // Quietly bail out if any required field is missing — no toast.
         if (!productFormData.nombre || !productFormData.descripcion || !productFormData.precio || !productFormData.categoria) {
-            showToast('Por favor completa todos los campos requeridos', 'error');
             return false;
         }
         
@@ -834,29 +834,22 @@ function prevWizardStep() {
 }
 
 function validateWizardStep(step) {
+    // Validation just blocks the wizard from advancing; no toast / alert so
+    // the admin doesn't get noisy "completa X" messages on empty saves.
     switch(step) {
-        case 1:
+        case 1: {
             const nombre = document.getElementById('productNombre').value.trim();
             const desc = document.getElementById('productDescripcion').value.trim();
-            if (!nombre || !desc) {
-                showToast('Por favor completa nombre y descripción', 'error');
-                return false;
-            }
-            return true;
-        case 2:
+            return !!(nombre && desc);
+        }
+        case 2: {
             const precio = parseFloat(document.getElementById('productPrecio').value);
-            if (isNaN(precio) || precio <= 0) {
-                showToast('Por favor ingresa un precio válido (número mayor a 0)', 'error');
-                return false;
-            }
-            return true;
-        case 3:
+            return !isNaN(precio) && precio > 0;
+        }
+        case 3: {
             const categoria = document.querySelector('input[name="categoria"]:checked');
-            if (!categoria) {
-                showToast('Por favor selecciona una categoría', 'error');
-                return false;
-            }
-            return true;
+            return !!categoria;
+        }
         default:
             return true;
     }

@@ -1675,48 +1675,8 @@ chatInput?.addEventListener('keypress', (e) => {
   if (e.key === 'Enter') sendMessage();
 });
 
-// ========== EXIT POPUP ==========
-let exitPopupShown = false;
-
-function showExitPopup() {
-  if (exitPopupShown) return;
-  if (sessionStorage.getItem('exitPopupClosed')) return;
-
-  const popup = document.getElementById('exitPopup');
-  if (popup) {
-    popup.classList.add('active');
-    exitPopupShown = true;
-    trackEvent('exit_intent_shown');
-  }
-}
-
-function closeExitPopup() {
-  const popup = document.getElementById('exitPopup');
-  if (popup) {
-    popup.classList.remove('active');
-    sessionStorage.setItem('exitPopupClosed', 'true');
-  }
-}
-
-// Detectar intención de salida (mouse sale de la ventana)
-document.addEventListener('mouseout', (e) => {
-  if (e.clientY <= 0 && !exitPopupShown) {
-    showExitPopup();
-  }
-});
-
-document.getElementById('exitPopupClose')?.addEventListener('click', closeExitPopup);
-document.getElementById('exitPopup')?.addEventListener('click', (e) => {
-  if (e.target.id === 'exitPopup') closeExitPopup();
-});
-
-document.getElementById('copyDiscountCode')?.addEventListener('click', () => {
-  const code = document.querySelector('.discount-code')?.textContent;
-  if (code) {
-    navigator.clipboard.writeText(code);
-    showToast('¡Código copiado!', 'success');
-  }
-});
+// Exit popup removed (BIENVENIDO10 coupon retired by the client)
+function closeExitPopup() { /* no-op kept for legacy onclick handlers */ }
 
 // ========== CONTADOR ANIMADO ==========
 function animateCounters() {
