@@ -843,13 +843,27 @@
           <div id="shippingResult"></div>
         </div>
         <div class="shipping-address" id="shippingAddress" style="display: none;">
-          <input type="text" id="addressStreet" placeholder="Calle" required>
-          <input type="text" id="addressNumber" placeholder="Número" required>
+          <div class="addr-row">
+            <input type="text" id="addressStreet" placeholder="Calle" required style="flex:2;">
+            <input type="text" id="addressNumber" placeholder="N°" required style="flex:1;">
+          </div>
           <input type="text" id="addressExtra" placeholder="Piso / depto (opcional)">
-          <input type="text" id="addressCity" placeholder="Ciudad / Localidad" required>
-          <input type="text" id="addressProvince" placeholder="Provincia (CABA, Buenos Aires, etc)" required>
+          <div class="addr-row">
+            <input type="text" id="addressCity" placeholder="Localidad" required style="flex:1;">
+            <input type="text" id="addressProvince" placeholder="Provincia" required style="flex:1;">
+          </div>
           <input type="text" id="addressNotes" placeholder="Referencias para el repartidor (opcional)">
         </div>
+      </div>
+
+      <div class="customer-section">
+        <h4>Tus datos</h4>
+        <input type="text" id="mpName" placeholder="Nombre y apellido" required>
+        <div class="addr-row">
+          <input type="text" id="mpDni" placeholder="DNI" inputmode="numeric" pattern="[0-9]{7,9}" required style="flex:1;">
+          <input type="tel" id="mpPhone" placeholder="Teléfono (sin 0 ni 15)" required style="flex:1.4;">
+        </div>
+        <input type="email" id="mpEmail" placeholder="Email" required>
       </div>
 
       <div class="cart-total">
@@ -952,20 +966,6 @@
     </div>
   </div>
 
-  <!-- MERCADOPAGO CHECKOUT MODAL -->
-  <div class="mp-modal" id="mpModal">
-    <div class="mp-modal-content">
-      <button class="mp-close" id="mpClose">&times;</button>
-      <h3>Finalizar compra</h3>
-      <form id="mpForm">
-        <input type="text" id="mpName" placeholder="Nombre completo" required>
-        <input type="text" id="mpDni" placeholder="DNI" inputmode="numeric" pattern="[0-9]{7,9}" required>
-        <input type="email" id="mpEmail" placeholder="Email" required>
-        <input type="tel" id="mpPhone" placeholder="Teléfono (sin 0 ni 15)" required>
-        <button type="button" class="btn primary" id="mpPayBtn">Pagar con MercadoPago</button>
-      </form>
-    </div>
-  </div>
 
   <!-- Lightbox -->
   <div class="lightbox" id="lightbox">

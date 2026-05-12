@@ -1113,25 +1113,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // listeners para MercadoPago modal
-  const mpModal = document.getElementById('mpModal');
-  const mpClose = document.getElementById('mpClose');
-  mpClose?.addEventListener('click', () => {
-    mpModal?.classList.remove('active');
-    document.body.style.overflow = '';
-  });
-  mpModal?.addEventListener('click', e => {
-    if (e.target === mpModal) {
-      mpModal.classList.remove('active');
-      document.body.style.overflow = '';
-    }
-  });
-  document.getElementById('mpPayBtn')?.addEventListener('click', (e) => {
-    e.preventDefault();
-    processPayment();
-  });
-
-  // MercadoPago button (cart)
+  // MercadoPago button (cart). The legacy #mpModal is gone — name/DNI/email
+  // /phone now live inside the cart sidebar so processPayment() reads them
+  // straight from there.
   const mpBtn = document.getElementById('mpOpenBtn');
   if (mpBtn) {
     mpBtn.addEventListener('click', (e) => {
@@ -1955,6 +1939,19 @@ async function processPayment() {
     const email = document.getElementById('mpEmail')?.value?.trim() || '';
     const phone = document.getElementById('mpPhone')?.value?.trim() || '';
     const dni = document.getElementById('mpDni')?.value?.trim() || '';
+
+    // Quick sanity on the new in-cart contact form so we don't ship empty
+    // payer data to MercadoPago.
+    if (!name || !email || !phone || !dni) {
+      showToast('Completá nombre, DNI, email y teléfono para continuar', 'error');
+      if (payBtn) { payBtn.disabled = false; payBtn.classList.remove('loading'); }
+      return;
+    }
+    if (!/^[0-9]{7,9}$/.test(dni)) {
+      showToast('Revisá el DNI (solo números, 7-9 dígitos)', 'error');
+      if (payBtn) { payBtn.disabled = false; payBtn.classList.remove('loading'); }
+      return;
+    }
 
     // Build items - include shipping as line item if delivery
     const items = cart.map(item => ({
