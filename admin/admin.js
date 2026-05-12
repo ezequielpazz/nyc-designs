@@ -28,7 +28,8 @@ function escapeHtml(str) {
 // Authorized admin emails
 const AUTHORIZED_EMAILS = [
     "newyorkcitydesigns4@gmail.com",
-    "javierituarte20@gmail.com"
+    "javierituarte20@gmail.com",
+    "javierituarte2000@gmail.com"
 ];
 
 function checkAuthorization(email) {
