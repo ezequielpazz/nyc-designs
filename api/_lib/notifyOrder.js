@@ -125,16 +125,13 @@ function buildText(order) {
   return lines.join('\n');
 }
 
-async function notifyOrderEmail(order) {
+async function sendResendEmail({ to, subject, html, text }) {
   const key = process.env.RESEND_API_KEY;
   if (!key) {
-    console.log('notifyOrderEmail: RESEND_API_KEY not set, skipping');
+    console.log('Resend email skipped — RESEND_API_KEY not configured');
     return { sent: false, reason: 'no_api_key' };
   }
-  const to = process.env.ORDER_NOTIFY_TO || NOTIFY_TO_DEFAULT;
   const from = process.env.ORDER_NOTIFY_FROM || NOTIFY_FROM_DEFAULT;
-  const subject = `Nuevo pedido en NYC Designs — $${fmtAr(order.total)}`;
-
   try {
     const resp = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -142,24 +139,140 @@ async function notifyOrderEmail(order) {
         Authorization: `Bearer ${key}`,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
-        from,
-        to: [to],
-        subject,
-        html: buildHtml(order),
-        text: buildText(order)
-      })
+      body: JSON.stringify({ from, to: Array.isArray(to) ? to : [to], subject, html, text })
     });
     if (!resp.ok) {
       const body = await resp.text();
-      console.error('notifyOrderEmail failed:', resp.status, body);
+      console.error('Resend email failed:', resp.status, body);
       return { sent: false, reason: `http_${resp.status}` };
     }
     return { sent: true };
   } catch (err) {
-    console.error('notifyOrderEmail exception:', err.message);
+    console.error('Resend email exception:', err.message);
     return { sent: false, reason: err.message };
   }
 }
 
-module.exports = { notifyOrderEmail };
+/**
+ * Email to the SHOP OWNER (Sol) — full operational summary.
+ */
+async function notifyOrderEmail(order) {
+  const to = process.env.ORDER_NOTIFY_TO || NOTIFY_TO_DEFAULT;
+  const subject = `Nuevo pedido en NYC Designs — $${fmtAr(order.total)}`;
+  return sendResendEmail({
+    to,
+    subject,
+    html: buildHtml(order),
+    text: buildText(order)
+  });
+}
+
+/**
+ * Build a customer-facing confirmation email. Same data as the admin one but
+ * written from the brand's voice (Sol's perspective) and without the "admin
+ * panel" link.
+ */
+function buildCustomerHtml(order) {
+  const customer = order.payer || {};
+  const items = Array.isArray(order.items) ? order.items : [];
+  const addr = order.address || {};
+  const shippingLabel = order.shipping_label
+    || (order.shipping_type === 'delivery' ? 'Envío a domicilio (E-Pick)' : 'Retiro en Acassuso 5268, CABA');
+
+  const itemsRows = items.map(i => `
+    <tr>
+      <td style="padding:6px 12px;border-bottom:1px solid #eee;">${escapeHtml(i.title || 'Producto')}</td>
+      <td style="padding:6px 12px;border-bottom:1px solid #eee;text-align:center;">${i.quantity || 1}</td>
+      <td style="padding:6px 12px;border-bottom:1px solid #eee;text-align:right;">$${fmtAr(i.unit_price)}</td>
+    </tr>`).join('');
+
+  const fullStreet = [addr.street, addr.number].filter(Boolean).join(' ');
+  const addrBlock = order.shipping_type === 'delivery'
+    ? `<p style="margin:6px 0;"><strong>Dirección de envío:</strong> ${escapeHtml(fullStreet)}${addr.extra ? ` (${escapeHtml(addr.extra)})` : ''}, ${escapeHtml(addr.city || '')}, ${escapeHtml(addr.province || '')}${order.postal_code ? ` — CP ${escapeHtml(order.postal_code)}` : ''}</p>`
+    : `<p style="margin:6px 0;">Coordinamos retiro por WhatsApp en Acassuso 5268, CABA.</p>`;
+
+  const trackingBlock = order.tracking_code
+    ? `<p style="margin:6px 0;"><strong>Código de seguimiento:</strong> ${escapeHtml(order.tracking_code)}<br>
+       <a href="https://www.e-pick.com.ar/tracking?code=${encodeURIComponent(order.tracking_code)}" style="color:#B8777F;">Ver estado del envío →</a></p>`
+    : (order.shipping_type === 'delivery'
+        ? `<p style="margin:6px 0;color:#666;">Te vamos a mandar el código de seguimiento por email cuando se despache.</p>`
+        : '');
+
+  return `<!doctype html>
+<html><body style="font-family:Arial,Helvetica,sans-serif;color:#2B2B2B;max-width:600px;margin:0 auto;padding:20px;">
+  <h2 style="color:#B8777F;margin:0 0 8px;">¡Gracias por tu compra, ${escapeHtml(customer.name?.split(' ')[0] || '')}!</h2>
+  <p style="margin:0 0 16px;color:#666;">Confirmamos tu pedido <strong>${escapeHtml(order.id || '')}</strong>.</p>
+
+  <h3 style="margin:16px 0 8px;font-size:16px;">Tu pedido</h3>
+  <table style="width:100%;border-collapse:collapse;margin-bottom:16px;">
+    <thead>
+      <tr style="background:#F6D6D8;">
+        <th style="padding:8px 12px;text-align:left;font-size:13px;">Producto</th>
+        <th style="padding:8px 12px;text-align:center;font-size:13px;">Cant.</th>
+        <th style="padding:8px 12px;text-align:right;font-size:13px;">Precio</th>
+      </tr>
+    </thead>
+    <tbody>${itemsRows}</tbody>
+  </table>
+
+  <p style="margin:8px 0;font-size:18px;"><strong>Total: $${fmtAr(order.total)}</strong></p>
+
+  <div style="background:#FAF7F5;padding:16px;border-radius:8px;margin-top:16px;">
+    <h3 style="margin:0 0 8px;font-size:16px;">Entrega</h3>
+    <p style="margin:6px 0;"><strong>Modalidad:</strong> ${escapeHtml(shippingLabel)}</p>
+    ${addrBlock}
+    ${trackingBlock}
+    <p style="margin:6px 0;color:#666;font-size:13px;">Producción estimada: 3-7 días hábiles.</p>
+  </div>
+
+  <p style="margin-top:24px;font-size:13px;color:#666;">
+    Si necesitás coordinar algo, escribinos por
+    <a href="https://wa.me/5491123199122" style="color:#B8777F;">WhatsApp</a>
+    o respondé este mail.
+  </p>
+  <p style="margin-top:24px;font-size:11px;color:#999;">— NYC Designs · Acassuso 5268, CABA · <a href="https://nycdesigns.com.ar" style="color:#999;">nycdesigns.com.ar</a></p>
+</body></html>`;
+}
+
+function buildCustomerText(order) {
+  const customer = order.payer || {};
+  const items = Array.isArray(order.items) ? order.items : [];
+  const addr = order.address || {};
+  const lines = [];
+  lines.push(`¡Gracias por tu compra${customer.name ? ', ' + customer.name.split(' ')[0] : ''}!`);
+  lines.push(`Pedido: ${order.id || ''}`);
+  lines.push('');
+  items.forEach(i => lines.push(`  - ${i.title} x${i.quantity || 1} · $${fmtAr(i.unit_price)}`));
+  lines.push('');
+  lines.push(`TOTAL: $${fmtAr(order.total)}`);
+  lines.push('');
+  if (order.shipping_type === 'delivery') {
+    const full = [addr.street, addr.number].filter(Boolean).join(' ');
+    lines.push(`Envío a: ${full}${addr.extra ? ` (${addr.extra})` : ''}, ${addr.city || ''}, ${addr.province || ''}`);
+    if (order.tracking_code) lines.push(`Seguimiento: ${order.tracking_code}`);
+  } else {
+    lines.push('Retiro en Acassuso 5268, CABA — coordinamos por WhatsApp.');
+  }
+  lines.push('');
+  lines.push('WhatsApp: +54 9 11 2319-9122');
+  lines.push('Web: https://nycdesigns.com.ar');
+  return lines.join('\n');
+}
+
+/**
+ * Email to the CUSTOMER who just paid. Fire-and-forget; if there's no
+ * customer email or Resend is not configured the call is a no-op.
+ */
+async function notifyCustomerEmail(order) {
+  const customerEmail = order?.payer?.email;
+  if (!customerEmail) return { sent: false, reason: 'no_customer_email' };
+  const subject = `Pedido confirmado en NYC Designs — ${order.id || ''}`;
+  return sendResendEmail({
+    to: customerEmail,
+    subject,
+    html: buildCustomerHtml(order),
+    text: buildCustomerText(order)
+  });
+}
+
+module.exports = { notifyOrderEmail, notifyCustomerEmail };

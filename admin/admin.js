@@ -70,7 +70,13 @@ let productFormData = {
     imagenes: [null, null, null, null, null],
     material: '',
     medidas: '',
-    cuidados: ''
+    cuidados: '',
+    // Shipping dimensions (consumed by /api/epick-cotizar and api/webhook.js
+    // when calling get_etiquetas). Empty values fall back to EPICK_CONFIG.DEFAULT_PACKAGE.
+    peso: null,
+    largo: null,
+    ancho: null,
+    alto: null
 };
 
 /* ============================================
@@ -476,6 +482,11 @@ async function saveProduct() {
             material: productFormData.material || '',
             medidas: productFormData.medidas || '',
             cuidados: productFormData.cuidados || '',
+            // Shipping dimensions — null means "use the default package"
+            peso:  productFormData.peso  != null && productFormData.peso  !== '' ? Number(productFormData.peso)  : null,
+            largo: productFormData.largo != null && productFormData.largo !== '' ? Number(productFormData.largo) : null,
+            ancho: productFormData.ancho != null && productFormData.ancho !== '' ? Number(productFormData.ancho) : null,
+            alto:  productFormData.alto  != null && productFormData.alto  !== '' ? Number(productFormData.alto)  : null,
             updatedAt: new Date()
         };
 
@@ -658,7 +669,11 @@ function openEditModal(productId) {
         visible: product.visible !== false,
         destacado: product.destacado || false,
         badges: product.badges || [],
-        imagenes: product.imagenes || [product.imagen || null, null, null, null, null]
+        imagenes: product.imagenes || [product.imagen || null, null, null, null, null],
+        peso:  product.peso  ?? null,
+        largo: product.largo ?? null,
+        ancho: product.ancho ?? null,
+        alto:  product.alto  ?? null
     };
     
     populateWizardForm();
@@ -712,6 +727,12 @@ function populateWizardForm() {
     document.getElementById('productPrecio').value = productFormData.precio;
     document.getElementById('productPrecioAnterior').value = productFormData.precio_anterior || '';
     document.getElementById('productStock').value = productFormData.stock === 'ilimitado' ? '' : productFormData.stock;
+    // Shipping dimensions (blank = use default package)
+    const fillDim = (id, v) => { const el = document.getElementById(id); if (el) el.value = (v == null ? '' : v); };
+    fillDim('productPeso',  productFormData.peso);
+    fillDim('productLargo', productFormData.largo);
+    fillDim('productAncho', productFormData.ancho);
+    fillDim('productAlto',  productFormData.alto);
     
     // Categoría
     const categoryRadio = document.querySelector(`input[name="categoria"][value="${productFormData.categoria}"]`);
@@ -866,13 +887,23 @@ function saveWizardStepData(step) {
             productFormData.nombre = document.getElementById('productNombre').value.trim();
             productFormData.descripcion = document.getElementById('productDescripcion').value.trim();
             break;
-        case 2:
+        case 2: {
             productFormData.material = document.getElementById('productMaterial')?.value || '';
             productFormData.medidas = document.getElementById('productMedidas')?.value || '';
             productFormData.cuidados = document.getElementById('productCuidados')?.value || '';
             productFormData.precio = document.getElementById('productPrecio').value;
             productFormData.precio_anterior = document.getElementById('productPrecioAnterior').value || null;
+            // Capture shipping dimensions (live in the same wizard step)
+            const readDim = id => {
+                const v = document.getElementById(id)?.value;
+                return v === '' || v == null ? null : Number(v);
+            };
+            productFormData.peso  = readDim('productPeso');
+            productFormData.largo = readDim('productLargo');
+            productFormData.ancho = readDim('productAncho');
+            productFormData.alto  = readDim('productAlto');
             break;
+        }
         case 3:
             const stockType = document.querySelector('input[name="stockType"]:checked').value;
             productFormData.stock = stockType === 'ilimitado' ? 'ilimitado' : document.getElementById('productStock').value;

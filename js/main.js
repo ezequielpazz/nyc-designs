@@ -192,7 +192,12 @@ async function loadProductsFromFirebase() {
         visible: data.visible,
         material: data.material || '',
         medidas: data.medidas || '',
-        cuidados: data.cuidados || ''
+        cuidados: data.cuidados || '',
+        // Shipping dims (null = use default package on the backend)
+        peso:  data.peso  ?? null,
+        largo: data.largo ?? null,
+        ancho: data.ancho ?? null,
+        alto:  data.alto  ?? null
       });
     });
     
@@ -881,24 +886,70 @@ function calculateShippingCostLocal(postalCode) {
 }
 
 /**
- * Server-side quote via /api/epick-cotizar (sandbox-aware).
- * TODO: Replace this with the real E-Pick API call by setting EPICK_LIVE=1 +
- *       EPICK_API_KEY/EPICK_API_SECRET in Vercel — the endpoint already
- *       contains the live request behind a commented block.
- *
- * Returns null on any failure so the caller can fall back to the local table.
+ * Build the Packages array E-Pick expects from the current cart.
+ * Each cart item becomes one package using its own dims (or the safe
+ * defaults if Sol hasn't filled them yet for that product).
+ */
+function buildCartPackages() {
+  const DEFAULTS = { sizeWidth: 15, sizeHeight: 10, sizeDepth: 5, weight: 0.25 };
+  if (!Array.isArray(cart) || !cart.length) return [DEFAULTS];
+  return cart.map(line => {
+    const p = (allProducts || []).find(x => x.id === line.id) || {};
+    return {
+      sizeWidth:  Number(p.ancho) > 0 ? Number(p.ancho) : DEFAULTS.sizeWidth,
+      sizeHeight: Number(p.alto)  > 0 ? Number(p.alto)  : DEFAULTS.sizeHeight,
+      sizeDepth:  Number(p.largo) > 0 ? Number(p.largo) : DEFAULTS.sizeDepth,
+      weight:     Number(p.peso)  > 0 ? Number(p.peso)  : DEFAULTS.weight
+    };
+  });
+}
+
+/**
+ * Server-side quote via /api/epick-cotizar. Returns null on any failure so
+ * the caller can fall back to the local table.
  */
 async function fetchEpickQuote(postalCode) {
   try {
     const resp = await fetch('/api/epick-cotizar', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ postal_code_destination: postalCode })
+      body: JSON.stringify({
+        postal_code_destination: postalCode,
+        packages: buildCartPackages()
+      })
     });
     if (!resp.ok) return null;
     const data = await resp.json();
     if (!data.success) return null;
     return data;
+  } catch (_) {
+    return null;
+  }
+}
+
+/**
+ * Pre-checkout coverage check. Asks /api/epick-cobertura whether E-Pick
+ * actually delivers to this CP. Returns true / false / null on error.
+ * Defaults to "covered" if the endpoint blows up so we don't lock the cart
+ * out of every order on a transient API issue.
+ */
+async function checkEpickCoverage(postalCode, addressFields) {
+  try {
+    const resp = await fetch('/api/epick-cobertura', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        postal_code: postalCode,
+        street: addressFields?.street || '',
+        number: addressFields?.number || '',
+        city: addressFields?.city || '',
+        province: addressFields?.province || ''
+      })
+    });
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    if (!data.success) return null;
+    return !!data.covered;
   } catch (_) {
     return null;
   }
@@ -927,10 +978,35 @@ async function calculateShippingCost() {
     cost = calculateShippingCostLocal(postalCode);
   }
 
+  // Coverage check in parallel — if E-Pick explicitly returns "no coverage"
+  // we still show the price but warn the customer and disable the pay button
+  // so they don't pay for something that can't be shipped.
+  const covered = await checkEpickCoverage(postalCode);
   shippingCost = cost;
-  resultDiv.innerHTML = '<span style="color:#27ae60">✓ Envío disponible</span>';
-  priceSpan.textContent = `$${cost.toLocaleString('es-AR')}`;
-  addressSection.style.display = 'flex';
+
+  if (covered === false) {
+    resultDiv.innerHTML = '<span style="color:#e74c3c">⚠️ E-Pick no llega a esta zona. Elegí <strong>retiro en local</strong> o escribinos por WhatsApp para coordinar.</span>';
+    priceSpan.textContent = 'Sin cobertura';
+    addressSection.style.display = 'flex';
+    const payBtn = document.getElementById('mpOpenBtn');
+    if (payBtn) {
+      payBtn.disabled = true;
+      payBtn.dataset.blockedReason = 'no-coverage';
+      payBtn.title = 'Esta dirección no tiene cobertura. Elegí retiro o cambialo.';
+    }
+  } else {
+    resultDiv.innerHTML = covered === true
+      ? '<span style="color:#27ae60">✓ Cobertura confirmada — envío disponible</span>'
+      : '<span style="color:#27ae60">✓ Envío disponible</span>';
+    priceSpan.textContent = `$${cost.toLocaleString('es-AR')}`;
+    addressSection.style.display = 'flex';
+    const payBtn = document.getElementById('mpOpenBtn');
+    if (payBtn && payBtn.dataset.blockedReason === 'no-coverage') {
+      payBtn.disabled = false;
+      delete payBtn.dataset.blockedReason;
+      payBtn.removeAttribute('title');
+    }
+  }
   updateCartUI();
 }
 
@@ -949,6 +1025,14 @@ function initShipping() {
     addressSection.style.display = 'none';
     shippingCost = 0;
     document.getElementById('shippingPrice').textContent = 'Calcular';
+    // Pickup never needs E-Pick coverage — re-enable the pay button if it was
+    // blocked by a previous "no coverage" delivery attempt.
+    const payBtn = document.getElementById('mpOpenBtn');
+    if (payBtn && payBtn.dataset.blockedReason === 'no-coverage') {
+      payBtn.disabled = false;
+      delete payBtn.dataset.blockedReason;
+      payBtn.removeAttribute('title');
+    }
     updateCartUI();
   });
 
@@ -2062,7 +2146,9 @@ async function processPayment() {
         city:   document.getElementById('addressCity')?.value || '',
         province: document.getElementById('addressProvince')?.value || '',
         notes:  document.getElementById('addressNotes')?.value || ''
-      } : null
+      } : null,
+      // Real package list — webhook reuses it when calling get_etiquetas
+      packages: buildCartPackages()
     });
 
     const response = await fetch('/api/create-preference', {
