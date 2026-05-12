@@ -6,9 +6,10 @@ const firebaseConfig = {
     apiKey: "AIzaSyDTZdpmpGLxOQVVw0Q3k4g2yKzZZ8K8XIw",
     authDomain: "nyc-designs.firebaseapp.com",
     projectId: "nyc-designs",
-    storageBucket: "nyc-designs.appspot.com",
-    messagingSenderId: "661146487634",
-    appId: "1:661146487634:web:a4b3c5d6e7f8g9h0i1"
+    storageBucket: "nyc-designs.firebasestorage.app",
+    messagingSenderId: "377493242036",
+    appId: "1:377493242036:web:c1ded401db8fbdc08017e1",
+    measurementId: "G-6NZTMSC6XR"
 };
 
 const CLOUDINARY_CONFIG = {
