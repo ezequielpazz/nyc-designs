@@ -90,19 +90,22 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const {
-      postal_code_destination,
-      postal_code_origin,
-      packages
-    } = req.body || {};
+    // Accept both naming conventions: destination (current
+    // storefront) and destZip (matches the spec / e-pick doc verbatim).
+    // Accept both naming conventions: postal_code_destination (current
+    // storefront) and destZip (matches the spec / e-pick doc verbatim).
+    const body = req.body || {};
+    const destination = body.destination || body.postal_code_destination || body.destZip;
+    const origin_cp = body.origin_cp || body.postal_code_origin || body.origZip;
+    const packages = body.packages;
 
-    if (!postal_code_destination) {
-      return res.status(400).json({ error: 'postal_code_destination requerido' });
+    if (!destination) {
+      return res.status(400).json({ error: 'destZip / postal_code_destination requerido' });
     }
 
     // ------- SANDBOX path -------
     if (EPICK_CONFIG.SANDBOX_MODE) {
-      const q = fallbackQuote(postal_code_destination);
+      const q = fallbackQuote(destination);
       if (!q) return res.status(400).json({ error: 'Código postal inválido' });
       return res.status(200).json(q);
     }
@@ -118,22 +121,22 @@ module.exports = async (req, res) => {
       : [EPICK_CONFIG.DEFAULT_PACKAGE];
 
     const result = await callEpickProxy('get_rates', {
-      origZip: postal_code_origin || EPICK_CONFIG.SENDER.postalCode,
-      destZip: postal_code_destination,
+      origZip: origin_cp || EPICK_CONFIG.SENDER.postalCode,
+      destZip: destination,
       api_key: EPICK_CONFIG.API_KEY,
       Packages: pkgs
     });
 
     if (!result.ok) {
       // Fall back to local table so the cart never gets stuck.
-      const q = fallbackQuote(postal_code_destination);
+      const q = fallbackQuote(destination);
       if (q) return res.status(200).json({ ...q, fallback_reason: result.error });
       return res.status(502).json({ success: false, error: 'No se pudo cotizar', detail: result.error });
     }
 
     const cheapest = pickCheapest(result.data);
     if (!cheapest) {
-      const q = fallbackQuote(postal_code_destination);
+      const q = fallbackQuote(destination);
       if (q) return res.status(200).json({ ...q, fallback_reason: 'no_services' });
       return res.status(502).json({ success: false, error: 'Sin servicios disponibles' });
     }
@@ -147,7 +150,7 @@ module.exports = async (req, res) => {
     });
   } catch (err) {
     console.error('epick-cotizar error:', err.message);
-    const q = fallbackQuote(req.body?.postal_code_destination);
+    const q = fallbackQuote(req.body?.destination);
     if (q) return res.status(200).json({ ...q, fallback_reason: 'exception' });
     return res.status(500).json({ success: false, error: 'No se pudo cotizar' });
   }

@@ -30,7 +30,7 @@ const EPICK_CONFIG = {
     number: process.env.EPICK_SENDER_NUMBER || '5268',
     city: process.env.EPICK_SENDER_CITY || 'CABA',
     province: process.env.EPICK_SENDER_PROVINCE || 'CABA', // or single-letter code 'C'
-    postalCode: process.env.EPICK_SENDER_CP || '',
+    postalCode: process.env.EPICK_SENDER_CP || process.env.EPICK_ORIGIN_ZIP || '',
     infoadicional: process.env.EPICK_SENDER_EXTRA || '',
     // url_key is where E-Pick will POST status updates for shipments we create.
     // Must point to our /api/epick-webhook endpoint on production.
