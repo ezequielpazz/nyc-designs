@@ -62,6 +62,29 @@ EPICK_WEBHOOK_TOKEN=           # required in prod, shared with Wanderlust Codes
 | `POST /api/epick-tracking` | `get_status` | Admin "Ver seguimiento" |
 | `POST /api/epick-webhook` | n/a | Receives push notifications from E-Pick |
 
+## Rate limiting (Upstash, optional)
+
+The serverless rate limiter falls back to in-memory if these are not set, but
+that doesn't share state across Vercel function instances. Adding Upstash
+makes the limit actually enforce across cold starts.
+
+```
+UPSTASH_REDIS_REST_URL=
+UPSTASH_REDIS_REST_TOKEN=
+```
+
+Free tier: 10k commands/day. Steps:
+
+1. Sign up at https://upstash.com with the project's Google account.
+2. **Create database** → name "nyc-designs-rl", region `us-east-1` (closest to
+   Vercel functions). Choose "Regional" + "TLS enabled".
+3. After creation, scroll to **REST API** → copy `UPSTASH_REDIS_REST_URL` and
+   `UPSTASH_REDIS_REST_TOKEN`.
+4. Add both to Vercel → Settings → Environment Variables (Production scope).
+5. Redeploy.
+
+No code change needed — `api/_lib/rateLimit.js` auto-detects them.
+
 ## Email notifications (Resend)
 
 When a payment is approved the webhook sends a "new order" email to Sol. The

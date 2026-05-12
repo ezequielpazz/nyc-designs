@@ -3016,3 +3016,16 @@ footer {
   color: white;
   border-color: var(--rose);
 }
+
+/* ===== Honeypot anti-spam (hidden to humans, visible to dumb bots) ===== */
+.hp-field {
+  position: absolute !important;
+  left: -10000px !important;
+  width: 1px !important;
+  height: 1px !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  border: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
