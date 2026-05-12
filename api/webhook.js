@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 const mercadopago = require('mercadopago');
+const { EPICK_CONFIG } = require('../config/shipping');
 
 const client = new mercadopago.MercadoPagoConfig({
   accessToken: process.env.MP_ACCESS_TOKEN
@@ -10,6 +11,75 @@ const payment = new mercadopago.Payment(client);
 // Firestore REST API helper
 const FIREBASE_PROJECT = 'nyc-designs';
 const FIREBASE_API_KEY = process.env.FIREBASE_API_KEY;
+
+/**
+ * E-Pick shipment creation (placeholder).
+ *
+ * While EPICK_CONFIG.SANDBOX_MODE is true we generate a deterministic mock
+ * tracking code so the admin UI / customer can already see "envío creado"
+ * end-to-end. When Sol provides credentials, set EPICK_LIVE=1 + EPICK_API_KEY
+ * in Vercel and uncomment the fetch() block below.
+ */
+async function createEpickShipment(order) {
+  // TODO: Uncomment when E-Pick credentials are ready
+  /*
+  if (!EPICK_CONFIG.SANDBOX_MODE) {
+    const resp = await fetch(`${EPICK_CONFIG.BASE_URL}/shipments`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${EPICK_CONFIG.API_SECRET}`
+      },
+      body: JSON.stringify({
+        apiKey: EPICK_CONFIG.API_KEY,
+        external_reference: order.id,
+        sender: EPICK_CONFIG.SENDER,
+        recipient: {
+          name: order.payer?.name || '',
+          address: order.address?.street || '',
+          city: order.address?.city || '',
+          postal_code: order.postal_code || '',
+          phone: order.payer?.phone || ''
+        },
+        package: { weight_kg: 0.5, length: 20, width: 15, height: 5 }
+      })
+    });
+    if (!resp.ok) throw new Error(`E-Pick create shipment failed: ${resp.status}`);
+    const data = await resp.json();
+    return { tracking_code: data.tracking_code, label_url: data.label_url };
+  }
+  */
+
+  // Sandbox: stable mock per order
+  const h = crypto.createHash('sha1').update(String(order.id || Date.now())).digest('hex');
+  return {
+    tracking_code: `EP-MOCK-${h.substring(0, 10).toUpperCase()}`,
+    label_url: null,
+    sandbox: true
+  };
+}
+
+async function updateOrderTracking(docName, trackingCode, labelUrl) {
+  if (!FIREBASE_API_KEY || !docName) return;
+  const fields = ['tracking_code', 'tracking_updated_at'];
+  if (labelUrl) fields.push('label_url');
+  const mask = fields.map(f => `updateMask.fieldPaths=${f}`).join('&');
+  const url = `https://firestore.googleapis.com/v1/${docName}?${mask}&key=${FIREBASE_API_KEY}`;
+
+  const body = {
+    fields: {
+      tracking_code: { stringValue: String(trackingCode) },
+      tracking_updated_at: { timestampValue: new Date().toISOString() }
+    }
+  };
+  if (labelUrl) body.fields.label_url = { stringValue: String(labelUrl) };
+
+  await fetch(url, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+}
 
 async function decrementStock(productId, quantity) {
   if (!FIREBASE_API_KEY) return;
@@ -209,12 +279,26 @@ module.exports = async (req, res) => {
           external_reference: paymentData.external_reference || ''
         };
 
-        await saveOrderToFirestore(orderData);
+        const saved = await saveOrderToFirestore(orderData);
 
         // Decrement stock for purchased items
         for (const item of orderData.items) {
           if (item.product_id) {
             await decrementStock(item.product_id, item.quantity);
+          }
+        }
+
+        // Auto-create the E-Pick shipment for delivery orders so the admin
+        // already sees a tracking code. In sandbox mode this is a mock; the
+        // real API call lives inside createEpickShipment().
+        if (shippingType === 'delivery') {
+          try {
+            const ship = await createEpickShipment(orderData);
+            if (ship?.tracking_code && saved?.name) {
+              await updateOrderTracking(saved.name, ship.tracking_code, ship.label_url);
+            }
+          } catch (shipErr) {
+            console.error('E-Pick shipment skipped:', shipErr.message);
           }
         }
       }
