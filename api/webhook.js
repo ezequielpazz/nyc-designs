@@ -1,7 +1,7 @@
 const crypto = require('crypto');
 const mercadopago = require('mercadopago');
 const { EPICK_CONFIG, provinceCode, callEpickProxy } = require('../config/shipping');
-const { notifyOrderEmail } = require('./_lib/notifyOrder');
+const { notifyOrderEmail, notifyCustomerEmail } = require('./_lib/notifyOrder');
 
 const client = new mercadopago.MercadoPagoConfig({
   accessToken: process.env.MP_ACCESS_TOKEN
@@ -83,6 +83,13 @@ async function createEpickShipment(order) {
     province: provinceCode(EPICK_CONFIG.SENDER.province)
   };
 
+  // Use the packages array the front-end already built (one per cart item
+  // with real product dimensions). Falls back to a single default package
+  // when the customer pre-dates this feature.
+  const packagesForEpick = Array.isArray(order.packages) && order.packages.length
+    ? order.packages
+    : [EPICK_CONFIG.DEFAULT_PACKAGE];
+
   const destino_datos = [{
     name: order.payer?.name || '',
     dni: order.payer?.dni || '',
@@ -96,7 +103,7 @@ async function createEpickShipment(order) {
     adicional: order.address?.extra || order.address?.adicional || '',
     observaciones: order.address?.notes || order.address?.observaciones || '',
     valortotal: Number(order.total || 0),
-    packages: JSON.stringify([EPICK_CONFIG.DEFAULT_PACKAGE])
+    packages: JSON.stringify(packagesForEpick)
   }];
 
   const chosen_shipping = order.chosen_shipping || { external_reference: String(order.id) };
@@ -357,6 +364,7 @@ module.exports = async (req, res) => {
           shipping_label: shippingLabel,
           postal_code: extra.postal_code || '',
           address: extra.address || null,
+          packages: Array.isArray(extra.packages) ? extra.packages : null,
           external_reference: paymentData.external_reference || ''
         };
 
@@ -389,12 +397,21 @@ module.exports = async (req, res) => {
           }
         }
 
-        // Fire-and-forget email to Sol. Never blocks the webhook response so
-        // a failing email doesn't make MP retry the notification.
+        // Fire-and-forget emails:
+        //   - Sol (shop owner) gets the operational summary
+        //   - Customer gets a friendly confirmation + tracking link
+        // Both share the same Resend key (env: RESEND_API_KEY). Failures are
+        // logged but never block the webhook response.
+        const orderForEmail = { ...orderData, tracking_code: trackingCode };
         try {
-          await notifyOrderEmail({ ...orderData, tracking_code: trackingCode });
+          await notifyOrderEmail(orderForEmail);
         } catch (mailErr) {
-          console.error('order notification email failed:', mailErr.message);
+          console.error('shop notification email failed:', mailErr.message);
+        }
+        try {
+          await notifyCustomerEmail(orderForEmail);
+        } catch (mailErr) {
+          console.error('customer confirmation email failed:', mailErr.message);
         }
       }
     }

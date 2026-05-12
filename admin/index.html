@@ -779,6 +779,29 @@
                         </div>
                         <input type="number" id="productStock" placeholder="Cantidad" min="0" style="display: none;">
                     </div>
+
+                    <fieldset class="form-fieldset">
+                        <legend>Dimensiones para envío (E-Pick)</legend>
+                        <p class="form-help">Usados para cotizar el envío. Si los dejás vacíos se usan los valores por defecto (15×10×5 cm · 0.25 kg).</p>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="productPeso">Peso (kg)</label>
+                                <input type="number" id="productPeso" step="0.01" min="0" placeholder="0.25">
+                            </div>
+                            <div class="form-group">
+                                <label for="productLargo">Largo (cm)</label>
+                                <input type="number" id="productLargo" step="0.1" min="0" placeholder="15">
+                            </div>
+                            <div class="form-group">
+                                <label for="productAncho">Ancho (cm)</label>
+                                <input type="number" id="productAncho" step="0.1" min="0" placeholder="10">
+                            </div>
+                            <div class="form-group">
+                                <label for="productAlto">Alto (cm)</label>
+                                <input type="number" id="productAlto" step="0.1" min="0" placeholder="5">
+                            </div>
+                        </div>
+                    </fieldset>
                 </div>
 
                 <!-- Step 3: Category -->
