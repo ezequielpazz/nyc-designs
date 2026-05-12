@@ -843,9 +843,12 @@
           <div id="shippingResult"></div>
         </div>
         <div class="shipping-address" id="shippingAddress" style="display: none;">
-          <input type="text" id="addressStreet" placeholder="Calle y número" required>
-          <input type="text" id="addressCity" placeholder="Ciudad" required>
-          <input type="text" id="addressProvince" placeholder="Provincia" required>
+          <input type="text" id="addressStreet" placeholder="Calle" required>
+          <input type="text" id="addressNumber" placeholder="Número" required>
+          <input type="text" id="addressExtra" placeholder="Piso / depto (opcional)">
+          <input type="text" id="addressCity" placeholder="Ciudad / Localidad" required>
+          <input type="text" id="addressProvince" placeholder="Provincia (CABA, Buenos Aires, etc)" required>
+          <input type="text" id="addressNotes" placeholder="Referencias para el repartidor (opcional)">
         </div>
       </div>
 
@@ -956,8 +959,9 @@
       <h3>Finalizar compra</h3>
       <form id="mpForm">
         <input type="text" id="mpName" placeholder="Nombre completo" required>
+        <input type="text" id="mpDni" placeholder="DNI" inputmode="numeric" pattern="[0-9]{7,9}" required>
         <input type="email" id="mpEmail" placeholder="Email" required>
-        <input type="tel" id="mpPhone" placeholder="Teléfono" required>
+        <input type="tel" id="mpPhone" placeholder="Teléfono (sin 0 ni 15)" required>
         <button type="button" class="btn primary" id="mpPayBtn">Pagar con MercadoPago</button>
       </form>
     </div>

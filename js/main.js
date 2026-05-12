@@ -645,6 +645,13 @@ async function loadBannerConfig() {
         heroShipping.textContent = data.shipping.methods;
       }
     }
+
+    // ===== INSTALLMENTS (cuotas) — only if Sol enables them in admin =====
+    window._installmentsConfig = data.installments || null;
+    if (data.installments?.enabled) {
+      // run after products render
+      setTimeout(() => addInstallments(data.installments), 1200);
+    }
     
     // ===== UPDATE HOURS IN FOOTER AND CHATBOT =====
     if (data.hours) {
@@ -1743,15 +1750,19 @@ function updateStockWarnings() {
   });
 }
 
-// ========== CUOTAS VISIBLES ==========
-function addInstallments() {
+// Cuotas: shown only when Firestore configuracion.installments.enabled is true.
+// Sol can flip the switch from admin → Configuración.
+function addInstallments(config) {
+  const enabled = !!(config && config.enabled);
+  const installments = Number(config?.count) || 3;
+  if (!enabled) return;
   document.querySelectorAll('.product .price strong').forEach(priceEl => {
     const price = parseInt(priceEl.textContent.replace(/\D/g, ''));
     if (price >= 3000) {
-      const installment = Math.floor(price / 3);
+      const installment = Math.floor(price / installments);
       const installmentEl = document.createElement('div');
       installmentEl.className = 'installments';
-      installmentEl.innerHTML = `o <strong>3 cuotas de $${installment.toLocaleString('es-AR')}</strong>`;
+      installmentEl.innerHTML = `o <strong>${installments} cuotas de $${installment.toLocaleString('es-AR')}</strong>`;
       priceEl.parentNode.appendChild(installmentEl);
     }
   });
@@ -1781,7 +1792,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   setTimeout(() => {
     updateStockWarnings();
-    addInstallments();
+    // Cuotas are off by default — loadBannerConfig pulls installments config
+    // from Firestore and re-invokes addInstallments() when products render.
   }, 1500);
 });
 
@@ -1925,6 +1937,7 @@ async function processPayment() {
     const name = document.getElementById('mpName')?.value?.trim() || '';
     const email = document.getElementById('mpEmail')?.value?.trim() || '';
     const phone = document.getElementById('mpPhone')?.value?.trim() || '';
+    const dni = document.getElementById('mpDni')?.value?.trim() || '';
 
     // Build items - include shipping as line item if delivery
     const items = cart.map(item => ({
@@ -1955,10 +1968,14 @@ async function processPayment() {
       timestamp: Date.now(),
       shipping_type: shippingType,
       postal_code: document.getElementById('postalCode')?.value || '',
+      customer: { name, email, phone, dni },
       address: shippingType === 'delivery' ? {
         street: document.getElementById('addressStreet')?.value || '',
-        city: document.getElementById('addressCity')?.value || '',
-        province: document.getElementById('addressProvince')?.value || ''
+        number: document.getElementById('addressNumber')?.value || '',
+        extra:  document.getElementById('addressExtra')?.value || '',
+        city:   document.getElementById('addressCity')?.value || '',
+        province: document.getElementById('addressProvince')?.value || '',
+        notes:  document.getElementById('addressNotes')?.value || ''
       } : null
     });
 

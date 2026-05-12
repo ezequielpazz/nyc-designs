@@ -1122,30 +1122,36 @@ async function loadOrders(filter = 'todos') {
                 const itemsHtml = items.map(item =>
                     `<div class="order-item-line">${escapeHtml(item.title || 'Producto')} x${item.quantity || 1} — $${(item.unit_price || 0).toLocaleString('es-AR')}</div>`
                 ).join('');
-                const whatsappMsg = encodeURIComponent(`Hola ${customer.name || ''}, tu pedido #${order.id.slice(0, 8).toUpperCase()} de NYC Designs está siendo procesado. ¿Tenés alguna consulta?`);
+                const orderNumber = `#${order.id.slice(0, 8).toUpperCase()}`;
+                const whatsappMsg = encodeURIComponent(`Hola ${customer.name || ''}, tu pedido ${orderNumber} de NYC Designs está siendo procesado. ¿Tenés alguna consulta?`);
                 const trackingCode = order.tracking_code || '';
+                const customerDni = escapeHtml(customer.dni || '');
 
                 // Shipping / delivery block
                 const shippingType = order.shipping_type || 'pickup';
                 const shippingLabel = order.shipping_label ||
                     (shippingType === 'delivery' ? 'Envío a domicilio (E-Pick)' : 'Retiro en Acassuso 5268, CABA');
                 const addr = order.shipping_address || {};
+                const streetLine = [addr.street, addr.number].filter(Boolean).join(' ');
+                const fullStreet = addr.extra ? `${streetLine} (${addr.extra})` : streetLine;
                 const addrLine = shippingType === 'delivery'
-                    ? [addr.street, addr.city, addr.province].filter(Boolean).map(escapeHtml).join(', ')
+                    ? [fullStreet, addr.city, addr.province].filter(Boolean).map(escapeHtml).join(', ')
                     : '';
+                const notesLine = shippingType === 'delivery' && addr.notes ? escapeHtml(addr.notes) : '';
                 const postal = order.postal_code ? ` · CP ${escapeHtml(order.postal_code)}` : '';
                 const whatsappPhone = customer.phone ? `<a href="https://wa.me/${String(customer.phone).replace(/\D/g, '')}" target="_blank">${customerPhone}</a>` : '';
 
                 return `
                 <div class="order-card order-card-expanded">
                     <div class="order-header">
-                        <div class="order-id">#${order.id.slice(0, 8).toUpperCase()}</div>
+                        <div class="order-id">Pedido ${orderNumber}</div>
                         <span class="order-date">${date}</span>
                         <span class="order-status status-${order.status || 'pendiente'}">${order.status || 'pendiente'}</span>
                     </div>
                     <div class="order-body">
                         <div class="order-customer">
-                            <div class="order-customer-name">${customerName}</div>
+                            <div class="order-customer-name"><strong>${customerName}</strong></div>
+                            ${customerDni ? `<div class="order-customer-dni">DNI: ${customerDni}</div>` : ''}
                             <div class="order-customer-email">${customerEmail}</div>
                             ${whatsappPhone ? `<div class="order-customer-phone">Tel: ${whatsappPhone}</div>` : ''}
                         </div>
@@ -1156,6 +1162,7 @@ async function loadOrders(filter = 'todos') {
                         </div>
                         <div class="order-shipping"><strong>Entrega:</strong> ${escapeHtml(shippingLabel)}${postal}</div>
                         ${addrLine ? `<div class="order-shipping-address">📍 ${addrLine}</div>` : ''}
+                        ${notesLine ? `<div class="order-shipping-notes">📝 ${notesLine}</div>` : ''}
                         ${trackingCode ? `<div class="order-tracking">Seguimiento: <strong>${escapeHtml(trackingCode)}</strong></div>` : ''}
                     </div>
                     <div class="order-footer">
@@ -1648,7 +1655,13 @@ async function loadSettings() {
                 if (methodsInput) methodsInput.value = settings.shipping.methods;
             }
         }
-        
+
+        // Load installments toggle (off by default)
+        const instChk = document.getElementById('installmentsEnabled');
+        const instCount = document.getElementById('installmentsCount');
+        if (instChk) instChk.checked = !!(settings.installments?.enabled);
+        if (instCount) instCount.value = settings.installments?.count || '';
+
     } catch (error) {
         console.error('❌ Error loading settings:', error);
     }
@@ -1686,11 +1699,17 @@ async function saveSettings(type) {
         } else if (type === 'shipping') {
             const productionTime = document.getElementById('productionTime')?.value;
             const shippingMethods = document.getElementById('shippingMethods')?.value;
-            
+            const installmentsEnabled = !!document.getElementById('installmentsEnabled')?.checked;
+            const installmentsCount = parseInt(document.getElementById('installmentsCount')?.value, 10);
+
             await settingsRef.set({
                 shipping: {
                     productionTime,
                     methods: shippingMethods
+                },
+                installments: {
+                    enabled: installmentsEnabled,
+                    count: Number.isFinite(installmentsCount) && installmentsCount > 1 ? installmentsCount : 3
                 },
                 updatedAt: new Date()
             }, { merge: true });
