@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 const mercadopago = require('mercadopago');
 const { EPICK_CONFIG, provinceCode, callEpickProxy } = require('../config/shipping');
+const { notifyOrderEmail } = require('./_lib/notifyOrder');
 
 const client = new mercadopago.MercadoPagoConfig({
   accessToken: process.env.MP_ACCESS_TOKEN
@@ -372,6 +373,7 @@ module.exports = async (req, res) => {
         // already sees a tracking code. Idempotent: if a previous webhook
         // delivery already created the shipment for this payment_id we just
         // reuse the existing tracking code.
+        let trackingCode = null;
         if (shippingType === 'delivery') {
           try {
             const existing = await existingShipmentForPayment(orderData.payment_id);
@@ -380,10 +382,19 @@ module.exports = async (req, res) => {
               : await createEpickShipment(orderData);
             if (ship?.tracking_code && saved?.name) {
               await updateOrderTracking(saved.name, ship.tracking_code, ship.label_url);
+              trackingCode = ship.tracking_code;
             }
           } catch (shipErr) {
             console.error('E-Pick shipment skipped:', shipErr.message);
           }
+        }
+
+        // Fire-and-forget email to Sol. Never blocks the webhook response so
+        // a failing email doesn't make MP retry the notification.
+        try {
+          await notifyOrderEmail({ ...orderData, tracking_code: trackingCode });
+        } catch (mailErr) {
+          console.error('order notification email failed:', mailErr.message);
         }
       }
     }

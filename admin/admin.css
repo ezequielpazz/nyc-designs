@@ -919,14 +919,19 @@ select:focus {
     width: fit-content;
 }
 
-.stock-in {
+.stock-in, .stock-ok {
     background-color: #d4edda;
     color: #155724;
 }
 
+.stock-mid {
+    background-color: #fff4d6;
+    color: #8a5a00;
+}
+
 .stock-low {
-    background-color: #fff3cd;
-    color: #856404;
+    background-color: #fde2e1;
+    color: #b3261e;
 }
 
 .stock-out {

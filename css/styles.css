@@ -2930,3 +2930,19 @@ footer {
   border-radius: 6px;
   font-size: 0.9rem;
 }
+
+/* ===== Stock semaphore on product cards ===== */
+.stock-pill {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .2px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  text-transform: none;
+  white-space: nowrap;
+}
+.stock-pill.stock-ok  { background: #e6f4ea; color: #1b6a2a; }
+.stock-pill.stock-mid { background: #fff4d6; color: #8a5a00; }
+.stock-pill.stock-low { background: #fde2e1; color: #b3261e; }
+.stock-pill.stock-out { background: #ececec; color: #555; }
