@@ -49,7 +49,8 @@ service cloud.firestore {
       return request.auth != null &&
         request.auth.token.email in [
           'newyorkcitydesigns4@gmail.com',
-          'javierituarte20@gmail.com'
+          'javierituarte20@gmail.com',
+          'javierituarte2000@gmail.com'
         ];
     }
   }
