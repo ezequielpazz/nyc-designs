@@ -1,6 +1,6 @@
 const crypto = require('crypto');
 const mercadopago = require('mercadopago');
-const { EPICK_CONFIG } = require('../config/shipping');
+const { EPICK_CONFIG, provinceCode, callEpickProxy } = require('../config/shipping');
 
 const client = new mercadopago.MercadoPagoConfig({
   accessToken: process.env.MP_ACCESS_TOKEN
@@ -13,49 +13,117 @@ const FIREBASE_PROJECT = 'nyc-designs';
 const FIREBASE_API_KEY = process.env.FIREBASE_API_KEY;
 
 /**
- * E-Pick shipment creation (placeholder).
+ * Idempotency guard: returns true if we already created an E-Pick shipment
+ * for this MercadoPago payment_id. Uses Firestore's runQuery REST API.
+ */
+async function existingShipmentForPayment(paymentId) {
+  if (!FIREBASE_API_KEY || !paymentId) return null;
+  const url = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT}/databases/(default)/documents:runQuery?key=${FIREBASE_API_KEY}`;
+  const query = {
+    structuredQuery: {
+      from: [{ collectionId: 'pedidos' }],
+      where: {
+        compositeFilter: {
+          op: 'AND',
+          filters: [
+            { fieldFilter: { field: { fieldPath: 'payment_id' }, op: 'EQUAL', value: { stringValue: String(paymentId) } } },
+            { fieldFilter: { field: { fieldPath: 'tracking_code' }, op: 'GREATER_THAN', value: { stringValue: '' } } }
+          ]
+        }
+      },
+      limit: 1
+    }
+  };
+  try {
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(query)
+    });
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    const hit = Array.isArray(data) ? data.find(r => r.document) : null;
+    if (!hit) return null;
+    const f = hit.document.fields || {};
+    return {
+      tracking_code: f.tracking_code?.stringValue || '',
+      label_url: f.label_url?.stringValue || null
+    };
+  } catch (_) {
+    return null;
+  }
+}
+
+/**
+ * E-Pick shipment creation via Wanderlust Codes proxy (operation get_etiquetas).
  *
- * While EPICK_CONFIG.SANDBOX_MODE is true we generate a deterministic mock
- * tracking code so the admin UI / customer can already see "envío creado"
- * end-to-end. When Sol provides credentials, set EPICK_LIVE=1 + EPICK_API_KEY
- * in Vercel and uncomment the fetch() block below.
+ * - In SANDBOX_MODE (no api_key) we return a deterministic mock tracking code
+ *   so the rest of the pipeline keeps working end-to-end.
+ * - In LIVE mode (EPICK_LIVE=1 + EPICK_API_KEY) we POST the form-encoded
+ *   triple-nested JSON payload to the proxy and extract the order id / label.
+ *
+ * The endpoint is not idempotent on the proxy side — the caller must dedupe
+ * by payment_id before invoking this (see existingShipmentForPayment).
  */
 async function createEpickShipment(order) {
-  // TODO: Uncomment when E-Pick credentials are ready
-  /*
-  if (!EPICK_CONFIG.SANDBOX_MODE) {
-    const resp = await fetch(`${EPICK_CONFIG.BASE_URL}/shipments`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${EPICK_CONFIG.API_SECRET}`
-      },
-      body: JSON.stringify({
-        apiKey: EPICK_CONFIG.API_KEY,
-        external_reference: order.id,
-        sender: EPICK_CONFIG.SENDER,
-        recipient: {
-          name: order.payer?.name || '',
-          address: order.address?.street || '',
-          city: order.address?.city || '',
-          postal_code: order.postal_code || '',
-          phone: order.payer?.phone || ''
-        },
-        package: { weight_kg: 0.5, length: 20, width: 15, height: 5 }
-      })
-    });
-    if (!resp.ok) throw new Error(`E-Pick create shipment failed: ${resp.status}`);
-    const data = await resp.json();
-    return { tracking_code: data.tracking_code, label_url: data.label_url };
-  }
-  */
-
   // Sandbox: stable mock per order
-  const h = crypto.createHash('sha1').update(String(order.id || Date.now())).digest('hex');
+  if (EPICK_CONFIG.SANDBOX_MODE) {
+    const h = crypto.createHash('sha1').update(String(order.id || Date.now())).digest('hex');
+    return {
+      tracking_code: `EP-MOCK-${h.substring(0, 10).toUpperCase()}`,
+      label_url: null,
+      sandbox: true
+    };
+  }
+
+  // Live path — triple-nested JSON, see api/epick-crear-envio.js for the shape
+  const origen_datos = {
+    ...EPICK_CONFIG.SENDER,
+    province: provinceCode(EPICK_CONFIG.SENDER.province)
+  };
+
+  const destino_datos = [{
+    name: order.payer?.name || '',
+    email: order.payer?.email || '',
+    phone: order.payer?.phone || '',
+    street: order.address?.street || '',
+    number: order.address?.number || '0',
+    city: order.address?.city || '',
+    province: provinceCode(order.address?.province || ''),
+    postalCode: order.postal_code || '',
+    adicional: order.address?.adicional || '',
+    observaciones: order.address?.observaciones || '',
+    valortotal: Number(order.total || 0),
+    packages: JSON.stringify([EPICK_CONFIG.DEFAULT_PACKAGE])
+  }];
+
+  const chosen_shipping = order.chosen_shipping || { external_reference: String(order.id) };
+
+  const result = await callEpickProxy('get_etiquetas', {
+    origen_datos: JSON.stringify(origen_datos),
+    destino_datos: JSON.stringify(destino_datos),
+    chosen_shipping: JSON.stringify(chosen_shipping)
+  });
+
+  if (!result.ok) {
+    throw new Error(`E-Pick get_etiquetas failed: ${result.error}`);
+  }
+
+  // Extract id from the proxy's `results` field. The doc says it's the raw
+  // e-pick payload so we look for the common keys.
+  const raw = result.data?.results || result.data;
+  const parsed = typeof raw === 'string' ? (() => { try { return JSON.parse(raw); } catch (_) { return null; } })() : raw;
+  const trackingCode = parsed?.id || parsed?.order_id || parsed?.orderId || parsed?.tracking_code || null;
+  const labelUrl = parsed?.label_url || parsed?.labelUrl || parsed?.label || parsed?.pdf || null;
+
+  if (!trackingCode) {
+    throw new Error('E-Pick response missing order id');
+  }
+
   return {
-    tracking_code: `EP-MOCK-${h.substring(0, 10).toUpperCase()}`,
-    label_url: null,
-    sandbox: true
+    tracking_code: String(trackingCode),
+    label_url: labelUrl ? String(labelUrl) : null,
+    sandbox: false
   };
 }
 
@@ -289,11 +357,15 @@ module.exports = async (req, res) => {
         }
 
         // Auto-create the E-Pick shipment for delivery orders so the admin
-        // already sees a tracking code. In sandbox mode this is a mock; the
-        // real API call lives inside createEpickShipment().
+        // already sees a tracking code. Idempotent: if a previous webhook
+        // delivery already created the shipment for this payment_id we just
+        // reuse the existing tracking code.
         if (shippingType === 'delivery') {
           try {
-            const ship = await createEpickShipment(orderData);
+            const existing = await existingShipmentForPayment(orderData.payment_id);
+            const ship = existing && existing.tracking_code
+              ? existing
+              : await createEpickShipment(orderData);
             if (ship?.tracking_code && saved?.name) {
               await updateOrderTracking(saved.name, ship.tracking_code, ship.label_url);
             }

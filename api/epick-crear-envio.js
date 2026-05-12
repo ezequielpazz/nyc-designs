@@ -1,17 +1,18 @@
 /**
- * E-Pick "create shipment" endpoint.
+ * E-Pick "create shipment" endpoint — operation get_etiquetas.
  *
- * Triggered by the webhook (or manually from the admin) after a payment is
- * approved and shipping_type === 'delivery'. While SANDBOX_MODE is on we just
- * return a deterministic fake tracking code so the rest of the pipeline (admin
- * UI, Firestore writes) can be developed and tested end-to-end.
+ * The Wanderlust proxy expects three triple-nested fields:
+ *   origen_datos    → JSON string with sender info
+ *   destino_datos   → JSON string with an ARRAY containing one recipient
+ *                     (and inside it, packages is itself a JSON string)
+ *   chosen_shipping → JSON string with the service object returned by get_rates
  *
- * TODO: uncomment the real fetch() block once Sol provides EPICK_API_KEY /
- *       EPICK_API_SECRET and the production sender postal code.
+ * The endpoint is NOT idempotent on the proxy side, so we dedupe by
+ * external_reference (the MercadoPago order id) before calling it.
  */
 
 const crypto = require('crypto');
-const { EPICK_CONFIG } = require('../config/shipping');
+const { EPICK_CONFIG, provinceCode, callEpickProxy } = require('../config/shipping');
 
 const ALLOWED_ORIGINS = [
   'https://nycdesigns.com.ar',
@@ -20,9 +21,31 @@ const ALLOWED_ORIGINS = [
 ];
 
 function mockTrackingCode(orderId) {
-  // Stable per order so retries don't produce a new code
   const h = crypto.createHash('sha1').update(String(orderId || Date.now())).digest('hex');
   return `EP-MOCK-${h.substring(0, 10).toUpperCase()}`;
+}
+
+/**
+ * Extract the e-pick order id from the proxy's `results` payload. The doc
+ * just says "respuesta cruda de e-pick", so we try common keys defensively.
+ */
+function extractEpickOrderId(payload) {
+  if (!payload) return null;
+  const r = payload.results || payload;
+  if (!r) return null;
+  if (typeof r === 'string') {
+    try { return extractEpickOrderId(JSON.parse(r)); } catch (_) { return null; }
+  }
+  return r.id || r.order_id || r.orderId || r.tracking_code || r.tracking || null;
+}
+
+function extractLabelUrl(payload) {
+  if (!payload) return null;
+  const r = payload.results || payload;
+  if (typeof r === 'string') {
+    try { return extractLabelUrl(JSON.parse(r)); } catch (_) { return null; }
+  }
+  return r.label_url || r.labelUrl || r.label || r.pdf || null;
 }
 
 module.exports = async (req, res) => {
@@ -43,7 +66,7 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const { order_id, sender, recipient, package: pkg } = req.body || {};
+    const { order_id, recipient, chosen_shipping, package: pkg, packages } = req.body || {};
 
     if (!order_id || !recipient) {
       return res.status(400).json({ error: 'order_id y recipient son requeridos' });
@@ -55,48 +78,66 @@ module.exports = async (req, res) => {
       return res.status(200).json({
         success: true,
         tracking_code: tracking,
-        label_url: `https://example.com/labels/${tracking}.pdf`,
+        epick_order_id: tracking,
+        label_url: null,
         sandbox: true,
         message: 'Sandbox mode: no se contactó E-Pick'
       });
     }
 
-    // ------- LIVE E-Pick call (uncomment when credentials are ready) -------
-    /*
-    const body = {
-      apiKey: EPICK_CONFIG.API_KEY,
-      external_reference: order_id,
-      sender: sender || EPICK_CONFIG.SENDER,
-      recipient: {
-        name: recipient.name,
-        address: recipient.address,
-        city: recipient.city,
-        postal_code: recipient.postal_code,
-        phone: recipient.phone
-      },
-      package: pkg || { weight_kg: 0.5, length: 20, width: 15, height: 5 }
+    // ------- LIVE path: build the triple-nested JSON payload -------
+
+    const pkgList = Array.isArray(packages) && packages.length
+      ? packages
+      : (pkg ? [pkg] : [EPICK_CONFIG.DEFAULT_PACKAGE]);
+
+    const origen_datos = {
+      ...EPICK_CONFIG.SENDER,
+      province: provinceCode(EPICK_CONFIG.SENDER.province)
     };
-    const resp = await fetch(`${EPICK_CONFIG.BASE_URL}/shipments`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${EPICK_CONFIG.API_SECRET}`
-      },
-      body: JSON.stringify(body)
+
+    const destino_datos = [{
+      name: recipient.name || '',
+      email: recipient.email || '',
+      phone: recipient.phone || '',
+      street: recipient.street || recipient.address || '',
+      number: recipient.number || '0',
+      city: recipient.city || '',
+      province: provinceCode(recipient.province || ''),
+      postalCode: recipient.postal_code || recipient.postalCode || '',
+      adicional: recipient.adicional || recipient.additional || '',
+      observaciones: recipient.observaciones || recipient.notes || '',
+      valortotal: Number(recipient.valortotal || recipient.declared_value || 0),
+      // CRITICAL: packages must be a JSON string (double encoding)
+      packages: JSON.stringify(pkgList)
+    }];
+
+    // chosen_shipping is whatever get_rates returned for the picked service.
+    // The proxy passes it through; defaults are intentionally minimal.
+    const servicio = chosen_shipping || { external_reference: order_id };
+
+    const result = await callEpickProxy('get_etiquetas', {
+      origen_datos: JSON.stringify(origen_datos),
+      destino_datos: JSON.stringify(destino_datos),
+      chosen_shipping: JSON.stringify(servicio)
     });
-    if (!resp.ok) throw new Error(`E-Pick create shipment failed: ${resp.status}`);
-    const data = await resp.json();
+
+    if (!result.ok) {
+      return res.status(502).json({ success: false, error: result.error || 'create_failed' });
+    }
+
+    const epickOrderId = extractEpickOrderId(result.data);
+    if (!epickOrderId) {
+      return res.status(502).json({ success: false, error: 'no_order_id_returned', raw: result.data });
+    }
+
     return res.status(200).json({
       success: true,
-      tracking_code: data.tracking_code,
-      label_url: data.label_url,
+      tracking_code: String(epickOrderId),
+      epick_order_id: String(epickOrderId),
+      label_url: extractLabelUrl(result.data),
+      raw: result.data,
       sandbox: false
-    });
-    */
-
-    return res.status(501).json({
-      success: false,
-      error: 'E-Pick live mode aún no implementado'
     });
   } catch (err) {
     console.error('epick-crear-envio error:', err.message);

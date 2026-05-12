@@ -1,12 +1,14 @@
 /**
- * E-Pick tracking endpoint.
+ * E-Pick tracking endpoint — operation get_status.
  *
- * Returns the current status + history for a tracking code. In SANDBOX_MODE we
- * synthesize a fake history so admin UI / customer notifications can be built
- * before the real integration is live.
+ * Wanderlust proxy expects:
+ *   method[get_status][origen_datos] = JSON.stringify({ id: "ORDER_ID" })
+ *
+ * The raw response from e-pick is forwarded as-is. We normalize the basic
+ * status + history fields so the admin can render without reshaping each call.
  */
 
-const { EPICK_CONFIG } = require('../config/shipping');
+const { EPICK_CONFIG, callEpickProxy } = require('../config/shipping');
 
 const ALLOWED_ORIGINS = [
   'https://nycdesigns.com.ar',
@@ -18,10 +20,28 @@ function mockHistory(trackingCode) {
   const now = Date.now();
   const hour = 60 * 60 * 1000;
   return [
-    { status: 'created',     date: new Date(now - 6 * hour).toISOString(), description: 'Envío creado' },
-    { status: 'picked_up',   date: new Date(now - 3 * hour).toISOString(), description: 'Retirado del remitente' },
-    { status: 'in_transit',  date: new Date(now - 1 * hour).toISOString(), description: 'En camino al destino' }
+    { status: 'created',    date: new Date(now - 6 * hour).toISOString(), description: 'Envío creado' },
+    { status: 'picked_up',  date: new Date(now - 3 * hour).toISOString(), description: 'Retirado del remitente' },
+    { status: 'in_transit', date: new Date(now - 1 * hour).toISOString(), description: 'En camino al destino' }
   ];
+}
+
+/**
+ * Normalize the e-pick payload into { status, history }. The raw shape is
+ * carried through in `raw` for the admin to inspect if needed.
+ */
+function normalize(raw) {
+  if (!raw) return { status: 'unknown', history: [] };
+  if (typeof raw === 'string') {
+    try { return normalize(JSON.parse(raw)); } catch (_) { return { status: 'unknown', history: [] }; }
+  }
+  const status = raw.status || raw.state || raw.estado || (raw.order && raw.order.status) || 'unknown';
+  const history = Array.isArray(raw.history) ? raw.history
+                : Array.isArray(raw.events) ? raw.events
+                : Array.isArray(raw.tracking) ? raw.tracking
+                : Array.isArray(raw.movements) ? raw.movements
+                : [];
+  return { status: String(status), history };
 }
 
 module.exports = async (req, res) => {
@@ -63,28 +83,23 @@ module.exports = async (req, res) => {
       });
     }
 
-    // ------- LIVE E-Pick call (uncomment when credentials are ready) -------
-    /*
-    const resp = await fetch(`${EPICK_CONFIG.BASE_URL}/shipments/${encodeURIComponent(tracking_code)}`, {
-      headers: {
-        Authorization: `Bearer ${EPICK_CONFIG.API_SECRET}`,
-        'X-Api-Key': EPICK_CONFIG.API_KEY
-      }
+    // ------- LIVE path -------
+    const result = await callEpickProxy('get_status', {
+      origen_datos: JSON.stringify({ id: String(tracking_code) })
     });
-    if (!resp.ok) throw new Error(`E-Pick tracking failed: ${resp.status}`);
-    const data = await resp.json();
+
+    if (!result.ok) {
+      return res.status(502).json({ success: false, error: result.error || 'status_failed' });
+    }
+
+    const { status, history } = normalize(result.data);
     return res.status(200).json({
       success: true,
       tracking_code,
-      status: data.status,
-      history: data.history || [],
+      status,
+      history,
+      raw: result.data,
       sandbox: false
-    });
-    */
-
-    return res.status(501).json({
-      success: false,
-      error: 'E-Pick live mode aún no implementado'
     });
   } catch (err) {
     console.error('epick-tracking error:', err.message);

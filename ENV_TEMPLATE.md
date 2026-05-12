@@ -11,43 +11,71 @@ Never commit real values to the repo.
 | `MP_WEBHOOK_SECRET` | MercadoPago → Tu app → Webhooks → Firma secreta | **Required in prod**: `api/webhook.js` rejects unsigned calls |
 | `FIREBASE_API_KEY` | Firebase Console → Project Settings → Web app → apiKey | Used by serverless functions for the Firestore REST API |
 
-## E-Pick integration (pending credentials from Sol)
+## E-Pick integration (via Wanderlust Codes proxy)
+
+The integration uses the proxy at `wanderlust.codes/epick/api.php`. Endpoints
+ship in **sandbox mode** by default — they return mock tracking codes and use
+the local price table so the store works before the credentials arrive.
 
 ```
-EPICK_API_KEY=
-EPICK_API_SECRET=
-EPICK_BASE_URL=        # optional, defaults to https://api.e-pick.com.ar
-EPICK_SANDBOX_URL=     # optional
-EPICK_SENDER_ADDRESS=  # defaults to "Acassuso 5268"
-EPICK_SENDER_CP=       # Sol's pickup postal code
-EPICK_LIVE=            # set to "1" to flip out of sandbox mode
+EPICK_API_KEY=                 # provided by Wanderlust Codes (proxy api_key)
+EPICK_LIVE=                    # set to "1" to switch out of sandbox mode
+EPICK_BASE_URL=                # optional, defaults to https://wanderlust.codes/epick/api.php
+
+# Sender (used as origen_datos in get_etiquetas)
+EPICK_SENDER_NAME=             # defaults to "NYC Designs"
+EPICK_SENDER_EMAIL=            # defaults to newyorkcitydesigns4@gmail.com
+EPICK_SENDER_PHONE=            # defaults to 5491123199122
+EPICK_SENDER_STREET=           # defaults to "Acassuso"
+EPICK_SENDER_NUMBER=           # defaults to "5268"
+EPICK_SENDER_CITY=             # defaults to "CABA"
+EPICK_SENDER_PROVINCE=         # "CABA" or single-letter "C"
+EPICK_SENDER_CP=               # Sol's pickup postal code (required for live)
+EPICK_SENDER_EXTRA=            # piso / dpto, optional
+
+# E-Pick → us webhook (url_key)
+EPICK_WEBHOOK_URL=             # defaults to https://nycdesigns.com.ar/api/epick-webhook
+EPICK_WEBHOOK_TOKEN=           # required in prod, shared with Wanderlust Codes
 ```
 
-### When Sol provides the credentials
+### Steps to go live
 
-1. Add `EPICK_API_KEY` and `EPICK_API_SECRET` (Production scope) in Vercel.
-2. Add `EPICK_SENDER_CP` with the real pickup postal code.
-3. Set `EPICK_LIVE=1` so `config/shipping.js` toggles `SANDBOX_MODE` off.
-4. Uncomment the `fetch()` blocks inside:
-   - `api/epick-cotizar.js`
-   - `api/epick-crear-envio.js`
-   - `api/epick-tracking.js`
-   - `api/webhook.js` (inside `createEpickShipment`)
-5. Redeploy.
+1. Ask Wanderlust Codes for: the production endpoint URL (if different from
+   `wanderlust.codes/epick/api.php`), the `api_key`, and the auth mechanism
+   they prefer (header/token/IP whitelist).
+2. Set `EPICK_API_KEY` + `EPICK_SENDER_CP` + `EPICK_WEBHOOK_TOKEN` in Vercel
+   with **Production** scope.
+3. Set `EPICK_LIVE=1` so `config/shipping.js` flips `SANDBOX_MODE` off.
+4. Hand them the webhook URL (`https://nycdesigns.com.ar/api/epick-webhook`)
+   together with the shared `EPICK_WEBHOOK_TOKEN` value so E-Pick can call us
+   on status changes.
+5. Redeploy. No code change needed — the storefront and admin already point at
+   `/api/epick-*`.
 
-The storefront and the admin already point at `/api/epick-*` — no UI changes
-needed.
+### What each endpoint does
+
+| Endpoint | Op proxy | Used by |
+| --- | --- | --- |
+| `POST /api/epick-cotizar` | `get_rates` | Storefront shipping calculator |
+| `POST /api/epick-cobertura` | `get_direccion` | Pre-checkout coverage validation |
+| `POST /api/epick-crear-envio` | `get_etiquetas` | Auto from MP webhook + manual button in admin |
+| `POST /api/epick-tracking` | `get_status` | Admin "Ver seguimiento" |
+| `POST /api/epick-webhook` | n/a | Receives push notifications from E-Pick |
 
 ## Local development
 
-For `vercel dev`, create `.env.local` (gitignored) with the same keys you'd set
-in Vercel. Without `EPICK_LIVE=1` the integration stays in sandbox.
+For `vercel dev`, create `.env.local` (gitignored) with the same keys you'd
+set in Vercel. Without `EPICK_LIVE=1` the integration stays in sandbox.
 
 ## Security notes
 
-- Never paste tokens in pull requests, issues, or chat. If one leaks, rotate it
-  immediately in the provider's panel (MP → Generar nuevamente).
+- Never paste tokens in pull requests, issues, or chat. If one leaks, rotate
+  it immediately in the provider's panel.
 - `MP_WEBHOOK_SECRET` is mandatory in production. The webhook rejects every
   request if it's missing.
-- Firestore writes still require the Firestore rules defined in
-  `firestore.rules` — make sure they are **published** in Firebase Console.
+- `EPICK_WEBHOOK_TOKEN` is mandatory in production. `api/epick-webhook.js`
+  returns 401 if it's missing or mismatched.
+- Firestore writes still require the rules defined in `firestore.rules` —
+  make sure they are **published** in Firebase Console.
+- `get_etiquetas` is **not idempotent** on the proxy side. `api/webhook.js`
+  deduplicates by MercadoPago payment_id before calling it.
