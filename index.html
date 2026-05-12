@@ -41,7 +41,7 @@
   <meta name="msapplication-TileColor" content="#B8777F">
   
   <!-- ESTILOS -->
-  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/styles.css?v=20260513-1">
 
   <!-- Google Analytics 4 -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-6NZTMSC6XR"></script>
@@ -371,6 +371,19 @@
       <!-- Filtros -->
       <!-- botones de filtro generados según las categorías configuradas en js/main.js -->
       <div class="filter-buttons" id="filterButtons"></div>
+
+      <!-- Filtro por precio -->
+      <div class="price-filter" id="priceFilter">
+        <label class="price-filter-label" for="priceMaxRange">Filtrar por precio máximo: <strong id="priceMaxLabel">Todos</strong></label>
+        <input type="range" id="priceMaxRange" min="0" max="100000" step="1000" value="100000">
+        <div class="price-filter-chips">
+          <button type="button" class="price-chip" data-price="3000">Hasta $3.000</button>
+          <button type="button" class="price-chip" data-price="6000">Hasta $6.000</button>
+          <button type="button" class="price-chip" data-price="10000">Hasta $10.000</button>
+          <button type="button" class="price-chip" data-price="20000">Hasta $20.000</button>
+          <button type="button" class="price-chip" data-price="0">Todos</button>
+        </div>
+      </div>
 
       <!-- Encabezado de productos con selector de cantidad por página -->
       <div class="products-header">
@@ -1128,7 +1141,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
 
   <!-- JAVASCRIPT -->
-  <script src="js/main.js"></script>
+  <script src="js/main.js?v=20260513-1"></script>
 
 </body>
 </html>
