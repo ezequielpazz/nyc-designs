@@ -6,6 +6,12 @@
   "redirects": [
     { "source": "/index.html", "destination": "/", "permanent": true }
   ],
+  "crons": [
+    {
+      "path": "/api/cron/refresh-shipments",
+      "schedule": "0 13 * * *"
+    }
+  ],
   "headers": [
     {
       "source": "/(.*)",
