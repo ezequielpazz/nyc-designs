@@ -1,4 +1,5 @@
 const mercadopago = require('mercadopago');
+const { rateLimit, clientKey } = require('./_lib/rateLimit');
 
 const client = new mercadopago.MercadoPagoConfig({
   accessToken: process.env.MP_ACCESS_TOKEN
@@ -30,27 +31,9 @@ const ALLOWED_ORIGINS = [
   'https://nyc-designs.vercel.app'
 ];
 
-// Simple in-memory rate limiter (per Vercel function instance)
-// 10 requests per minute per IP
+// Rate limit shape — backed by Upstash if configured, else in-memory.
 const RATE_LIMIT_WINDOW_MS = 60 * 1000;
-const RATE_LIMIT_MAX = 10;
-const rateBucket = new Map();
-
-function rateLimit(ip) {
-  const now = Date.now();
-  const entry = rateBucket.get(ip) || { count: 0, reset: now + RATE_LIMIT_WINDOW_MS };
-  if (now > entry.reset) {
-    entry.count = 0;
-    entry.reset = now + RATE_LIMIT_WINDOW_MS;
-  }
-  entry.count++;
-  rateBucket.set(ip, entry);
-  // Cleanup occasionally
-  if (rateBucket.size > 1000) {
-    for (const [k, v] of rateBucket) if (now > v.reset) rateBucket.delete(k);
-  }
-  return entry.count <= RATE_LIMIT_MAX;
-}
+const RATE_LIMIT_MAX = 8; // a real human won't try to pay 8 times in 60s
 
 module.exports = async (req, res) => {
   const origin = req.headers.origin;
@@ -74,10 +57,20 @@ module.exports = async (req, res) => {
     return res.status(403).json({ error: 'Origen no permitido' });
   }
 
-  // Rate limit per IP
-  const ip = (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.socket?.remoteAddress || 'unknown';
-  if (!rateLimit(ip)) {
-    res.setHeader('Retry-After', '60');
+  // Distributed rate limit per IP. With Upstash configured the counter is
+  // shared across every Vercel instance, so 12 quick requests from the same
+  // IP are actually blocked at the 9th — not just within a single warm box.
+  const ip = clientKey(req);
+  const rl = await rateLimit({
+    bucket: 'create-preference',
+    key: ip,
+    max: RATE_LIMIT_MAX,
+    windowMs: RATE_LIMIT_WINDOW_MS
+  });
+  res.setHeader('X-RateLimit-Limit', String(RATE_LIMIT_MAX));
+  res.setHeader('X-RateLimit-Remaining', String(rl.remaining));
+  if (!rl.ok) {
+    res.setHeader('Retry-After', String(Math.ceil((rl.resetAt - Date.now()) / 1000)));
     return res.status(429).json({ error: 'Demasiadas solicitudes. Intentá en un minuto.' });
   }
 

@@ -1557,19 +1557,75 @@ backToTop?.addEventListener('click', () => {
 });
 
 // ========== FORMULARIO DE CONTACTO ==========
-function handleContactForm(e) {
+// Mark when the contact form is rendered so we can reject instant-bot submits.
+document.addEventListener('DOMContentLoaded', () => {
+  const cf = document.getElementById('contactForm');
+  if (cf) cf.dataset.loadedAt = String(Date.now());
+});
+
+async function handleContactForm(e) {
   e.preventDefault();
   const form = e.target;
-  const emailInput = form.querySelector('input[type="email"]');
-  if (emailInput) {
-    const email = emailInput.value.trim();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      showToast('Por favor ingresá un email válido', 'error');
-      return;
-    }
+  const fd = new FormData(form);
+  const nombre  = String(fd.get('nombre') || '').trim();
+  const email   = String(fd.get('email') || '').trim();
+  const subject = String(fd.get('subject') || '').trim();
+  const message = String(fd.get('message') || '').trim();
+  const honeypot = String(fd.get('website') || '').trim();
+
+  // --- Anti-spam guards (silent: a real bot wouldn't see the toast anyway) ---
+  // 1) Honeypot: if filled, it's a bot
+  if (honeypot) {
+    showToast('¡Mensaje enviado!');
+    form.reset();
+    return;
   }
-  showToast('¡Mensaje enviado! Te responderemos pronto.');
-  form.reset();
+  // 2) Min dwell time: humans take more than 2 seconds to read+fill the form
+  const loadedAt = Number(form.dataset.loadedAt || 0);
+  if (loadedAt > 0 && Date.now() - loadedAt < 2000) {
+    showToast('¡Mensaje enviado!');
+    form.reset();
+    return;
+  }
+  // 3) Per-session rate limit (max 3 submissions per session)
+  const submits = Number(sessionStorage.getItem('contactSubmits') || 0);
+  if (submits >= 3) {
+    showToast('Ya enviaste varios mensajes. Probá por WhatsApp si necesitás respuesta rápida.', 'error');
+    return;
+  }
+
+  // --- Field validation ---
+  if (nombre.length < 2) {
+    showToast('Ingresá tu nombre', 'error'); return;
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    showToast('Por favor ingresá un email válido', 'error'); return;
+  }
+  if (message.length < 10) {
+    showToast('El mensaje es muy corto (mínimo 10 caracteres)', 'error'); return;
+  }
+
+  try {
+    if (!firebaseDb) initializeFirebase();
+    await firebaseDb.collection('mensajes').add({
+      nombre,
+      email,
+      subject: subject || '(sin asunto)',
+      message,
+      visto: false,
+      respondido: false,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      userAgent: (navigator.userAgent || '').substring(0, 200)
+    });
+    sessionStorage.setItem('contactSubmits', String(submits + 1));
+    showToast('¡Mensaje enviado! Te responderemos pronto.');
+    trackContactSubmit?.();
+    form.reset();
+    form.dataset.loadedAt = String(Date.now()); // reset dwell-time anchor
+  } catch (err) {
+    console.error('Contact form error:', err.message);
+    showToast('No se pudo enviar. Probá por WhatsApp.', 'error');
+  }
 }
 
 // ========== TECLADO ==========

@@ -7,6 +7,7 @@
  */
 
 const { EPICK_CONFIG, priceForPostalCode, callEpickProxy } = require('../config/shipping');
+const { rateLimit, clientKey } = require('./_lib/rateLimit');
 
 const ALLOWED_ORIGINS = [
   'https://nycdesigns.com.ar',
@@ -15,19 +16,7 @@ const ALLOWED_ORIGINS = [
 ];
 
 const RATE_LIMIT_WINDOW_MS = 60 * 1000;
-const RATE_LIMIT_MAX = 30;
-const rateBucket = new Map();
-function rateLimit(ip) {
-  const now = Date.now();
-  const entry = rateBucket.get(ip) || { count: 0, reset: now + RATE_LIMIT_WINDOW_MS };
-  if (now > entry.reset) { entry.count = 0; entry.reset = now + RATE_LIMIT_WINDOW_MS; }
-  entry.count++;
-  rateBucket.set(ip, entry);
-  if (rateBucket.size > 1000) {
-    for (const [k, v] of rateBucket) if (now > v.reset) rateBucket.delete(k);
-  }
-  return entry.count <= RATE_LIMIT_MAX;
-}
+const RATE_LIMIT_MAX = 30; // quoting is read-only, allow more
 
 function fallbackQuote(postalCode) {
   const match = priceForPostalCode(postalCode);
@@ -96,9 +85,15 @@ module.exports = async (req, res) => {
     return res.status(403).json({ error: 'Origen no permitido' });
   }
 
-  const ip = (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.socket?.remoteAddress || 'unknown';
-  if (!rateLimit(ip)) {
-    res.setHeader('Retry-After', '60');
+  const ip = clientKey(req);
+  const rl = await rateLimit({
+    bucket: 'epick-cotizar',
+    key: ip,
+    max: RATE_LIMIT_MAX,
+    windowMs: RATE_LIMIT_WINDOW_MS
+  });
+  if (!rl.ok) {
+    res.setHeader('Retry-After', String(Math.ceil((rl.resetAt - Date.now()) / 1000)));
     return res.status(429).json({ error: 'Demasiadas solicitudes. Intentá en un minuto.' });
   }
 
