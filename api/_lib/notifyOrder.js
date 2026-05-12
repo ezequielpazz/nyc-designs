@@ -275,4 +275,156 @@ async function notifyCustomerEmail(order) {
   });
 }
 
-module.exports = { notifyOrderEmail, notifyCustomerEmail };
+// ============================================================
+// Shipment-status update email (used by the polling cron)
+// ============================================================
+
+/**
+ * Friendly Spanish summary of an E-Pick / OCA raw status.
+ * Returns { title, subject, body, emoji } so we can render different templates
+ * per milestone. Returns null for statuses we don't want to notify about.
+ */
+function statusCopy(rawStatus, order) {
+  const s = String(rawStatus || '').toLowerCase().trim();
+  const orderShort = (order?.id || '').split('_').pop()?.substring(0, 8).toUpperCase();
+  const customerFirst = (order?.payer?.name || '').split(' ')[0] || '';
+  const trackUrl = order?.tracking_code
+    ? `https://www.e-pick.com.ar/tracking?code=${encodeURIComponent(order.tracking_code)}`
+    : null;
+
+  if (['created', 'pending', 'pending_pickup', 'creado'].includes(s)) {
+    return {
+      emoji: '📦',
+      subject: `Tu pedido #${orderShort} se está preparando`,
+      title: 'Tu pedido se está preparando',
+      body: 'Recibimos tu pedido y lo estamos preparando para el envío. Te avisamos cuando salga.'
+    };
+  }
+  if (['picked_up', 'in_warehouse', 'retirado', 'recibido', 'en_deposito'].includes(s)) {
+    return {
+      emoji: '🚚',
+      subject: `Tu pedido #${orderShort} ya está en camino`,
+      title: '¡Tu pedido salió!',
+      body: 'El paquete fue retirado por el courier y está en tránsito.'
+    };
+  }
+  if (['in_transit', 'on_route', 'en_camino', 'en_transito', 'en_distribucion'].includes(s)) {
+    return {
+      emoji: '🛣️',
+      subject: `Tu pedido #${orderShort} está en camino`,
+      title: 'En camino a tu domicilio',
+      body: 'Tu paquete está siendo distribuido. Llega en las próximas horas / días según tu zona.'
+    };
+  }
+  if (['out_for_delivery', 'en_reparto', 'salio_a_reparto'].includes(s)) {
+    return {
+      emoji: '🛵',
+      subject: `Tu pedido #${orderShort} sale a reparto hoy`,
+      title: '¡Sale a reparto hoy!',
+      body: 'El paquete está en el vehículo del repartidor. Asegurate de que haya alguien para recibirlo.'
+    };
+  }
+  if (['delivered', 'entregado'].includes(s)) {
+    return {
+      emoji: '✅',
+      subject: `Tu pedido #${orderShort} fue entregado`,
+      title: '¡Tu pedido llegó!',
+      body: 'El paquete fue entregado en tu domicilio. ¡Gracias por elegirnos! Si pudiste, contanos tu experiencia respondiendo este mail.'
+    };
+  }
+  if (['returned', 'devuelto', 'rechazado', 'no_entregado'].includes(s)) {
+    return {
+      emoji: '↩️',
+      subject: `Hubo un problema con tu pedido #${orderShort}`,
+      title: 'El paquete volvió a nuestro depósito',
+      body: 'No se pudo entregar el paquete. Escribinos por WhatsApp para coordinar una nueva entrega.'
+    };
+  }
+  if (['cancelled', 'canceled', 'cancelado'].includes(s)) {
+    return {
+      emoji: '❌',
+      subject: `Tu envío del pedido #${orderShort} fue cancelado`,
+      title: 'Envío cancelado',
+      body: 'El envío fue cancelado en el sistema del courier. Si esto es un error, escribinos por WhatsApp.'
+    };
+  }
+  return null; // unknown / noisy state — don't email
+}
+
+function buildShipmentUpdateHtml(order, status) {
+  const copy = statusCopy(status, order);
+  if (!copy) return null;
+  const trackUrl = order.tracking_code
+    ? `https://www.e-pick.com.ar/tracking?code=${encodeURIComponent(order.tracking_code)}`
+    : null;
+  const customerFirst = (order.payer?.name || '').split(' ')[0] || '';
+  return `<!doctype html>
+<html><body style="font-family:Arial,Helvetica,sans-serif;color:#2B2B2B;max-width:600px;margin:0 auto;padding:20px;">
+  <div style="font-size:48px;line-height:1;margin-bottom:8px;">${copy.emoji}</div>
+  <h2 style="color:#B8777F;margin:0 0 8px;">${escapeHtml(copy.title)}</h2>
+  ${customerFirst ? `<p style="margin:0 0 8px;">Hola ${escapeHtml(customerFirst)},</p>` : ''}
+  <p style="margin:0 0 16px;color:#444;line-height:1.5;">${escapeHtml(copy.body)}</p>
+
+  <div style="background:#FAF7F5;padding:16px;border-radius:8px;margin:16px 0;">
+    <p style="margin:4px 0;font-size:13px;color:#666;">Pedido</p>
+    <p style="margin:4px 0;"><strong>${escapeHtml(order.id || '')}</strong></p>
+    ${order.tracking_code ? `<p style="margin:12px 0 4px;font-size:13px;color:#666;">Código de seguimiento</p>
+      <p style="margin:4px 0;font-family:monospace;font-size:14px;"><strong>${escapeHtml(order.tracking_code)}</strong></p>` : ''}
+  </div>
+
+  ${trackUrl ? `<p style="margin:24px 0;text-align:center;">
+    <a href="${escapeHtml(trackUrl)}" style="background:#B8777F;color:white;text-decoration:none;padding:12px 24px;border-radius:999px;display:inline-block;font-weight:600;">Ver estado del envío</a>
+  </p>` : ''}
+
+  <p style="margin-top:24px;font-size:13px;color:#666;">
+    ¿Necesitás ayuda? Escribinos por
+    <a href="https://wa.me/5491123199122" style="color:#B8777F;">WhatsApp</a>.
+  </p>
+  <p style="margin-top:24px;font-size:11px;color:#999;">— NYC Designs · Acassuso 5268, CABA · <a href="https://nycdesigns.com.ar" style="color:#999;">nycdesigns.com.ar</a></p>
+</body></html>`;
+}
+
+function buildShipmentUpdateText(order, status) {
+  const copy = statusCopy(status, order);
+  if (!copy) return null;
+  const trackUrl = order.tracking_code
+    ? `https://www.e-pick.com.ar/tracking?code=${encodeURIComponent(order.tracking_code)}`
+    : null;
+  const lines = [
+    `${copy.emoji} ${copy.title}`,
+    '',
+    copy.body,
+    '',
+    `Pedido: ${order.id || ''}`,
+    order.tracking_code ? `Tracking: ${order.tracking_code}` : null,
+    trackUrl ? `Ver estado: ${trackUrl}` : null,
+    '',
+    'NYC Designs · https://nycdesigns.com.ar · WhatsApp +54 9 11 2319-9122'
+  ].filter(Boolean);
+  return lines.join('\n');
+}
+
+/**
+ * Notify the customer of a shipping-status change. Returns
+ *   { sent: false, reason: 'no_copy' }  when the new status isn't worth notifying.
+ * Skips silently when there's no customer email.
+ */
+async function notifyShipmentUpdateEmail(order) {
+  const customerEmail = order?.payer?.email;
+  if (!customerEmail) return { sent: false, reason: 'no_customer_email' };
+  const status = order.shipping_status;
+  const copy = statusCopy(status, order);
+  if (!copy) return { sent: false, reason: 'no_copy' };
+  return sendResendEmail({
+    to: customerEmail,
+    subject: copy.subject,
+    html: buildShipmentUpdateHtml(order, status),
+    text: buildShipmentUpdateText(order, status)
+  });
+}
+
+module.exports = {
+  notifyOrderEmail,
+  notifyCustomerEmail,
+  notifyShipmentUpdateEmail
+};

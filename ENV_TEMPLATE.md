@@ -113,6 +113,46 @@ Notes:
 - Set `ORDER_NOTIFY_TO` to a comma-separated list if you ever need to copy
   more people.
 
+## Shipment status polling (cron job)
+
+The endpoint `/api/cron/refresh-shipments` checks E-Pick for status changes on
+every active shipment and emails the customer when something changes
+("Tu pedido está en camino", "Tu pedido fue entregado", etc).
+
+```
+CRON_SECRET=          # required, long random string (generate with openssl rand -hex 32)
+```
+
+The endpoint accepts auth two ways so you can use both Vercel cron and an
+external pinger like cron-job.org:
+
+- Header: `Authorization: Bearer <CRON_SECRET>` (Vercel cron sends this)
+- Query:  `?token=<CRON_SECRET>` (easier from cron-job.org / GitHub Actions)
+
+### Vercel cron schedule
+
+Configured in `vercel.json` (1x per day at 13:00 UTC — Hobby plan limit).
+
+```json
+"crons": [
+  { "path": "/api/cron/refresh-shipments", "schedule": "0 13 * * *" }
+]
+```
+
+### Faster updates with an external pinger (optional)
+
+If once a day is too slow, use a free external cron service to ping the
+endpoint hourly:
+
+1. https://cron-job.org → Sign up
+2. Create job → URL:
+   `https://nycdesigns.com.ar/api/cron/refresh-shipments?token=<CRON_SECRET>`
+3. Schedule: every hour
+4. Save
+
+Both crons can run together — the endpoint is idempotent (won't email twice
+for the same status).
+
 ## Local development
 
 For `vercel dev`, create `.env.local` (gitignored) with the same keys you'd
