@@ -59,15 +59,19 @@ module.exports = async (req, res) => {
       return res.status(502).json({ success: false, error: result.error || 'coverage_failed' });
     }
 
-    // e-pick's verify-coverage payload — pass through plus a flat "covered" hint.
-    const covered = result.data?.covered === true
-      || result.data?.coverage === true
-      || result.data?.status === 'ok'
-      || result.data?.results?.covered === true;
+    // Real proxy payload (observed):
+    //   { zoneID, zoneCovered: true, zoneIsExcluded: false, service: "OCA" }
+    // Coverage = zoneCovered AND NOT excluded.
+    const d = result.data || {};
+    const covered = (
+      d.zoneCovered === true || d.covered === true || d.coverage === true
+      || d.results?.covered === true || d.status === 'ok'
+    ) && d.zoneIsExcluded !== true;
 
     return res.status(200).json({
       success: true,
       covered: !!covered,
+      service: d.service || null,
       raw: result.data,
       sandbox: false
     });
