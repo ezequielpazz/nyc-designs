@@ -817,7 +817,41 @@ const SHIPPING_ZONES = {
   '1900':3500,'1901':3500,'1902':3500,'1903':3500,'1904':3500
 };
 
-function calculateShippingCost() {
+function calculateShippingCostLocal(postalCode) {
+  let cost = SHIPPING_ZONES[postalCode];
+  if (!cost) {
+    const prefix = postalCode.substring(0, 2);
+    const baPrefixes = ['10','11','12','13','14','15','16','17','18','19'];
+    cost = baPrefixes.includes(prefix) ? 4000 : 5500;
+  }
+  return cost;
+}
+
+/**
+ * Server-side quote via /api/epick-cotizar (sandbox-aware).
+ * TODO: Replace this with the real E-Pick API call by setting EPICK_LIVE=1 +
+ *       EPICK_API_KEY/EPICK_API_SECRET in Vercel — the endpoint already
+ *       contains the live request behind a commented block.
+ *
+ * Returns null on any failure so the caller can fall back to the local table.
+ */
+async function fetchEpickQuote(postalCode) {
+  try {
+    const resp = await fetch('/api/epick-cotizar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ postal_code_destination: postalCode })
+    });
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    if (!data.success) return null;
+    return data;
+  } catch (_) {
+    return null;
+  }
+}
+
+async function calculateShippingCost() {
   const postalCode = document.getElementById('postalCode').value.trim();
   const resultDiv = document.getElementById('shippingResult');
   const addressSection = document.getElementById('shippingAddress');
@@ -830,11 +864,14 @@ function calculateShippingCost() {
 
   resultDiv.innerHTML = '<span>Calculando...</span>';
 
-  let cost = SHIPPING_ZONES[postalCode];
-  if (!cost) {
-    const prefix = postalCode.substring(0, 2);
-    const baPrefixes = ['10','11','12','13','14','15','16','17','18','19'];
-    cost = baPrefixes.includes(prefix) ? 4000 : 5500;
+  // Try server quote first (sandbox today, real E-Pick once credentials land),
+  // and fall back to the local table so the UX never breaks.
+  let cost;
+  const quote = await fetchEpickQuote(postalCode);
+  if (quote && typeof quote.price === 'number') {
+    cost = quote.price;
+  } else {
+    cost = calculateShippingCostLocal(postalCode);
   }
 
   shippingCost = cost;
