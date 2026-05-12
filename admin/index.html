@@ -514,6 +514,16 @@
                                 <label>Métodos de envío</label>
                                 <input type="text" id="shippingMethods" placeholder="Ej: Retiro / E-Pick">
                             </div>
+                            <div class="form-group">
+                                <label style="display:flex;align-items:center;gap:8px;">
+                                    <input type="checkbox" id="installmentsEnabled">
+                                    Mostrar "X cuotas" debajo del precio
+                                </label>
+                            </div>
+                            <div class="form-group">
+                                <label>Cantidad de cuotas (si está activado)</label>
+                                <input type="number" id="installmentsCount" min="2" max="12" placeholder="Ej: 3">
+                            </div>
                             <button class="btn btn-primary" id="saveShippingBtn">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>

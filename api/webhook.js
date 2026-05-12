@@ -84,6 +84,7 @@ async function createEpickShipment(order) {
 
   const destino_datos = [{
     name: order.payer?.name || '',
+    dni: order.payer?.dni || '',
     email: order.payer?.email || '',
     phone: order.payer?.phone || '',
     street: order.address?.street || '',
@@ -91,8 +92,8 @@ async function createEpickShipment(order) {
     city: order.address?.city || '',
     province: provinceCode(order.address?.province || ''),
     postalCode: order.postal_code || '',
-    adicional: order.address?.adicional || '',
-    observaciones: order.address?.observaciones || '',
+    adicional: order.address?.extra || order.address?.adicional || '',
+    observaciones: order.address?.notes || order.address?.observaciones || '',
     valortotal: Number(order.total || 0),
     packages: JSON.stringify([EPICK_CONFIG.DEFAULT_PACKAGE])
   }];
@@ -188,6 +189,7 @@ async function saveOrderToFirestore(orderData) {
     name: { stringValue: orderData.payer.name || '' }
   };
   if (orderData.payer.phone) customerFields.phone = { stringValue: String(orderData.payer.phone) };
+  if (orderData.payer.dni)   customerFields.dni   = { stringValue: String(orderData.payer.dni) };
 
   const fields = {
     id: { stringValue: orderData.id },
@@ -217,8 +219,11 @@ async function saveOrderToFirestore(orderData) {
   if (orderData.address) {
     fields.shipping_address = { mapValue: { fields: {
       street: { stringValue: orderData.address.street || '' },
-      city: { stringValue: orderData.address.city || '' },
-      province: { stringValue: orderData.address.province || '' }
+      number: { stringValue: String(orderData.address.number || '') },
+      extra:  { stringValue: orderData.address.extra || '' },
+      city:   { stringValue: orderData.address.city || '' },
+      province: { stringValue: orderData.address.province || '' },
+      notes:  { stringValue: orderData.address.notes || '' }
     }}};
   }
 
@@ -324,15 +329,22 @@ module.exports = async (req, res) => {
           ? 'Envío a domicilio (E-Pick)'
           : 'Retiro en Acassuso 5268, CABA';
 
+        // Prefer the data the customer typed in the checkout form (carried in
+        // extra.customer) over what MercadoPago auto-fills, because MP may
+        // strip names / sanitize phones.
+        const frontCustomer = extra.customer || {};
+
         const orderData = {
           id: `order_${data.id}`,
           payment_id: data.id,
           status: 'approved',
           total: paymentData.transaction_amount,
           payer: {
-            email: paymentData.payer?.email || '',
-            name: `${paymentData.payer?.first_name || ''} ${paymentData.payer?.last_name || ''}`.trim(),
-            phone: paymentData.payer?.phone?.number || ''
+            email: frontCustomer.email || paymentData.payer?.email || '',
+            name: frontCustomer.name
+              || `${paymentData.payer?.first_name || ''} ${paymentData.payer?.last_name || ''}`.trim(),
+            phone: frontCustomer.phone || paymentData.payer?.phone?.number || '',
+            dni: frontCustomer.dni || paymentData.payer?.identification?.number || ''
           },
           items: (paymentData.additional_info?.items || []).map(item => ({
             title: item.title,
