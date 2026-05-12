@@ -265,16 +265,21 @@ function renderProductsGrid() {
         const card = document.createElement('div');
         card.className = 'product-card';
         
-        // Stock status
-        let stockStatus = 'stock-in';
+        // Stock semaphore: red ≤3, yellow 4-10, green >10 (or ilimitado)
+        let stockStatus = 'stock-ok';
         let stockText = product.stock === 'ilimitado' ? 'Ilimitado' : product.stock;
-        
         if (product.stock === 0 || product.stock === '0') {
             stockStatus = 'stock-out';
             stockText = 'Sin stock';
-        } else if (product.stock !== 'ilimitado' && product.stock <= 5) {
-            stockStatus = 'stock-low';
-            stockText = `${product.stock} restantes`;
+        } else if (product.stock !== 'ilimitado') {
+            const n = parseInt(product.stock, 10);
+            if (Number.isFinite(n)) {
+                if (n <= 3) { stockStatus = 'stock-low'; stockText = `🔴 ${n} restantes`; }
+                else if (n <= 10) { stockStatus = 'stock-mid'; stockText = `🟡 ${n} restantes`; }
+                else { stockStatus = 'stock-ok'; stockText = `🟢 ${n} en stock`; }
+            }
+        } else {
+            stockText = '🟢 Ilimitado';
         }
         
         // Descuento
@@ -2017,17 +2022,20 @@ function renderFilteredProducts(products) {
         const card = document.createElement('div');
         card.className = 'product-card';
         
-        let stockStatus = 'stock-in';
-        let stockText = product.stock === 'ilimitado' ? 'Ilimitado' : product.stock;
-        
+        let stockStatus = 'stock-ok';
+        let stockText = product.stock === 'ilimitado' ? '🟢 Ilimitado' : product.stock;
         if (product.stock === 0 || product.stock === '0') {
             stockStatus = 'stock-out';
             stockText = 'Sin stock';
-        } else if (product.stock !== 'ilimitado' && product.stock <= 5) {
-            stockStatus = 'stock-low';
-            stockText = `${product.stock} restantes`;
+        } else if (product.stock !== 'ilimitado') {
+            const n = parseInt(product.stock, 10);
+            if (Number.isFinite(n)) {
+                if (n <= 3) { stockStatus = 'stock-low'; stockText = `🔴 ${n} restantes`; }
+                else if (n <= 10) { stockStatus = 'stock-mid'; stockText = `🟡 ${n} restantes`; }
+                else { stockStatus = 'stock-ok'; stockText = `🟢 ${n} en stock`; }
+            }
         }
-        
+
         const hasDiscount = product.precio_anterior && product.precio_anterior > product.precio;
         const badgesHTML = (product.badges || []).map(badge => `
             <span class="product-badge badge-${escapeHtml(badge.toLowerCase())}">${escapeHtml(badge)}</span>

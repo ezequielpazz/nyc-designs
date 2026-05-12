@@ -263,7 +263,24 @@ function renderProductsPage(page = 1, category = 'todos', searchTerm = '') {
   const grid = document.getElementById('productGrid');
   if (!grid) return;
 
-  grid.innerHTML = pageProducts.map((p, idx) => `
+  grid.innerHTML = pageProducts.map((p, idx) => {
+    // Stock semaphore: red ≤3, yellow 4-10, green >10 (ignore "ilimitado")
+    let stockLabel = p.stock;
+    let stockClass = '';
+    if (p.stock === 'agotado' || p.stock === 0 || p.stock === '0') {
+      stockLabel = sheetConfig.texto_agotado || 'Sin stock';
+      stockClass = 'stock-out';
+    } else if (p.stock === 'ilimitado') {
+      stockLabel = '';
+      stockClass = '';
+    } else {
+      const n = Number(p.stock);
+      if (Number.isFinite(n)) {
+        stockLabel = n <= 3 ? `¡Quedan ${n}!` : (n <= 10 ? `Pocas unidades (${n})` : 'En stock');
+        stockClass = n <= 3 ? 'stock-low' : (n <= 10 ? 'stock-mid' : 'stock-ok');
+      }
+    }
+    return `
     <article class="product" data-id="${escapeHtml(p.id)}" data-product-index="${idx}" data-name="${escapeHtml(p.name)}" data-price="${p.price}" data-category="${escapeHtml(p.category)}" role="article" aria-label="${escapeHtml(p.name)} - $${p.price.toLocaleString('es-AR')}">
       <div class="pimg" onclick="openProductByIndex(${idx})">
         ${p.old_price && p.old_price > p.price ? `<span class="discount-badge">-${Math.round((1 - p.price/p.old_price) * 100)}%</span>` : ''}
@@ -282,14 +299,14 @@ function renderProductsPage(page = 1, category = 'todos', searchTerm = '') {
             <strong>$${p.price.toLocaleString('es-AR')}</strong>
             ${p.old_price ? `<span style="text-decoration: line-through; font-size: 12px; color: #999;">$${p.old_price.toLocaleString('es-AR')}</span>` : ''}
           </div>
-          <span>${p.stock === 'agotado' ? sheetConfig.texto_agotado : p.stock}</span>
+          ${stockLabel ? `<span class="stock-pill ${stockClass}">${escapeHtml(stockLabel)}</span>` : ''}
         </div>
         <button class="btn primary add-to-cart" type="button" ${(p.stock === 'agotado' || p.stock === 0 || p.stock === '0') ? 'disabled' : ''}>
           ${(p.stock === 'agotado' || p.stock === 0 || p.stock === '0') ? 'Sin stock' : 'Agregar al carrito'}
         </button>
       </div>
-    </article>
-  `).join('');
+    </article>`;
+  }).join('');
 
   // Actualizar contador
   const countEl = document.getElementById('productCount');

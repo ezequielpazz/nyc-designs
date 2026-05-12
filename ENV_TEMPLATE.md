@@ -62,6 +62,34 @@ EPICK_WEBHOOK_TOKEN=           # required in prod, shared with Wanderlust Codes
 | `POST /api/epick-tracking` | `get_status` | Admin "Ver seguimiento" |
 | `POST /api/epick-webhook` | n/a | Receives push notifications from E-Pick |
 
+## Email notifications (Resend)
+
+When a payment is approved the webhook sends a "new order" email to Sol. The
+notification uses [Resend](https://resend.com) — free tier: 100 emails/day.
+
+```
+RESEND_API_KEY=        # required, from resend.com → API Keys
+ORDER_NOTIFY_TO=       # default: newyorkcitydesigns4@gmail.com
+ORDER_NOTIFY_FROM=     # default: NYC Designs <onboarding@resend.dev>
+```
+
+Steps:
+
+1. Sign up at https://resend.com with the same Gmail Sol uses.
+2. Create an API key (scope: Sending access).
+3. Add `RESEND_API_KEY` to Vercel.
+4. While the domain is not verified, leave `ORDER_NOTIFY_FROM` unset (defaults
+   to `onboarding@resend.dev` which works for any account).
+5. When ready for branded sender (e.g. `pedidos@nycdesigns.com.ar`), follow
+   Resend's domain verification (it adds 3 DNS records). Then set
+   `ORDER_NOTIFY_FROM=NYC Designs <pedidos@nycdesigns.com.ar>`.
+
+Notes:
+- The email is fire-and-forget. If Resend rejects, the webhook still saves
+  the order and creates the E-Pick shipment — only the email is missed.
+- Set `ORDER_NOTIFY_TO` to a comma-separated list if you ever need to copy
+  more people.
+
 ## Local development
 
 For `vercel dev`, create `.env.local` (gitignored) with the same keys you'd
