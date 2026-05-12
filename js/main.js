@@ -397,12 +397,13 @@ function updateCartUI() {
   }
 
   cartItems.innerHTML = cart.map((item, index) => {
+    const safeName = escapeHtml(item.name || 'Producto');
     return `
       <div class="cart-item">
-        <img src="assets/img/logo.jpg" alt="${item.name}">
+        <img src="assets/img/logo.jpg" alt="${safeName}">
         <div class="cart-item-info">
-          <h4>${item.name}</h4>
-          <span>$${item.price.toLocaleString('es-AR')}</span>
+          <h4>${safeName}</h4>
+          <span>$${(Number(item.price) || 0).toLocaleString('es-AR')}</span>
         </div>
         <button class="cart-item-remove" onclick="removeFromCart(${index})">×</button>
       </div>
