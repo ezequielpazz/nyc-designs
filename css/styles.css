@@ -2946,3 +2946,31 @@ footer {
 .stock-pill.stock-mid { background: #fff4d6; color: #8a5a00; }
 .stock-pill.stock-low { background: #fde2e1; color: #b3261e; }
 .stock-pill.stock-out { background: #ececec; color: #555; }
+
+/* ===== Cart contact + compact address ===== */
+.customer-section {
+  margin-top: .75rem;
+  padding-top: .75rem;
+  border-top: 1px solid rgba(138,111,106,.15);
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+}
+.customer-section h4 {
+  margin: 0 0 .25rem;
+  font-size: .9rem;
+  color: var(--charcoal);
+}
+.customer-section input {
+  padding: .6rem;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: .9rem;
+}
+.addr-row {
+  display: flex;
+  gap: .5rem;
+}
+.addr-row > input {
+  min-width: 0;
+}
