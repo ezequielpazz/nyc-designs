@@ -44,12 +44,25 @@ function fallbackQuote(postalCode) {
 }
 
 /**
- * Pick the cheapest service from the e-pick rates response. The exact shape
- * depends on e-pick's payload (the doc calls it "JSON con el listado de
- * servicios disponibles") so we accept a few common shapes defensively.
+ * Pick the cheapest service from the e-pick rates response. The actual shape
+ * observed from the Wanderlust proxy is a single object:
+ *   { isValid: true, price: 9477, equivalence: 1, eta: [1, 2] }
+ * but we also accept arrays / nested shapes defensively in case it changes.
  */
 function pickCheapest(rates) {
   if (!rates) return null;
+
+  // Single-object shape (observed in production)
+  if (rates.isValid !== undefined || (rates.price !== undefined && !Array.isArray(rates))) {
+    if (rates.isValid === false) return null;
+    const price = Number(rates.price ?? rates.cost ?? 0);
+    if (!price) return null;
+    const etaArr = Array.isArray(rates.eta) ? rates.eta : null;
+    const days = etaArr ? Number(etaArr[etaArr.length - 1]) : Number(rates.estimated_days || rates.days || 0);
+    return { ...rates, _price: price, _days: days };
+  }
+
+  // Array / list-style fallback (kept for future schema changes)
   const list = Array.isArray(rates) ? rates
              : Array.isArray(rates.rates) ? rates.rates
              : Array.isArray(rates.services) ? rates.services
@@ -60,7 +73,7 @@ function pickCheapest(rates) {
     .map(r => ({
       ...r,
       _price: Number(r.price ?? r.cost ?? r.total ?? r.amount ?? r.precio ?? 0),
-      _days: Number(r.estimated_days ?? r.days ?? r.eta ?? 0)
+      _days: Number(r.estimated_days ?? r.days ?? (Array.isArray(r.eta) ? r.eta[r.eta.length - 1] : r.eta) ?? 0)
     }))
     .filter(r => r._price > 0)
     .sort((a, b) => a._price - b._price)[0] || null;
