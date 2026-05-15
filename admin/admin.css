@@ -3581,3 +3581,15 @@ select:focus {
 @keyframes spin {
     to { transform: rotate(360deg); }
 }
+
+.product-variant {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #B8777F;
+  background: rgba(184,119,127,.10);
+  border: 1px solid rgba(184,119,127,.28);
+  border-radius: 999px;
+  padding: 2px 10px;
+  margin: 2px 0 6px;
+}
