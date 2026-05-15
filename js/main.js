@@ -77,16 +77,54 @@ const USE_FIREBASE = true; // Cambiar a false para usar productos estáticos
 
 
 // ========== CATEGORÍAS DINÁMICAS ==========
-// Categorías reales del negocio NYC Designs
+// Granular categories so each product family lives in its own bucket. The
+// older buckets (fotos-recuerdos, decoracion, tazas-vasos, accesorios) are
+// kept at the bottom for backwards compatibility — products that haven't
+// been migrated yet still appear under those.
 const CATEGORIES = [
-  { id: 'fotos-recuerdos', label: 'Fotos & Recuerdos', emoji: '📸', description: 'Polaroids, álbumes y recuerdos personalizados' },
-  { id: 'decoracion', label: 'Decoración', emoji: '🖼️', description: 'Cuadros, carteles y decoración para tu hogar' },
-  { id: 'tazas-vasos', label: 'Tazas & Vasos', emoji: '☕', description: 'Tazas sublimadas y vasos personalizados' },
-  { id: 'accesorios', label: 'Accesorios', emoji: '👜', description: 'Totebags, llaveros y más' },
-  { id: 'stickers', label: 'Stickers', emoji: '✨', description: 'Stickers para celular, notebook y más' },
-  { id: 'imprimibles-plantillas', label: 'Imprimibles & Plantillas', emoji: '📄', description: 'Plantillas digitales para imprimir' },
-  { id: 'fiestas-eventos', label: 'Fiestas & Eventos', emoji: '🎉', description: 'Kits de cumpleaños, decoración para fiestas' }
+  // New, granular taxonomy (preferred)
+  { id: 'stickers-escena-3d',    label: 'Stickers Escena 3D',    emoji: '🏠', description: 'Escenas en miniatura con stickers 3D' },
+  { id: 'totebag-personalizada', label: 'Totebag Personalizada', emoji: '👜', description: 'Bolsas de tela con tu diseño' },
+  { id: 'sticker-celular',       label: 'Stickers para celular', emoji: '📱', description: 'Sets de stickers para personalizar el cel' },
+  { id: 'cuadros',               label: 'Cuadros',                emoji: '🖼️', description: 'Cuadros personalizados en varios tamaños' },
+  { id: 'fotos-mini-polaroids',  label: 'Fotos Mini Polaroids',   emoji: '📸', description: 'Polaroids estilo Mini en distintos packs' },
+  { id: 'fotos-enmarcadas',      label: 'Fotos Enmarcadas',       emoji: '🖼️', description: 'Fotos con marco listas para colgar' },
+  { id: 'taza-personalizada',    label: 'Taza Personalizada',     emoji: '☕', description: 'Tazas sublimadas con tu diseño' },
+  { id: 'vasos',                 label: 'Vasos',                  emoji: '🥤', description: 'Vasos personalizados' },
+  { id: 'fiestas-eventos',       label: 'Fiestas & Eventos',      emoji: '🎉', description: 'Kits para cumpleaños y eventos' },
+  { id: 'imprimibles-plantillas',label: 'Imprimibles & Plantillas', emoji: '📄', description: 'Plantillas digitales para imprimir' },
+  // Legacy buckets — kept until every old product is moved
+  { id: 'fotos-recuerdos',       label: 'Fotos & Recuerdos',      emoji: '📸', description: 'Polaroids, álbumes y recuerdos personalizados' },
+  { id: 'decoracion',            label: 'Decoración',             emoji: '🖼️', description: 'Cuadros, carteles y decoración' },
+  { id: 'tazas-vasos',           label: 'Tazas & Vasos',          emoji: '☕', description: 'Tazas sublimadas y vasos' },
+  { id: 'accesorios',            label: 'Accesorios',             emoji: '👜', description: 'Totebags, llaveros y más' },
+  { id: 'stickers',              label: 'Stickers',               emoji: '✨', description: 'Stickers varios' }
 ];
+
+/**
+ * Pull a "variante" string from a product name when the legacy data didn't
+ * have a separate field. Two heuristics:
+ *   - "Algo (Variante)" → "Variante"
+ *   - "30 Mini Polaroids" → "30 unidades" (number + noun)
+ *   - "Set Green" / "Pack 5" / "20x30" → captured as-is
+ */
+function extractVariantFromName(name) {
+  if (!name) return '';
+  const n = String(name).trim();
+  // Pattern 1: text inside parentheses
+  const paren = n.match(/\(([^)]+)\)/);
+  if (paren) return paren[1].trim();
+  // Pattern 2: leading "N <noun>"
+  const qty = n.match(/^(\d+\s+[A-Za-zÁÉÍÓÚáéíóúñÑ]+(?:\s+[A-Za-zÁÉÍÓÚáéíóúñÑ]+)?)/);
+  if (qty) return qty[1].trim();
+  // Pattern 3: dimension "20x30" or "20 x 30"
+  const dim = n.match(/(\d+\s*x\s*\d+)/i);
+  if (dim) return dim[1].replace(/\s+/g, '').toLowerCase();
+  // Pattern 4: "Set <color>"
+  const setColor = n.match(/Set\s+\w+/i);
+  if (setColor) return setColor[0];
+  return '';
+}
 
 // ========== PRECIOS PARA CALCULADORA ==========
 const PRICES = {
@@ -179,6 +217,9 @@ async function loadProductsFromFirebase() {
       products.push({
         id: doc.id,
         name: data.nombre,
+        // Variant: stored explicitly when Sol fills the new field; falls back
+        // to a heuristic extraction from the name for legacy products.
+        variant: data.variante || data.variant || extractVariantFromName(data.nombre) || '',
         price: data.precio,
         old_price: data.precio_anterior || 0,
         category: data.categoria,
@@ -244,6 +285,64 @@ async function loadProducts() {
 
 // Renderizar página de productos
 /**
+ * Render the variant filter UI based on the products currently in view.
+ * Shows nothing for "todos" or when no product has a variant. Clears the
+ * active variant when the category changes so we don't keep an inapplicable
+ * filter on (e.g. "30 Mini Polaroids" while browsing Cuadros).
+ */
+function renderVariantFilter(category, preFilteredProducts) {
+  const container = document.getElementById('variantFilter');
+  if (!container) return;
+
+  // Reset variant selection on category change
+  if (window._variantFilterCategory !== category) {
+    window._variantFilter = '';
+    window._variantFilterCategory = category;
+  }
+
+  // Hide on "todos"
+  if (!category || category === 'todos') {
+    container.style.display = 'none';
+    container.innerHTML = '';
+    return;
+  }
+
+  // Collect unique variants for the current category from the unfiltered set
+  const variants = Array.from(new Set(
+    (allProducts || [])
+      .filter(p => p.category === category && p.variant)
+      .map(p => p.variant)
+  )).sort((a, b) => {
+    // Sort numerically when both start with a number
+    const na = parseInt(a, 10);
+    const nb = parseInt(b, 10);
+    if (Number.isFinite(na) && Number.isFinite(nb)) return na - nb;
+    return String(a).localeCompare(String(b));
+  });
+
+  if (variants.length === 0) {
+    container.style.display = 'none';
+    container.innerHTML = '';
+    return;
+  }
+
+  const active = window._variantFilter || '';
+  container.style.display = 'flex';
+  container.innerHTML = `
+    <span class="variant-filter-label">Variante:</span>
+    <button type="button" class="variant-chip ${active === '' ? 'active' : ''}" data-variant="">Todas</button>
+    ${variants.map(v => `<button type="button" class="variant-chip ${active === v ? 'active' : ''}" data-variant="${escapeHtml(v)}">${escapeHtml(v)}</button>`).join('')}
+  `;
+  container.querySelectorAll('.variant-chip').forEach(btn => {
+    btn.addEventListener('click', () => {
+      window._variantFilter = btn.dataset.variant || '';
+      const activeFilter = document.querySelector('.filter-btn.active');
+      renderProductsPage(1, activeFilter?.dataset.filter || 'todos', document.getElementById('searchInput')?.value || '');
+    });
+  });
+}
+
+/**
  * Inject Cloudinary auto-format / auto-quality / width transforms into the URL
  * so the CDN serves an optimized image (WebP/AVIF, ~600px) instead of the
  * original full-resolution upload. Non-Cloudinary URLs are returned untouched.
@@ -278,6 +377,13 @@ function renderProductsPage(page = 1, category = 'todos', searchTerm = '') {
   const cap = Number(window._priceMax) || 0;
   if (cap > 0) {
     filtered = filtered.filter(p => Number(p.price) <= cap);
+  }
+
+  // Refresh variant filter UI based on what's available in the current
+  // category/search slice. Apply the active variant if any.
+  renderVariantFilter(category, filtered);
+  if (window._variantFilter) {
+    filtered = filtered.filter(p => (p.variant || '') === window._variantFilter);
   }
 
   filteredProducts = filtered;
@@ -325,6 +431,7 @@ function renderProductsPage(page = 1, category = 'todos', searchTerm = '') {
       </div>
       <div class="pbody">
         <div class="badges">
+          ${p.variant ? `<span class="badge badge-variant">${escapeHtml(p.variant)}</span>` : ''}
           ${p.badges.map(b => `<span class="badge${b === 'Popular' || b === 'Nuevo' ? ' strong' : ''}">${escapeHtml(b)}</span>`).join('')}
         </div>
         <strong onclick="openProductByIndex(${idx})" style="cursor:pointer;">${escapeHtml(p.name)}</strong>
@@ -499,6 +606,22 @@ function openProductModal(productData) {
   }
 
   document.getElementById('modalProductName').textContent = productData.name;
+  // Show variant as a subtitle right under the name if there's a slot for it
+  // (we look up an existing element first so it's safe to ship without HTML changes).
+  let variantSlot = document.getElementById('modalProductVariant');
+  if (productData.variant) {
+    if (!variantSlot) {
+      variantSlot = document.createElement('div');
+      variantSlot.id = 'modalProductVariant';
+      variantSlot.className = 'modal-product-variant';
+      const nameEl = document.getElementById('modalProductName');
+      nameEl?.parentNode?.insertBefore(variantSlot, nameEl.nextSibling);
+    }
+    variantSlot.textContent = productData.variant;
+    variantSlot.style.display = '';
+  } else if (variantSlot) {
+    variantSlot.style.display = 'none';
+  }
   document.getElementById('modalProductPrice').textContent = '$' + productData.price.toLocaleString('es-AR');
   
   // Old price

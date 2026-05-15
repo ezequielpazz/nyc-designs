@@ -3029,3 +3029,56 @@ footer {
   padding: 0 !important;
   margin: 0 !important;
 }
+
+/* ===== Variant badges + chips ===== */
+.badge.badge-variant {
+  background: rgba(184,119,127,.12);
+  border: 1px solid rgba(184,119,127,.35);
+  color: var(--rose);
+  font-weight: 700;
+  text-transform: none;
+}
+.modal-product-variant {
+  font-size: 13px;
+  color: var(--taupe);
+  margin: 2px 0 8px;
+  font-weight: 600;
+  letter-spacing: .3px;
+}
+
+.variant-filter {
+  margin: 8px 0 18px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.variant-filter-label {
+  font-size: 12px;
+  color: var(--taupe);
+  margin-right: 6px;
+}
+.variant-chip {
+  background: white;
+  border: 1px solid rgba(138,111,106,.25);
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  color: var(--charcoal);
+  transition: background .15s, border-color .15s;
+}
+.variant-chip:hover { border-color: var(--rose); }
+.variant-chip.active {
+  background: var(--rose);
+  color: white;
+  border-color: var(--rose);
+}
+
+/* Legacy category options in admin show as muted */
+.category-option-legacy span em {
+  color: rgba(0,0,0,.4);
+  font-size: .8em;
+  font-style: normal;
+  margin-left: 4px;
+}
