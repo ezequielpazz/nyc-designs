@@ -58,6 +58,7 @@ let currentEditingProductId = null;
 let currentWizardStep = 1;
 let productFormData = {
     nombre: '',
+    productType: '',
     variante: '',
     descripcion: '',
     precio: 0,
@@ -99,28 +100,56 @@ function extractVariantFromName(name) {
 }
 
 /**
+ * Sub-grouping within a category (productType). Same heuristic used on the
+ * storefront so they stay in sync.
+ */
+function extractProductTypeFromName(name) {
+    if (!name) return '';
+    const n = String(name).toLowerCase();
+    if (/mini\s*polaroid/.test(n)) return 'Mini Polaroids';
+    if (/polaroid/.test(n))        return 'Polaroids';
+    if (/kodak/.test(n))           return 'Kodak';
+    if (/enmarcad/.test(n))        return 'Enmarcadas';
+    if (/^taza|tazas? /.test(n))   return 'Taza';
+    if (/^vaso|vasos? /.test(n))   return 'Vaso';
+    if (/tote ?bag/.test(n))       return 'Totebag';
+    if (/cuadro/.test(n))          return 'Cuadro';
+    if (/escena\s*3d/.test(n))     return 'Escena 3D';
+    if (/sticker.*celular|stickers? para celular/.test(n)) return 'Sticker celular';
+    return '';
+}
+
+/**
  * Migration helper: based on the product name + current category, guess the
- * NEW granular category. Returns the suggested category id (or the existing
- * one if there's no better fit).
+ * NEW (consolidated) category id. Returns the suggested category id (or the
+ * existing one if there's no better fit).
  */
 function suggestNewCategory(product) {
     const name = (product.nombre || '').toLowerCase();
     const cat = (product.categoria || '').toLowerCase();
     if (/escena\s*3d/.test(name)) return 'stickers-escena-3d';
     if (/tote ?bag/.test(name)) return 'totebag-personalizada';
-    if (/sticker.*celular|stickers? para celular/.test(name)) return 'sticker-celular';
+    if (/sticker.*celular|stickers? para celular/.test(name)) return 'stickers-celular';
     if (/cuadro/.test(name)) return 'cuadros';
-    if (/mini polaroid/.test(name)) return 'fotos-mini-polaroids';
-    if (/polaroid/.test(name) || /kodak/.test(name)) return 'fotos-mini-polaroids';
-    if (/enmarcad/.test(name)) return 'fotos-enmarcadas';
-    if (/^taza|tazas? /.test(name)) return 'taza-personalizada';
-    if (/^vaso|vasos? /.test(name)) return 'vasos';
-    return cat; // keep current bucket if nothing matches
+    if (/polaroid|kodak|enmarcad|mini\s*polaroid/.test(name)) return 'fotos-recuerdos';
+    if (/^taza|tazas? |^vaso|vasos? /.test(name)) return 'tazas-vasos';
+    if (/canva|imprimible|plantilla/.test(name)) return 'imprimibles-plantillas';
+    if (/cumple|fiesta|evento|kit\s/.test(name)) return 'fiestas-eventos';
+
+    // Map legacy buckets to the new equivalents
+    if (cat === 'accesorios') return 'totebag-personalizada';
+    if (cat === 'decoracion') return 'cuadros';
+    if (cat === 'stickers')   return 'stickers-escena-3d';
+    if (cat === 'fotos-mini-polaroids' || cat === 'fotos-enmarcadas') return 'fotos-recuerdos';
+    if (cat === 'taza-personalizada' || cat === 'vasos') return 'tazas-vasos';
+    if (cat === 'sticker-celular') return 'stickers-celular';
+
+    return cat; // keep whatever was there if nothing matches
 }
 
 /**
- * Bulk migration: for every product, write back variant + suggested new
- * category. Triggered manually from the admin Configuración section.
+ * Bulk migration: writes back variant + productType + suggested new category
+ * for every product. Triggered from the admin Configuración section.
  * Idempotent — re-running it without changes is a no-op.
  */
 async function runProductMigration({ dryRun = true } = {}) {
@@ -129,19 +158,24 @@ async function runProductMigration({ dryRun = true } = {}) {
         summary.scanned++;
         const variantNow = (p.variante || p.variant || '').trim();
         const variantNext = variantNow || extractVariantFromName(p.nombre);
+        const typeNow = (p.productType || p.tipo || '').trim();
+        const typeNext = typeNow || extractProductTypeFromName(p.nombre);
         const categoryNow = (p.categoria || '').trim();
         const categoryNext = suggestNewCategory(p);
 
-        const needsUpdate = (variantNext && variantNext !== variantNow) || (categoryNext && categoryNext !== categoryNow);
+        const needsUpdate = (
+          (variantNext && variantNext !== variantNow) ||
+          (typeNext && typeNext !== typeNow) ||
+          (categoryNext && categoryNext !== categoryNow)
+        );
         if (!needsUpdate) { summary.skipped++; continue; }
 
         const change = {
             id: p.id,
             nombre: p.nombre,
-            variant_before: variantNow,
-            variant_after: variantNext,
-            category_before: categoryNow,
-            category_after: categoryNext
+            category_before: categoryNow, category_after: categoryNext,
+            type_before: typeNow,         type_after: typeNext,
+            variant_before: variantNow,   variant_after: variantNext
         };
         summary.changes.push(change);
 
@@ -149,6 +183,7 @@ async function runProductMigration({ dryRun = true } = {}) {
             try {
                 await db.collection('productos').doc(p.id).update({
                     variante: variantNext,
+                    productType: typeNext,
                     categoria: categoryNext,
                     updatedAt: new Date()
                 });
@@ -389,7 +424,10 @@ function renderProductsGrid() {
             </div>
             <div class="product-info">
                 <h3 class="product-name">${escapeHtml(product.nombre)}</h3>
-                ${product.variante ? `<div class="product-variant">${escapeHtml(product.variante)}</div>` : ''}
+                <div class="product-tags">
+                    ${product.productType ? `<span class="product-type">${escapeHtml(product.productType)}</span>` : ''}
+                    ${product.variante ? `<span class="product-variant">${escapeHtml(product.variante)}</span>` : ''}
+                </div>
                 ${product.descripcion ? `<p class="product-description">${escapeHtml(product.descripcion)}</p>` : ''}
                 <div class="product-meta">
                     <div class="product-price">
@@ -552,8 +590,9 @@ async function saveProduct() {
 
         const data = {
             nombre: productFormData.nombre,
-            // Variant: store what Sol typed; fall back to extracting from name.
+            // Variant + productType: take what Sol typed, fall back to name heuristics.
             variante: productFormData.variante || extractVariantFromName(productFormData.nombre) || '',
+            productType: productFormData.productType || extractProductTypeFromName(productFormData.nombre) || '',
             descripcion: productFormData.descripcion,
             precio: parseInt(productFormData.precio),
             precio_anterior: productFormData.precio_anterior ? parseInt(productFormData.precio_anterior) : null,
@@ -746,6 +785,7 @@ function openEditModal(productId) {
     
     productFormData = {
         nombre: product.nombre,
+        productType: product.productType || product.tipo || '',
         variante: product.variante || product.variant || '',
         descripcion: product.descripcion,
         precio: product.precio,
@@ -785,6 +825,8 @@ function closeWizardModal() {
 
 function resetWizardForm() {
     document.getElementById('productNombre').value = '';
+    const tipoInput = document.getElementById('productTipo');
+    if (tipoInput) tipoInput.value = '';
     const variantInput = document.getElementById('productVariante');
     if (variantInput) variantInput.value = '';
     document.getElementById('productDescripcion').value = '';
@@ -809,6 +851,8 @@ function resetWizardForm() {
 
 function populateWizardForm() {
     document.getElementById('productNombre').value = productFormData.nombre;
+    const tipoEl = document.getElementById('productTipo');
+    if (tipoEl) tipoEl.value = productFormData.productType || '';
     const variantEl = document.getElementById('productVariante');
     if (variantEl) variantEl.value = productFormData.variante || '';
     document.getElementById('productDescripcion').value = productFormData.descripcion;
@@ -976,6 +1020,7 @@ function saveWizardStepData(step) {
     switch(step) {
         case 1:
             productFormData.nombre = document.getElementById('productNombre').value.trim();
+            productFormData.productType = (document.getElementById('productTipo')?.value || '').trim();
             productFormData.variante = (document.getElementById('productVariante')?.value || '').trim();
             productFormData.descripcion = document.getElementById('productDescripcion').value.trim();
             break;
@@ -2108,7 +2153,8 @@ function setupEventListeners() {
                 p.nombre.toLowerCase().includes(query) ||
                 (p.descripcion || '').toLowerCase().includes(query) ||
                 (p.categoria || '').toLowerCase().includes(query) ||
-                (p.variante || p.variant || '').toLowerCase().includes(query)
+                (p.variante || p.variant || '').toLowerCase().includes(query) ||
+                (p.productType || p.tipo || '').toLowerCase().includes(query)
             );
             renderFilteredProducts(filtered);
         }
@@ -2194,7 +2240,10 @@ function renderFilteredProducts(products) {
             </div>
             <div class="product-info">
                 <h3 class="product-name">${escapeHtml(product.nombre)}</h3>
-                ${product.variante ? `<div class="product-variant">${escapeHtml(product.variante)}</div>` : ''}
+                <div class="product-tags">
+                    ${product.productType ? `<span class="product-type">${escapeHtml(product.productType)}</span>` : ''}
+                    ${product.variante ? `<span class="product-variant">${escapeHtml(product.variante)}</span>` : ''}
+                </div>
                 ${product.descripcion ? `<p class="product-description">${escapeHtml(product.descripcion)}</p>` : ''}
                 <div class="product-meta">
                     <div class="product-price">
