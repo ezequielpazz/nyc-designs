@@ -287,11 +287,6 @@ async function loadProducts() {
       .filter(p => sheetConfig.mostrar_agotados === 'si' || (p.stock && p.stock.toLowerCase() !== 'agotado'))
       .sort((a, b) => (a.order || 999) - (b.order || 999));
 
-    // Set the price slider ceiling once we know the catalog
-    if (typeof calibratePriceSlider === 'function') {
-      try { calibratePriceSlider(); } catch (_) { /* slider may not be in DOM yet */ }
-    }
-
     return true;
   }
   
@@ -420,12 +415,6 @@ function renderProductsPage(page = 1, category = 'todos', searchTerm = '') {
       p.name.toLowerCase().includes(searchLower) ||
       (p.description && p.description.toLowerCase().includes(searchLower))
     );
-  }
-
-  // Filtrar por precio máximo (window._priceMax, 0 = sin tope)
-  const cap = Number(window._priceMax) || 0;
-  if (cap > 0) {
-    filtered = filtered.filter(p => Number(p.price) <= cap);
   }
 
   // Refresh productType + variant filter UI based on what's available in the
@@ -1598,48 +1587,7 @@ searchInput?.addEventListener('input', debounce(() => {
   filterProducts(activeFilter?.dataset.filter || 'todos');
 }, 300));
 
-// ========== PRICE FILTER ==========
-window._priceMax = 0;
-function applyPriceFilter() {
-  const activeFilter = document.querySelector('.filter-btn.active');
-  const searchTerm = document.getElementById('searchInput')?.value || '';
-  renderProductsPage(1, activeFilter?.dataset.filter || 'todos', searchTerm);
-}
-function setPriceCap(value) {
-  const n = Math.max(0, Number(value) || 0);
-  window._priceMax = n;
-  const lbl = document.getElementById('priceMaxLabel');
-  const range = document.getElementById('priceMaxRange');
-  if (lbl) lbl.textContent = n > 0 ? `Hasta $${n.toLocaleString('es-AR')}` : 'Todos';
-  // Sync slider value when chips are used; keep its max in sync with current
-  // catalog so the slider stays useful.
-  if (range && n > 0 && n !== Number(range.value)) range.value = n;
-  applyPriceFilter();
-}
-// Adjust slider max to the most expensive product in stock once they load.
-function calibratePriceSlider() {
-  const range = document.getElementById('priceMaxRange');
-  if (!range || !Array.isArray(allProducts) || !allProducts.length) return;
-  const max = Math.max(...allProducts.map(p => Number(p.price) || 0));
-  const ceil = Math.max(1000, Math.ceil(max / 1000) * 1000);
-  range.max = ceil;
-  range.value = ceil;
-  window._priceMax = 0; // start with no cap
-}
-document.getElementById('priceMaxRange')?.addEventListener('input', e => setPriceCap(e.target.value));
-document.getElementById('priceMaxRange')?.addEventListener('change', e => {
-  // If user drags to the max, treat as "no cap"
-  const v = Number(e.target.value);
-  const mx = Number(e.target.max);
-  setPriceCap(v >= mx ? 0 : v);
-});
-document.querySelectorAll('.price-chip').forEach(chip => {
-  chip.addEventListener('click', () => {
-    document.querySelectorAll('.price-chip.active').forEach(c => c.classList.remove('active'));
-    chip.classList.add('active');
-    setPriceCap(Number(chip.dataset.price) || 0);
-  });
-});
+// Price filter removed — Sol prefers the cleaner layout without it.
 
 // ========== LIGHTBOX ==========
 const lightbox = document.getElementById('lightbox');

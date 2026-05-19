@@ -2975,47 +2975,7 @@ footer {
   min-width: 0;
 }
 
-/* ===== Price filter ===== */
-.price-filter {
-  background: var(--blush);
-  border-radius: 12px;
-  padding: 14px 18px;
-  margin: 12px 0 18px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.price-filter-label {
-  display: flex;
-  justify-content: space-between;
-  font-size: 13px;
-  color: var(--charcoal);
-}
-.price-filter input[type="range"] {
-  width: 100%;
-  accent-color: var(--rose);
-}
-.price-filter-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-.price-chip {
-  background: white;
-  border: 1px solid rgba(138,111,106,.25);
-  border-radius: 999px;
-  padding: 4px 12px;
-  font-size: 12px;
-  cursor: pointer;
-  color: var(--charcoal);
-  transition: background .15s, border-color .15s;
-}
-.price-chip:hover { border-color: var(--rose); }
-.price-chip.active {
-  background: var(--rose);
-  color: white;
-  border-color: var(--rose);
-}
+/* Price filter removed */
 
 /* ===== Honeypot anti-spam (hidden to humans, visible to dumb bots) ===== */
 .hp-field {
