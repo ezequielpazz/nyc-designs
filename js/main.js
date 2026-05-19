@@ -77,29 +77,41 @@ const USE_FIREBASE = true; // Cambiar a false para usar productos estáticos
 
 
 // ========== CATEGORÍAS DINÁMICAS ==========
-// Granular categories so each product family lives in its own bucket. The
-// older buckets (fotos-recuerdos, decoracion, tazas-vasos, accesorios) are
-// kept at the bottom for backwards compatibility — products that haven't
-// been migrated yet still appear under those.
+// Final taxonomy — 8 buckets only. Within each category we use `productType`
+// to group variations (e.g. fotos-recuerdos contains Mini Polaroids, Polaroids,
+// Kodak, Enmarcadas) and `variant` for specific sub-options ("30 Polaroids",
+// "Set Green", "20x30").
 const CATEGORIES = [
-  // New, granular taxonomy (preferred)
-  { id: 'stickers-escena-3d',    label: 'Stickers Escena 3D',    emoji: '🏠', description: 'Escenas en miniatura con stickers 3D' },
-  { id: 'totebag-personalizada', label: 'Totebag Personalizada', emoji: '👜', description: 'Bolsas de tela con tu diseño' },
-  { id: 'sticker-celular',       label: 'Stickers para celular', emoji: '📱', description: 'Sets de stickers para personalizar el cel' },
-  { id: 'cuadros',               label: 'Cuadros',                emoji: '🖼️', description: 'Cuadros personalizados en varios tamaños' },
-  { id: 'fotos-mini-polaroids',  label: 'Fotos Mini Polaroids',   emoji: '📸', description: 'Polaroids estilo Mini en distintos packs' },
-  { id: 'fotos-enmarcadas',      label: 'Fotos Enmarcadas',       emoji: '🖼️', description: 'Fotos con marco listas para colgar' },
-  { id: 'taza-personalizada',    label: 'Taza Personalizada',     emoji: '☕', description: 'Tazas sublimadas con tu diseño' },
-  { id: 'vasos',                 label: 'Vasos',                  emoji: '🥤', description: 'Vasos personalizados' },
-  { id: 'fiestas-eventos',       label: 'Fiestas & Eventos',      emoji: '🎉', description: 'Kits para cumpleaños y eventos' },
-  { id: 'imprimibles-plantillas',label: 'Imprimibles & Plantillas', emoji: '📄', description: 'Plantillas digitales para imprimir' },
-  // Legacy buckets — kept until every old product is moved
-  { id: 'fotos-recuerdos',       label: 'Fotos & Recuerdos',      emoji: '📸', description: 'Polaroids, álbumes y recuerdos personalizados' },
-  { id: 'decoracion',            label: 'Decoración',             emoji: '🖼️', description: 'Cuadros, carteles y decoración' },
-  { id: 'tazas-vasos',           label: 'Tazas & Vasos',          emoji: '☕', description: 'Tazas sublimadas y vasos' },
-  { id: 'accesorios',            label: 'Accesorios',             emoji: '👜', description: 'Totebags, llaveros y más' },
-  { id: 'stickers',              label: 'Stickers',               emoji: '✨', description: 'Stickers varios' }
+  { id: 'stickers-escena-3d',     label: 'Stickers Escena 3D',     emoji: '🏠',  description: 'Escenas en miniatura con stickers 3D' },
+  { id: 'totebag-personalizada',  label: 'Totebag Personalizada',  emoji: '👜',  description: 'Bolsas de tela con tu diseño' },
+  { id: 'stickers-celular',       label: 'Stickers para celular',  emoji: '📱',  description: 'Sets de stickers para personalizar el cel' },
+  { id: 'cuadros',                label: 'Cuadros',                 emoji: '🖼️', description: 'Cuadros personalizados' },
+  { id: 'fotos-recuerdos',        label: 'Fotos y Recuerdos',       emoji: '📸',  description: 'Polaroids, Kodak, Mini Polaroids y Enmarcadas' },
+  { id: 'tazas-vasos',            label: 'Tazas y Vasos',           emoji: '☕',  description: 'Tazas sublimadas y vasos personalizados' },
+  { id: 'fiestas-eventos',        label: 'Fiestas & Eventos',       emoji: '🎉',  description: 'Kits para cumpleaños y eventos' },
+  { id: 'imprimibles-plantillas', label: 'Imprimibles & Plantillas', emoji: '📄', description: 'Plantillas digitales para imprimir' }
 ];
+
+/**
+ * Guess the productType (sub-grouping within a category) from a product name.
+ * Lets us show a second-level filter inside, e.g., "Fotos y Recuerdos":
+ * Mini Polaroids / Polaroids / Kodak / Enmarcadas.
+ */
+function extractProductTypeFromName(name) {
+  if (!name) return '';
+  const n = String(name).toLowerCase();
+  if (/mini\s*polaroid/.test(n)) return 'Mini Polaroids';
+  if (/polaroid/.test(n))        return 'Polaroids';
+  if (/kodak/.test(n))           return 'Kodak';
+  if (/enmarcad/.test(n))        return 'Enmarcadas';
+  if (/^taza|tazas? /.test(n))   return 'Taza';
+  if (/^vaso|vasos? /.test(n))   return 'Vaso';
+  if (/tote ?bag/.test(n))       return 'Totebag';
+  if (/cuadro/.test(n))          return 'Cuadro';
+  if (/escena\s*3d/.test(n))     return 'Escena 3D';
+  if (/sticker.*celular|stickers? para celular/.test(n)) return 'Sticker celular';
+  return '';
+}
 
 /**
  * Pull a "variante" string from a product name when the legacy data didn't
@@ -220,6 +232,9 @@ async function loadProductsFromFirebase() {
         // Variant: stored explicitly when Sol fills the new field; falls back
         // to a heuristic extraction from the name for legacy products.
         variant: data.variante || data.variant || extractVariantFromName(data.nombre) || '',
+        // Product type: groups products within a category (e.g. Polaroids vs
+        // Kodak inside fotos-recuerdos). Falls back to name heuristic.
+        productType: data.productType || data.tipo || extractProductTypeFromName(data.nombre) || '',
         price: data.precio,
         old_price: data.precio_anterior || 0,
         category: data.categoria,
@@ -285,61 +300,95 @@ async function loadProducts() {
 
 // Renderizar página de productos
 /**
- * Render the variant filter UI based on the products currently in view.
- * Shows nothing for "todos" or when no product has a variant. Clears the
- * active variant when the category changes so we don't keep an inapplicable
- * filter on (e.g. "30 Mini Polaroids" while browsing Cuadros).
+ * Compare strings as numbers when both start with a number — keeps
+ * "14 Polaroids" before "28 Polaroids" before "42 Polaroids".
  */
-function renderVariantFilter(category, preFilteredProducts) {
-  const container = document.getElementById('variantFilter');
-  if (!container) return;
+function _smartSort(a, b) {
+  const na = parseInt(a, 10);
+  const nb = parseInt(b, 10);
+  if (Number.isFinite(na) && Number.isFinite(nb) && na !== nb) return na - nb;
+  return String(a).localeCompare(String(b));
+}
 
-  // Reset variant selection on category change
+/**
+ * Two-step filter UI inside a category:
+ *   1. If the selected category has more than one productType, render
+ *      product-type chips on top (e.g. Mini Polaroids / Polaroids / Kodak).
+ *   2. Once a productType is picked (or if there's only one in the category),
+ *      render variant chips for that subset.
+ * Both filters auto-reset when the category changes.
+ */
+function renderVariantFilter(category /*, preFilteredProducts */) {
+  const typeContainer = document.getElementById('productTypeFilter');
+  const varContainer  = document.getElementById('variantFilter');
+  if (!typeContainer || !varContainer) return;
+
+  // Reset both filters when the category changes
   if (window._variantFilterCategory !== category) {
+    window._productTypeFilter = '';
     window._variantFilter = '';
     window._variantFilterCategory = category;
   }
 
-  // Hide on "todos"
+  // Hide both on "todos"
   if (!category || category === 'todos') {
-    container.style.display = 'none';
-    container.innerHTML = '';
+    typeContainer.style.display = 'none'; typeContainer.innerHTML = '';
+    varContainer.style.display  = 'none'; varContainer.innerHTML  = '';
     return;
   }
 
-  // Collect unique variants for the current category from the unfiltered set
-  const variants = Array.from(new Set(
-    (allProducts || [])
-      .filter(p => p.category === category && p.variant)
-      .map(p => p.variant)
-  )).sort((a, b) => {
-    // Sort numerically when both start with a number
-    const na = parseInt(a, 10);
-    const nb = parseInt(b, 10);
-    if (Number.isFinite(na) && Number.isFinite(nb)) return na - nb;
-    return String(a).localeCompare(String(b));
-  });
+  const inCategory = (allProducts || []).filter(p => p.category === category);
 
-  if (variants.length === 0) {
-    container.style.display = 'none';
-    container.innerHTML = '';
-    return;
-  }
-
-  const active = window._variantFilter || '';
-  container.style.display = 'flex';
-  container.innerHTML = `
-    <span class="variant-filter-label">Variante:</span>
-    <button type="button" class="variant-chip ${active === '' ? 'active' : ''}" data-variant="">Todas</button>
-    ${variants.map(v => `<button type="button" class="variant-chip ${active === v ? 'active' : ''}" data-variant="${escapeHtml(v)}">${escapeHtml(v)}</button>`).join('')}
-  `;
-  container.querySelectorAll('.variant-chip').forEach(btn => {
-    btn.addEventListener('click', () => {
-      window._variantFilter = btn.dataset.variant || '';
-      const activeFilter = document.querySelector('.filter-btn.active');
-      renderProductsPage(1, activeFilter?.dataset.filter || 'todos', document.getElementById('searchInput')?.value || '');
+  // ===== Product-type chips =====
+  const productTypes = Array.from(new Set(inCategory.map(p => p.productType).filter(Boolean))).sort(_smartSort);
+  if (productTypes.length >= 2) {
+    const active = window._productTypeFilter || '';
+    typeContainer.style.display = 'flex';
+    typeContainer.innerHTML = `
+      <span class="variant-filter-label">Tipo:</span>
+      <button type="button" class="variant-chip ${active === '' ? 'active' : ''}" data-type="">Todos</button>
+      ${productTypes.map(t => `<button type="button" class="variant-chip ${active === t ? 'active' : ''}" data-type="${escapeHtml(t)}">${escapeHtml(t)}</button>`).join('')}
+    `;
+    typeContainer.querySelectorAll('.variant-chip').forEach(btn => {
+      btn.addEventListener('click', () => {
+        window._productTypeFilter = btn.dataset.type || '';
+        // Variant filter is contextual to the type — reset on type change
+        window._variantFilter = '';
+        const f = document.querySelector('.filter-btn.active');
+        renderProductsPage(1, f?.dataset.filter || 'todos', document.getElementById('searchInput')?.value || '');
+      });
     });
-  });
+  } else {
+    typeContainer.style.display = 'none';
+    typeContainer.innerHTML = '';
+  }
+
+  // ===== Variant chips =====
+  // Only show variants for the currently-selected productType (or all in the
+  // category when no productType chip is active).
+  const variantPool = window._productTypeFilter
+    ? inCategory.filter(p => p.productType === window._productTypeFilter)
+    : inCategory;
+  const variants = Array.from(new Set(variantPool.map(p => p.variant).filter(Boolean))).sort(_smartSort);
+  if (variants.length >= 2) {
+    const active = window._variantFilter || '';
+    varContainer.style.display = 'flex';
+    varContainer.innerHTML = `
+      <span class="variant-filter-label">Variante:</span>
+      <button type="button" class="variant-chip ${active === '' ? 'active' : ''}" data-variant="">Todas</button>
+      ${variants.map(v => `<button type="button" class="variant-chip ${active === v ? 'active' : ''}" data-variant="${escapeHtml(v)}">${escapeHtml(v)}</button>`).join('')}
+    `;
+    varContainer.querySelectorAll('.variant-chip').forEach(btn => {
+      btn.addEventListener('click', () => {
+        window._variantFilter = btn.dataset.variant || '';
+        const f = document.querySelector('.filter-btn.active');
+        renderProductsPage(1, f?.dataset.filter || 'todos', document.getElementById('searchInput')?.value || '');
+      });
+    });
+  } else {
+    varContainer.style.display = 'none';
+    varContainer.innerHTML = '';
+  }
 }
 
 /**
@@ -379,9 +428,12 @@ function renderProductsPage(page = 1, category = 'todos', searchTerm = '') {
     filtered = filtered.filter(p => Number(p.price) <= cap);
   }
 
-  // Refresh variant filter UI based on what's available in the current
-  // category/search slice. Apply the active variant if any.
-  renderVariantFilter(category, filtered);
+  // Refresh productType + variant filter UI based on what's available in the
+  // current category. Then apply whatever is selected.
+  renderVariantFilter(category);
+  if (window._productTypeFilter) {
+    filtered = filtered.filter(p => (p.productType || '') === window._productTypeFilter);
+  }
   if (window._variantFilter) {
     filtered = filtered.filter(p => (p.variant || '') === window._variantFilter);
   }
@@ -431,6 +483,7 @@ function renderProductsPage(page = 1, category = 'todos', searchTerm = '') {
       </div>
       <div class="pbody">
         <div class="badges">
+          ${p.productType ? `<span class="badge badge-type">${escapeHtml(p.productType)}</span>` : ''}
           ${p.variant ? `<span class="badge badge-variant">${escapeHtml(p.variant)}</span>` : ''}
           ${p.badges.map(b => `<span class="badge${b === 'Popular' || b === 'Nuevo' ? ' strong' : ''}">${escapeHtml(b)}</span>`).join('')}
         </div>

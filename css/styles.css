@@ -3082,3 +3082,11 @@ footer {
   font-style: normal;
   margin-left: 4px;
 }
+
+.badge.badge-type {
+  background: rgba(138,111,106,.12);
+  border: 1px solid rgba(138,111,106,.35);
+  color: var(--taupe);
+  font-weight: 700;
+  text-transform: none;
+}
