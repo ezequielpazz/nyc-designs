@@ -13,7 +13,7 @@ const firebaseConfig = {
 };
 
 const CLOUDINARY_CONFIG = {
-    cloudName: 'dqalfvnal',
+    cloudName: 'dgbdzcgkg',
     uploadPreset: 'nyc_designs'
 };
 
