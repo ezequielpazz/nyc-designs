@@ -2,6 +2,7 @@ const crypto = require('crypto');
 const mercadopago = require('mercadopago');
 const { EPICK_CONFIG, provinceCode, callEpickProxy } = require('../config/shipping');
 const { notifyOrderEmail, notifyCustomerEmail } = require('./_lib/notifyOrder');
+const { getDb, admin } = require('./_lib/firestoreAdmin');
 
 const client = new mercadopago.MercadoPagoConfig({
   accessToken: process.env.MP_ACCESS_TOKEN
@@ -9,48 +10,31 @@ const client = new mercadopago.MercadoPagoConfig({
 
 const payment = new mercadopago.Payment(client);
 
-// Firestore REST API helper
+// FIREBASE_PROJECT only used for the path prefix returned to callers that
+// previously matched against the REST API document name. The Admin SDK ignores
+// FIREBASE_API_KEY entirely — it authenticates with the service account.
 const FIREBASE_PROJECT = 'nyc-designs';
-const FIREBASE_API_KEY = process.env.FIREBASE_API_KEY;
 
 /**
- * Idempotency guard: returns true if we already created an E-Pick shipment
- * for this MercadoPago payment_id. Uses Firestore's runQuery REST API.
+ * Idempotency guard: returns the existing tracking info if we already created
+ * an E-Pick shipment for this MercadoPago payment_id.
  */
 async function existingShipmentForPayment(paymentId) {
-  if (!FIREBASE_API_KEY || !paymentId) return null;
-  const url = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT}/databases/(default)/documents:runQuery?key=${FIREBASE_API_KEY}`;
-  const query = {
-    structuredQuery: {
-      from: [{ collectionId: 'pedidos' }],
-      where: {
-        compositeFilter: {
-          op: 'AND',
-          filters: [
-            { fieldFilter: { field: { fieldPath: 'payment_id' }, op: 'EQUAL', value: { stringValue: String(paymentId) } } },
-            { fieldFilter: { field: { fieldPath: 'tracking_code' }, op: 'GREATER_THAN', value: { stringValue: '' } } }
-          ]
-        }
-      },
-      limit: 1
-    }
-  };
+  if (!paymentId) return null;
   try {
-    const resp = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(query)
-    });
-    if (!resp.ok) return null;
-    const data = await resp.json();
-    const hit = Array.isArray(data) ? data.find(r => r.document) : null;
-    if (!hit) return null;
-    const f = hit.document.fields || {};
+    const snap = await getDb().collection('pedidos')
+      .where('payment_id', '==', String(paymentId))
+      .where('tracking_code', '>', '')
+      .limit(1)
+      .get();
+    if (snap.empty) return null;
+    const data = snap.docs[0].data();
     return {
-      tracking_code: f.tracking_code?.stringValue || '',
-      label_url: f.label_url?.stringValue || null
+      tracking_code: data.tracking_code || '',
+      label_url: data.label_url || null
     };
-  } catch (_) {
+  } catch (err) {
+    console.error('existingShipmentForPayment failed:', err.message);
     return null;
   }
 }
@@ -137,143 +121,107 @@ async function createEpickShipment(order) {
 }
 
 async function updateOrderTracking(docName, trackingCode, labelUrl) {
-  if (!FIREBASE_API_KEY || !docName) return;
-  const fields = ['tracking_code', 'tracking_updated_at'];
-  if (labelUrl) fields.push('label_url');
-  const mask = fields.map(f => `updateMask.fieldPaths=${f}`).join('&');
-  const url = `https://firestore.googleapis.com/v1/${docName}?${mask}&key=${FIREBASE_API_KEY}`;
-
-  const body = {
-    fields: {
-      tracking_code: { stringValue: String(trackingCode) },
-      tracking_updated_at: { timestampValue: new Date().toISOString() }
-    }
-  };
-  if (labelUrl) body.fields.label_url = { stringValue: String(labelUrl) };
-
-  await fetch(url, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  });
+  if (!docName) return;
+  // docName is the absolute Firestore path returned by saveOrderToFirestore.
+  // The Admin SDK uses doc(string) with a relative path; strip the project prefix.
+  const relativePath = docName.replace(/^projects\/[^/]+\/databases\/\(default\)\/documents\//, '');
+  try {
+    const update = {
+      tracking_code: String(trackingCode),
+      tracking_updated_at: admin.firestore.FieldValue.serverTimestamp()
+    };
+    if (labelUrl) update.label_url = String(labelUrl);
+    await getDb().doc(relativePath).update(update);
+  } catch (err) {
+    console.error('updateOrderTracking failed:', err.message);
+  }
 }
 
 /**
  * Read a product's delivery metadata from Firestore so the webhook can decide
  * whether to ship it physically or just email a download link.
- * Returns { kind: 'virtual' | 'fisico', downloadUrl: string }.
  */
 async function getProductMeta(productId) {
-  if (!FIREBASE_API_KEY || !productId) return { kind: 'fisico', downloadUrl: '' };
-  const url = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT}/databases/(default)/documents/productos/${productId}?key=${FIREBASE_API_KEY}`;
+  if (!productId) return { kind: 'fisico', downloadUrl: '' };
   try {
-    const resp = await fetch(url);
-    if (!resp.ok) return { kind: 'fisico', downloadUrl: '' };
-    const doc = await resp.json();
-    const tipo = doc.fields?.tipo?.stringValue || 'fisico';
-    const archivoUrl = doc.fields?.archivoUrl?.stringValue || '';
-    return {
-      kind: tipo === 'virtual' ? 'virtual' : 'fisico',
-      downloadUrl: archivoUrl
-    };
-  } catch (_) {
+    const snap = await getDb().collection('productos').doc(productId).get();
+    if (!snap.exists) return { kind: 'fisico', downloadUrl: '' };
+    const data = snap.data();
+    const tipo = data.tipo === 'virtual' ? 'virtual' : 'fisico';
+    return { kind: tipo, downloadUrl: data.archivoUrl || '' };
+  } catch (err) {
+    console.error(`getProductMeta(${productId}) failed:`, err.message);
     return { kind: 'fisico', downloadUrl: '' };
   }
 }
 
 async function decrementStock(productId, quantity) {
-  if (!FIREBASE_API_KEY) return;
-  const docUrl = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT}/databases/(default)/documents/productos/${productId}?key=${FIREBASE_API_KEY}`;
-
+  if (!productId) return;
   try {
-    const getResp = await fetch(docUrl);
-    if (!getResp.ok) return;
-    const doc = await getResp.json();
-    const currentStock = doc.fields?.stock;
-
-    // Skip if stock is 'ilimitado' or not a number
-    if (!currentStock || currentStock.stringValue === 'ilimitado') return;
-
-    const stockVal = parseInt(currentStock.integerValue || currentStock.stringValue, 10);
-    if (isNaN(stockVal)) return;
-
-    const newStock = Math.max(0, stockVal - quantity);
-    const patchUrl = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT}/databases/(default)/documents/productos/${productId}?updateMask.fieldPaths=stock&key=${FIREBASE_API_KEY}`;
-
-    await fetch(patchUrl, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ fields: { stock: { integerValue: String(newStock) } } })
+    const ref = getDb().collection('productos').doc(productId);
+    await getDb().runTransaction(async (tx) => {
+      const snap = await tx.get(ref);
+      if (!snap.exists) return;
+      const data = snap.data() || {};
+      const stock = data.stock;
+      if (!stock || stock === 'ilimitado') return;
+      const stockVal = parseInt(stock, 10);
+      if (Number.isNaN(stockVal)) return;
+      const newStock = Math.max(0, stockVal - quantity);
+      tx.update(ref, { stock: newStock });
     });
   } catch (err) {
-    console.error(`Stock decrement failed for ${productId}:`, err.message);
+    console.error(`decrementStock(${productId}) failed:`, err.message);
   }
 }
 
 async function saveOrderToFirestore(orderData) {
-  const url = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT}/databases/(default)/documents/pedidos?key=${FIREBASE_API_KEY}`;
-
-  const nowIso = new Date().toISOString();
-
-  const customerFields = {
-    email: { stringValue: orderData.payer.email || '' },
-    name: { stringValue: orderData.payer.name || '' }
+  const now = new Date();
+  const customer = {
+    email: orderData.payer?.email || '',
+    name: orderData.payer?.name || ''
   };
-  if (orderData.payer.phone) customerFields.phone = { stringValue: String(orderData.payer.phone) };
-  if (orderData.payer.dni)   customerFields.dni   = { stringValue: String(orderData.payer.dni) };
+  if (orderData.payer?.phone) customer.phone = String(orderData.payer.phone);
+  if (orderData.payer?.dni)   customer.dni = String(orderData.payer.dni);
 
-  const fields = {
-    id: { stringValue: orderData.id },
-    payment_id: { stringValue: String(orderData.payment_id) },
-    status: { stringValue: orderData.status },
-    total: { doubleValue: orderData.total },
-    customer: { mapValue: { fields: customerFields }},
-    items: { arrayValue: { values: orderData.items.map(item => ({
-      mapValue: { fields: {
-        title: { stringValue: item.title || '' },
-        quantity: { integerValue: String(item.quantity || 1) },
-        unit_price: { doubleValue: item.unit_price || 0 },
-        product_id: { stringValue: item.product_id || '' },
-        kind: { stringValue: item.kind || 'fisico' },
-        download_url: { stringValue: item.download_url || '' }
-      }}
-    })) }},
-    shipping_type: { stringValue: orderData.shipping_type || 'pickup' },
-    shipping_label: { stringValue: orderData.shipping_label || '' },
-    external_reference: { stringValue: orderData.external_reference || '' },
-    created_at: { timestampValue: nowIso },
-    createdAt: { timestampValue: nowIso }
+  const doc = {
+    id: orderData.id,
+    payment_id: String(orderData.payment_id),
+    status: orderData.status,
+    total: Number(orderData.total) || 0,
+    customer,
+    items: (orderData.items || []).map(item => ({
+      title: item.title || '',
+      quantity: Number(item.quantity || 1),
+      unit_price: Number(item.unit_price || 0),
+      product_id: item.product_id || '',
+      kind: item.kind || 'fisico',
+      download_url: item.download_url || ''
+    })),
+    shipping_type: orderData.shipping_type || 'pickup',
+    shipping_label: orderData.shipping_label || '',
+    external_reference: orderData.external_reference || '',
+    created_at: now,
+    createdAt: now
   };
 
-  if (orderData.postal_code) {
-    fields.postal_code = { stringValue: String(orderData.postal_code) };
-  }
+  if (orderData.postal_code) doc.postal_code = String(orderData.postal_code);
 
   if (orderData.address) {
-    fields.shipping_address = { mapValue: { fields: {
-      street: { stringValue: orderData.address.street || '' },
-      number: { stringValue: String(orderData.address.number || '') },
-      extra:  { stringValue: orderData.address.extra || '' },
-      city:   { stringValue: orderData.address.city || '' },
-      province: { stringValue: orderData.address.province || '' },
-      notes:  { stringValue: orderData.address.notes || '' }
-    }}};
+    doc.shipping_address = {
+      street:   orderData.address.street   || '',
+      number:   String(orderData.address.number || ''),
+      extra:    orderData.address.extra    || '',
+      city:     orderData.address.city     || '',
+      province: orderData.address.province || '',
+      notes:    orderData.address.notes    || ''
+    };
   }
 
-  const firestoreDoc = { fields };
-
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(firestoreDoc)
-  });
-
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Firestore write failed: ${error}`);
-  }
-
-  return await response.json();
+  const ref = await getDb().collection('pedidos').add(doc);
+  // Return the legacy REST `name` shape so existing callers
+  // (updateOrderTracking) keep working unchanged.
+  return { name: `projects/${FIREBASE_PROJECT}/databases/(default)/documents/${ref.path}` };
 }
 
 // Validate MercadoPago webhook signature.

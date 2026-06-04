@@ -14,8 +14,7 @@
  * No customer PII (DNI, address, phone, email) is returned.
  */
 
-const FIREBASE_PROJECT = 'nyc-designs';
-const FIREBASE_API_KEY = process.env.FIREBASE_API_KEY;
+const { getDb } = require('./_lib/firestoreAdmin');
 
 const ALLOWED_ORIGINS = [
   'https://nycdesigns.com.ar',
@@ -24,43 +23,18 @@ const ALLOWED_ORIGINS = [
 ];
 
 async function findOrderByPaymentId(paymentId) {
-  if (!FIREBASE_API_KEY || !paymentId) return null;
-  const url = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT}/databases/(default)/documents:runQuery?key=${FIREBASE_API_KEY}`;
-  const query = {
-    structuredQuery: {
-      from: [{ collectionId: 'pedidos' }],
-      where: {
-        fieldFilter: {
-          field: { fieldPath: 'payment_id' },
-          op: 'EQUAL',
-          value: { stringValue: String(paymentId) }
-        }
-      },
-      limit: 1
-    }
-  };
+  if (!paymentId) return null;
   try {
-    const resp = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(query)
-    });
-    if (!resp.ok) return null;
-    const data = await resp.json();
-    const hit = Array.isArray(data) ? data.find(r => r.document) : null;
-    return hit?.document || null;
+    const snap = await getDb().collection('pedidos')
+      .where('payment_id', '==', String(paymentId))
+      .limit(1)
+      .get();
+    if (snap.empty) return null;
+    return snap.docs[0].data();
   } catch (err) {
     console.error('order-lookup fetch failed:', err.message);
     return null;
   }
-}
-
-function readField(fields, key) {
-  return fields?.[key];
-}
-
-function fieldString(f) {
-  return f?.stringValue || '';
 }
 
 module.exports = async (req, res) => {
@@ -78,30 +52,24 @@ module.exports = async (req, res) => {
   const paymentId = req.query?.payment_id;
   if (!paymentId) return res.status(400).json({ error: 'payment_id required' });
 
-  const doc = await findOrderByPaymentId(paymentId);
-  if (!doc) return res.status(404).json({ error: 'Order not found' });
+  const order = await findOrderByPaymentId(paymentId);
+  if (!order) return res.status(404).json({ error: 'Order not found' });
 
-  const fields = doc.fields || {};
-  const itemsRaw = fields.items?.arrayValue?.values || [];
-  const items = itemsRaw.map(v => {
-    const f = v.mapValue?.fields || {};
-    return {
-      title: fieldString(f.title),
-      quantity: Number(f.quantity?.integerValue || 1),
-      kind: fieldString(f.kind) || 'fisico',
-      // download_url is only included when the item is virtual
-      download_url: fieldString(f.kind) === 'virtual' ? fieldString(f.download_url) : ''
-    };
-  });
+  const items = (order.items || []).map(item => ({
+    title: item.title || '',
+    quantity: Number(item.quantity || 1),
+    kind: item.kind === 'virtual' ? 'virtual' : 'fisico',
+    // download_url is only included when the item is virtual
+    download_url: item.kind === 'virtual' ? (item.download_url || '') : ''
+  }));
 
-  const shippingType = fieldString(fields.shipping_type) || 'pickup';
-  const trackingCode = fieldString(fields.tracking_code) || '';
+  const shippingType = order.shipping_type || 'pickup';
 
   return res.status(200).json({
     success: true,
     shipping_type: shippingType,
-    is_digital: shippingType === 'digital' || items.every(i => i.kind === 'virtual'),
+    is_digital: shippingType === 'digital' || (items.length > 0 && items.every(i => i.kind === 'virtual')),
     items,
-    tracking_code: trackingCode
+    tracking_code: order.tracking_code || ''
   });
 };

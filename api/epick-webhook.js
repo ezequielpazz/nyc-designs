@@ -12,51 +12,32 @@
  * same token when handing the url_key to E-Pick.
  */
 
-const FIREBASE_PROJECT = 'nyc-designs';
-const FIREBASE_API_KEY = process.env.FIREBASE_API_KEY;
+const { getDb, admin } = require('./_lib/firestoreAdmin');
 
-async function findOrderByTracking(trackingCode) {
-  if (!FIREBASE_API_KEY || !trackingCode) return null;
-  const url = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT}/databases/(default)/documents:runQuery?key=${FIREBASE_API_KEY}`;
-  const body = {
-    structuredQuery: {
-      from: [{ collectionId: 'pedidos' }],
-      where: {
-        fieldFilter: {
-          field: { fieldPath: 'tracking_code' },
-          op: 'EQUAL',
-          value: { stringValue: String(trackingCode) }
-        }
-      },
-      limit: 1
-    }
-  };
-  const resp = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  });
-  if (!resp.ok) return null;
-  const data = await resp.json();
-  const hit = Array.isArray(data) ? data.find(r => r.document) : null;
-  return hit?.document?.name || null;
+async function findOrderRefByTracking(trackingCode) {
+  if (!trackingCode) return null;
+  try {
+    const snap = await getDb().collection('pedidos')
+      .where('tracking_code', '==', String(trackingCode))
+      .limit(1)
+      .get();
+    return snap.empty ? null : snap.docs[0].ref;
+  } catch (err) {
+    console.error('findOrderRefByTracking failed:', err.message);
+    return null;
+  }
 }
 
-async function patchOrderStatus(docName, status, raw) {
-  const mask = ['shipping_status', 'shipping_updated_at']
-    .map(f => `updateMask.fieldPaths=${f}`).join('&');
-  const url = `https://firestore.googleapis.com/v1/${docName}?${mask}&key=${FIREBASE_API_KEY}`;
-  const body = {
-    fields: {
-      shipping_status: { stringValue: String(status || 'updated') },
-      shipping_updated_at: { timestampValue: new Date().toISOString() }
-    }
-  };
-  await fetch(url, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  });
+async function patchOrderStatus(ref, status) {
+  if (!ref) return;
+  try {
+    await ref.update({
+      shipping_status: String(status || 'updated'),
+      shipping_updated_at: admin.firestore.FieldValue.serverTimestamp()
+    });
+  } catch (err) {
+    console.error('epick-webhook patchOrderStatus failed:', err.message);
+  }
 }
 
 module.exports = async (req, res) => {
@@ -97,9 +78,9 @@ module.exports = async (req, res) => {
       return res.status(200).json({ received: true, ignored: true });
     }
 
-    const docName = await findOrderByTracking(trackingCode);
-    if (docName) {
-      await patchOrderStatus(docName, status, body);
+    const orderRef = await findOrderRefByTracking(trackingCode);
+    if (orderRef) {
+      await patchOrderStatus(orderRef, status);
     }
 
     return res.status(200).json({ received: true });

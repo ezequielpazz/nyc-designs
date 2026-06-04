@@ -17,9 +17,7 @@
 
 const { callEpickProxy } = require('../../config/shipping');
 const { notifyShipmentUpdateEmail } = require('../_lib/notifyOrder');
-
-const FIREBASE_PROJECT = 'nyc-designs';
-const FIREBASE_API_KEY = process.env.FIREBASE_API_KEY;
+const { getDb, admin } = require('../_lib/firestoreAdmin');
 
 const TERMINAL_STATUSES = new Set([
   'delivered', 'entregado', 'returned', 'devuelto',
@@ -40,94 +38,60 @@ function isTerminal(status) {
  * this for the firebase-admin SDK with a service account.
  */
 async function fetchActiveShipments() {
-  if (!FIREBASE_API_KEY) return [];
-  const url = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT}/databases/(default)/documents:runQuery?key=${FIREBASE_API_KEY}`;
-  const query = {
-    structuredQuery: {
-      from: [{ collectionId: 'pedidos' }],
-      where: {
-        fieldFilter: {
-          field: { fieldPath: 'tracking_code' },
-          op: 'GREATER_THAN',
-          value: { stringValue: '' }
-        }
-      },
-      orderBy: [
-        { field: { fieldPath: 'tracking_code' }, direction: 'ASCENDING' }
-      ],
-      limit: MAX_ORDERS_PER_RUN
-    }
-  };
   try {
-    const resp = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(query)
-    });
-    if (!resp.ok) return [];
-    const data = await resp.json();
-    return (Array.isArray(data) ? data : [])
-      .filter(r => r.document)
-      .map(r => ({
-        docName: r.document.name,
-        fields: r.document.fields || {}
-      }));
+    const snap = await getDb().collection('pedidos')
+      .where('tracking_code', '>', '')
+      .orderBy('tracking_code', 'asc')
+      .limit(MAX_ORDERS_PER_RUN)
+      .get();
+    return snap.docs.map(d => ({ ref: d.ref, data: d.data() }));
   } catch (err) {
     console.error('fetchActiveShipments error:', err.message);
     return [];
   }
 }
 
-function readField(fields, key, type = 'stringValue') {
-  return fields?.[key]?.[type];
-}
-
 function flattenOrder(rec) {
-  const f = rec.fields;
-  const customer = f.customer?.mapValue?.fields || {};
-  const address = f.shipping_address?.mapValue?.fields || {};
+  const d = rec.data || {};
+  const customer = d.customer || {};
+  const address = d.shipping_address || {};
   return {
-    docName: rec.docName,
-    id: readField(f, 'id') || rec.docName.split('/').pop(),
-    payment_id: readField(f, 'payment_id'),
-    tracking_code: readField(f, 'tracking_code') || '',
-    shipping_status: readField(f, 'shipping_status') || '',
-    shipping_type: readField(f, 'shipping_type') || '',
-    shipping_label: readField(f, 'shipping_label') || '',
-    postal_code: readField(f, 'postal_code') || '',
-    total: Number(f.total?.doubleValue || f.total?.integerValue || 0),
+    ref: rec.ref,
+    id: d.id || rec.ref.id,
+    payment_id: d.payment_id || '',
+    tracking_code: d.tracking_code || '',
+    shipping_status: d.shipping_status || '',
+    shipping_type: d.shipping_type || '',
+    shipping_label: d.shipping_label || '',
+    postal_code: d.postal_code || '',
+    total: Number(d.total || 0),
     payer: {
-      email: customer.email?.stringValue || '',
-      name: customer.name?.stringValue || '',
-      phone: customer.phone?.stringValue || '',
-      dni: customer.dni?.stringValue || ''
+      email: customer.email || '',
+      name: customer.name || '',
+      phone: customer.phone || '',
+      dni: customer.dni || ''
     },
     address: {
-      street: address.street?.stringValue || '',
-      number: address.number?.stringValue || '',
-      extra: address.extra?.stringValue || '',
-      city: address.city?.stringValue || '',
-      province: address.province?.stringValue || '',
-      notes: address.notes?.stringValue || ''
+      street: address.street || '',
+      number: address.number || '',
+      extra: address.extra || '',
+      city: address.city || '',
+      province: address.province || '',
+      notes: address.notes || ''
     }
   };
 }
 
-async function patchOrderStatus(docName, newStatus) {
-  if (!FIREBASE_API_KEY || !docName) return;
-  const mask = ['shipping_status', 'shipping_updated_at']
-    .map(p => `updateMask.fieldPaths=${p}`).join('&');
-  const url = `https://firestore.googleapis.com/v1/${docName}?${mask}&key=${FIREBASE_API_KEY}`;
-  await fetch(url, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      fields: {
-        shipping_status: { stringValue: String(newStatus) },
-        shipping_updated_at: { timestampValue: new Date().toISOString() }
-      }
-    })
-  });
+async function patchOrderStatus(ref, newStatus) {
+  if (!ref) return;
+  try {
+    await ref.update({
+      shipping_status: String(newStatus),
+      shipping_updated_at: admin.firestore.FieldValue.serverTimestamp()
+    });
+  } catch (err) {
+    console.error('patchOrderStatus failed:', err.message);
+  }
 }
 
 /**
@@ -186,7 +150,7 @@ module.exports = async (req, res) => {
         const newStatus = normalizeStatus(result.data);
         if (!newStatus || newStatus === order.shipping_status) continue;
 
-        await patchOrderStatus(order.docName, newStatus);
+        await patchOrderStatus(order.ref, newStatus);
         summary.changed++;
 
         // Only email the buyer if the change is meaningful (skip noisy
