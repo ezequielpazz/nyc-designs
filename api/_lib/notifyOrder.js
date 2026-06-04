@@ -176,25 +176,55 @@ function buildCustomerHtml(order) {
   const customer = order.payer || {};
   const items = Array.isArray(order.items) ? order.items : [];
   const addr = order.address || {};
+  const isDigital = order.shipping_type === 'digital'
+    || (items.length > 0 && items.every(i => i.kind === 'virtual'));
   const shippingLabel = order.shipping_label
-    || (order.shipping_type === 'delivery' ? 'Envío a domicilio (E-Pick)' : 'Retiro en Acassuso 5268, CABA');
+    || (isDigital ? 'Producto digital'
+        : order.shipping_type === 'delivery' ? 'Envío a domicilio (E-Pick)'
+        : 'Retiro en Acassuso 5268, CABA');
 
   const itemsRows = items.map(i => `
     <tr>
-      <td style="padding:6px 12px;border-bottom:1px solid #eee;">${escapeHtml(i.title || 'Producto')}</td>
+      <td style="padding:6px 12px;border-bottom:1px solid #eee;">${escapeHtml(i.title || 'Producto')}${i.kind === 'virtual' ? ' <em style="color:#B8777F;font-size:11px;">(digital)</em>' : ''}</td>
       <td style="padding:6px 12px;border-bottom:1px solid #eee;text-align:center;">${i.quantity || 1}</td>
       <td style="padding:6px 12px;border-bottom:1px solid #eee;text-align:right;">$${fmtAr(i.unit_price)}</td>
     </tr>`).join('');
 
-  const fullStreet = [addr.street, addr.number].filter(Boolean).join(' ');
-  const addrBlock = order.shipping_type === 'delivery'
-    ? `<p style="margin:6px 0;"><strong>Dirección de envío:</strong> ${escapeHtml(fullStreet)}${addr.extra ? ` (${escapeHtml(addr.extra)})` : ''}, ${escapeHtml(addr.city || '')}, ${escapeHtml(addr.province || '')}${order.postal_code ? ` — CP ${escapeHtml(order.postal_code)}` : ''}</p>`
-    : `<p style="margin:6px 0;">Coordinamos retiro por WhatsApp en Acassuso 5268, CABA.</p>`;
+  // Build "Tu descarga" section if any virtual items exist with a download URL
+  const virtualItems = items.filter(i => i.kind === 'virtual' && i.download_url);
+  const digitalBlock = virtualItems.length > 0
+    ? `<div style="background:#fff3f4;border:2px solid #B8777F;border-radius:12px;padding:20px;margin:16px 0;">
+        <h3 style="margin:0 0 12px;color:#B8777F;font-size:18px;">🪄 Tu descarga</h3>
+        ${virtualItems.map(i => `
+          <p style="margin:8px 0;">
+            <strong>${escapeHtml(i.title)}</strong><br>
+            <a href="${escapeHtml(i.download_url)}" style="display:inline-block;background:#B8777F;color:white;text-decoration:none;padding:10px 20px;border-radius:999px;margin-top:6px;font-weight:600;">⬇ Descargar / Abrir</a>
+          </p>`).join('')}
+        <p style="margin:12px 0 0;font-size:13px;color:#666;">Si el link no abre, copiá y pegá la URL en tu navegador.</p>
+      </div>`
+    : '';
 
-  const trackingBlock = order.tracking_code
+  // WhatsApp deep-link with prefilled message — works on any device
+  const orderShort = (order.id || '').split('_').pop()?.substring(0, 10).toUpperCase();
+  const waText = encodeURIComponent(`Hola! Acabo de comprar el pedido ${orderShort} y quería confirmar la recepción.${virtualItems.length ? ' (Producto digital)' : ''}`);
+  const waBlock = `<p style="margin:16px 0;text-align:center;">
+    <a href="https://wa.me/5491123199122?text=${waText}" style="display:inline-block;background:#25D366;color:white;text-decoration:none;padding:12px 28px;border-radius:999px;font-weight:600;">💬 Escribir por WhatsApp</a>
+  </p>`;
+
+  const fullStreet = [addr.street, addr.number].filter(Boolean).join(' ');
+  let addrBlock;
+  if (isDigital) {
+    addrBlock = `<p style="margin:6px 0;">Producto digital — todo lo importante está arriba 👆 o consultanos por WhatsApp.</p>`;
+  } else if (order.shipping_type === 'delivery') {
+    addrBlock = `<p style="margin:6px 0;"><strong>Dirección de envío:</strong> ${escapeHtml(fullStreet)}${addr.extra ? ` (${escapeHtml(addr.extra)})` : ''}, ${escapeHtml(addr.city || '')}, ${escapeHtml(addr.province || '')}${order.postal_code ? ` — CP ${escapeHtml(order.postal_code)}` : ''}</p>`;
+  } else {
+    addrBlock = `<p style="margin:6px 0;">Coordinamos retiro por WhatsApp en Acassuso 5268, CABA.</p>`;
+  }
+
+  const trackingBlock = !isDigital && order.tracking_code
     ? `<p style="margin:6px 0;"><strong>Código de seguimiento:</strong> ${escapeHtml(order.tracking_code)}<br>
        <a href="https://www.e-pick.com.ar/tracking?code=${encodeURIComponent(order.tracking_code)}" style="color:#B8777F;">Ver estado del envío →</a></p>`
-    : (order.shipping_type === 'delivery'
+    : (!isDigital && order.shipping_type === 'delivery'
         ? `<p style="margin:6px 0;color:#666;">Te vamos a mandar el código de seguimiento por email cuando se despache.</p>`
         : '');
 
@@ -202,6 +232,8 @@ function buildCustomerHtml(order) {
 <html><body style="font-family:Arial,Helvetica,sans-serif;color:#2B2B2B;max-width:600px;margin:0 auto;padding:20px;">
   <h2 style="color:#B8777F;margin:0 0 8px;">¡Gracias por tu compra, ${escapeHtml(customer.name?.split(' ')[0] || '')}!</h2>
   <p style="margin:0 0 16px;color:#666;">Confirmamos tu pedido <strong>${escapeHtml(order.id || '')}</strong>.</p>
+
+  ${digitalBlock}
 
   <h3 style="margin:16px 0 8px;font-size:16px;">Tu pedido</h3>
   <table style="width:100%;border-collapse:collapse;margin-bottom:16px;">
@@ -222,13 +254,13 @@ function buildCustomerHtml(order) {
     <p style="margin:6px 0;"><strong>Modalidad:</strong> ${escapeHtml(shippingLabel)}</p>
     ${addrBlock}
     ${trackingBlock}
-    <p style="margin:6px 0;color:#666;font-size:13px;">Producción estimada: 3-7 días hábiles.</p>
+    ${isDigital ? '' : '<p style="margin:6px 0;color:#666;font-size:13px;">Producción estimada según el producto.</p>'}
   </div>
 
-  <p style="margin-top:24px;font-size:13px;color:#666;">
-    Si necesitás coordinar algo, escribinos por
-    <a href="https://wa.me/5491123199122" style="color:#B8777F;">WhatsApp</a>
-    o respondé este mail.
+  ${waBlock}
+
+  <p style="margin-top:8px;font-size:13px;color:#666;text-align:center;">
+    O respondé este mail si preferís.
   </p>
   <p style="margin-top:24px;font-size:11px;color:#999;">— NYC Designs · Acassuso 5268, CABA · <a href="https://nycdesigns.com.ar" style="color:#999;">nycdesigns.com.ar</a></p>
 </body></html>`;

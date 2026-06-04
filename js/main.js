@@ -229,12 +229,16 @@ async function loadProductsFromFirebase() {
       products.push({
         id: doc.id,
         name: data.nombre,
+        // Virtual delivery flag: 'virtual' products skip shipping and are sent
+        // by download link / WhatsApp after payment.
+        kind: data.tipo === 'virtual' ? 'virtual' : 'fisico',
+        downloadUrl: data.archivoUrl || '',
         // Variant: stored explicitly when Sol fills the new field; falls back
         // to a heuristic extraction from the name for legacy products.
         variant: data.variante || data.variant || extractVariantFromName(data.nombre) || '',
         // Product type: groups products within a category (e.g. Polaroids vs
         // Kodak inside fotos-recuerdos). Falls back to name heuristic.
-        productType: data.productType || data.tipo || extractProductTypeFromName(data.nombre) || '',
+        productType: data.productType || data.subtipo || extractProductTypeFromName(data.nombre) || '',
         price: data.precio,
         old_price: data.precio_anterior || 0,
         category: data.categoria,
@@ -824,35 +828,44 @@ async function loadBannerConfig() {
     }
     
     // ===== UPDATE PRODUCTION TIME EVERYWHERE =====
-    if (data.shipping?.productionTime) {
-      const productionTime = data.shipping.productionTime;
-      
+    // Only honor the Firestore value when it looks like a real "X-Y días" string.
+    // Strings like "de 3 a 30" or empty are ignored so the UI doesn't show
+    // confusing copy to customers.
+    const rawProductionTime = (data.shipping?.productionTime || '').trim();
+    const productionTimeLooksReal = /\d+\s*[-–a]\s*\d+\s*d[ií]as/i.test(rawProductionTime)
+      || /\d+\s*d[ií]as/i.test(rawProductionTime);
+    const productionTime = productionTimeLooksReal ? rawProductionTime : '';
+
+    if (productionTime) {
       // Banner pill
       const pill = document.querySelector('.announce .pill');
       if (pill) {
         pill.innerHTML = `<span class="dot"></span> Personalizados: ${escapeHtml(productionTime)}`;
       }
-      
+
       // Hero mini-info
       const heroMini = document.querySelector('.mini-info .mini:nth-child(3) .v');
       if (heroMini) {
         heroMini.textContent = `Producción ${productionTime}`;
       }
-      
+
       // FAQ - first question about production time
-      const faqAnswers = document.querySelectorAll('.faq-answer p');
-      faqAnswers.forEach(p => {
+      document.querySelectorAll('.faq-answer p').forEach(p => {
         if (p.textContent.includes('días hábiles')) {
           p.innerHTML = p.innerHTML.replace(/\d+[-–]\d+\s*días\s*hábiles/gi, escapeHtml(productionTime));
         }
       });
-      
+
       // Product cards with "X-X días" text
       document.querySelectorAll('.product .price span').forEach(span => {
         if (span.textContent.match(/\d+-\d+\s*días/i)) {
           span.textContent = productionTime;
         }
       });
+    } else {
+      // Hide the "Producción" mini-info chip when there's no valid value
+      const heroMini = document.querySelector('.mini-info .mini:nth-child(3)');
+      if (heroMini) heroMini.style.display = 'none';
     }
     
     // ===== UPDATE SHIPPING METHODS =====
@@ -2144,13 +2157,88 @@ function showPersonalizationSection() {
   }
 }
 
+/**
+ * Render the "Tu producto digital está listo" section by polling our public
+ * order-lookup endpoint until the MP webhook has had time to write the order
+ * to Firestore. Adds buttons to receive the download by WhatsApp (deep-link
+ * to the customer's own WhatsApp number or to NYC Designs).
+ */
+async function showDigitalDeliveryIfAny(paymentId) {
+  if (!paymentId) return;
+  const section = document.getElementById('entregaDigital');
+  const itemsEl = document.getElementById('entregaDigitalItems');
+  const actionsEl = document.getElementById('entregaDigitalActions');
+  if (!section || !itemsEl || !actionsEl) return;
+
+  // Webhook may need a few seconds to land — retry briefly.
+  let data = null;
+  for (let attempt = 0; attempt < 5; attempt++) {
+    try {
+      const resp = await fetch(`/api/order-lookup?payment_id=${encodeURIComponent(paymentId)}`);
+      if (resp.ok) {
+        data = await resp.json();
+        if (data?.success) break;
+      }
+    } catch (_) { /* swallow, retry */ }
+    await new Promise(r => setTimeout(r, 1500));
+  }
+  if (!data?.success || !data.is_digital) return;
+
+  const virtualItems = (data.items || []).filter(i => i.kind === 'virtual' && i.download_url);
+  if (virtualItems.length === 0) return;
+
+  itemsEl.innerHTML = virtualItems.map(i => `
+    <div style="padding:14px 0;border-bottom:1px solid rgba(138,111,106,.15);">
+      <div style="font-weight:700;margin-bottom:8px;">${escapeHtml(i.title)}</div>
+      <a href="${escapeHtml(i.download_url)}" target="_blank" rel="noopener noreferrer"
+         class="btn primary"
+         style="display:inline-flex;align-items:center;gap:6px;">
+        ⬇ Abrir / Descargar
+      </a>
+    </div>
+  `).join('');
+
+  // WhatsApp deep-link with the links pre-filled — works on every device.
+  // The customer is the one who hits "send" in their own WhatsApp.
+  const allLinks = virtualItems.map(i => `• ${i.title}\n${i.download_url}`).join('\n\n');
+  const waMessage = encodeURIComponent(`Hola NYC Designs! Acabo de comprar y este es mi pedido digital:\n\n${allLinks}`);
+  actionsEl.innerHTML = `
+    <a href="https://wa.me/5491123199122?text=${waMessage}" target="_blank" rel="noopener noreferrer"
+       class="btn primary" style="background:#25D366;border-color:#25D366;">
+      💬 Recibir por WhatsApp
+    </a>
+    <button type="button" class="btn" onclick="(async () => {
+      try { await navigator.clipboard.writeText(${JSON.stringify(virtualItems.map(i => i.download_url).join('\n'))});
+        showToast('Link copiado', 'success'); } catch (_) {}
+    })()">📋 Copiar link</button>
+  `;
+
+  section.style.display = 'block';
+  section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
 function checkPaymentReturn() {
   const urlParams = new URLSearchParams(window.location.search);
   const status = urlParams.get('collection_status') || urlParams.get('status');
 
   if (status === 'approved') {
-    showPersonalizationSection();
-    showToast('¡Pago exitoso! Envianos los detalles de personalización.', 'success');
+    const ref = urlParams.get('external_reference');
+    const paymentId = urlParams.get('payment_id') || urlParams.get('collection_id');
+
+    // Show the digital-delivery section if the order qualifies. If not, the
+    // legacy personalización section is shown so the customer can send fotos.
+    if (paymentId) {
+      showDigitalDeliveryIfAny(paymentId).then(() => {
+        const digital = document.getElementById('entregaDigital');
+        if (!digital || digital.style.display === 'none') {
+          showPersonalizationSection();
+        }
+      });
+    } else {
+      showPersonalizationSection();
+    }
+
+    showToast('¡Pago exitoso! Te llegará un mail con el detalle.', 'success');
 
     // Clear cart after successful payment
     cart = [];
@@ -2158,8 +2246,6 @@ function checkPaymentReturn() {
     updateCartUI();
 
     // Track purchase
-    const ref = urlParams.get('external_reference');
-    const paymentId = urlParams.get('payment_id');
     if (ref || paymentId) {
       trackPurchase(ref || paymentId, 0);
     }

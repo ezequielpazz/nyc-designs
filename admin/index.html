@@ -736,6 +736,19 @@
                     </div>
 
                     <div class="form-group">
+                        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                            <input type="checkbox" id="productEsDigital">
+                            <span>🪄 <strong>Producto digital</strong> (se entrega por link / WhatsApp, sin envío físico)</span>
+                        </label>
+                    </div>
+
+                    <div class="form-group" id="productDigitalUrlGroup" style="display:none;">
+                        <label for="productArchivoUrl">Link de descarga / acceso*</label>
+                        <input type="url" id="productArchivoUrl" placeholder="https://drive.google.com/... o https://canva.com/...">
+                        <small>Ej: Google Drive, Canva, Dropbox, Notion. Se manda automáticamente al cliente por email y se le ofrece recibirlo por WhatsApp al confirmar la compra.</small>
+                    </div>
+
+                    <div class="form-group">
                         <label for="productTipo">Tipo (sub-categoría)</label>
                         <input type="text" id="productTipo" placeholder="Ej: Mini Polaroids, Kodak, Taza, Totebag, Escena 3D...">
                         <small>Opcional. Sirve para agrupar productos dentro de una misma categoría (Fotos y Recuerdos puede tener Mini Polaroids, Polaroids, Kodak, Enmarcadas).</small>

@@ -158,6 +158,29 @@ async function updateOrderTracking(docName, trackingCode, labelUrl) {
   });
 }
 
+/**
+ * Read a product's delivery metadata from Firestore so the webhook can decide
+ * whether to ship it physically or just email a download link.
+ * Returns { kind: 'virtual' | 'fisico', downloadUrl: string }.
+ */
+async function getProductMeta(productId) {
+  if (!FIREBASE_API_KEY || !productId) return { kind: 'fisico', downloadUrl: '' };
+  const url = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT}/databases/(default)/documents/productos/${productId}?key=${FIREBASE_API_KEY}`;
+  try {
+    const resp = await fetch(url);
+    if (!resp.ok) return { kind: 'fisico', downloadUrl: '' };
+    const doc = await resp.json();
+    const tipo = doc.fields?.tipo?.stringValue || 'fisico';
+    const archivoUrl = doc.fields?.archivoUrl?.stringValue || '';
+    return {
+      kind: tipo === 'virtual' ? 'virtual' : 'fisico',
+      downloadUrl: archivoUrl
+    };
+  } catch (_) {
+    return { kind: 'fisico', downloadUrl: '' };
+  }
+}
+
 async function decrementStock(productId, quantity) {
   if (!FIREBASE_API_KEY) return;
   const docUrl = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT}/databases/(default)/documents/productos/${productId}?key=${FIREBASE_API_KEY}`;
@@ -210,7 +233,9 @@ async function saveOrderToFirestore(orderData) {
         title: { stringValue: item.title || '' },
         quantity: { integerValue: String(item.quantity || 1) },
         unit_price: { doubleValue: item.unit_price || 0 },
-        product_id: { stringValue: item.product_id || '' }
+        product_id: { stringValue: item.product_id || '' },
+        kind: { stringValue: item.kind || 'fisico' },
+        download_url: { stringValue: item.download_url || '' }
       }}
     })) }},
     shipping_type: { stringValue: orderData.shipping_type || 'pickup' },
@@ -332,10 +357,35 @@ module.exports = async (req, res) => {
           extra = {};
         }
 
-        const shippingType = extra.shipping_type === 'delivery' ? 'delivery' : 'pickup';
-        const shippingLabel = shippingType === 'delivery'
-          ? 'Envío a domicilio (E-Pick)'
-          : 'Retiro en Acassuso 5268, CABA';
+        // Enrich each item with its delivery kind (virtual/fisico) + download URL
+        // by reading Firestore. If the cart is 100% virtual we mark the order
+        // as 'digital' and skip E-Pick entirely.
+        const rawItems = paymentData.additional_info?.items || [];
+        const enrichedItems = await Promise.all(rawItems.map(async (item) => {
+          const meta = await getProductMeta(item.id || '');
+          return {
+            title: item.title,
+            quantity: Number(item.quantity),
+            unit_price: Number(item.unit_price),
+            product_id: item.id || '',
+            kind: meta.kind,
+            download_url: meta.downloadUrl
+          };
+        }));
+
+        const allVirtual = enrichedItems.length > 0
+          && enrichedItems.every(i => i.kind === 'virtual');
+
+        let shippingType = extra.shipping_type === 'delivery' ? 'delivery' : 'pickup';
+        let shippingLabel;
+        if (allVirtual) {
+          shippingType = 'digital';
+          shippingLabel = 'Producto digital — entrega por link / WhatsApp';
+        } else {
+          shippingLabel = shippingType === 'delivery'
+            ? 'Envío a domicilio (E-Pick)'
+            : 'Retiro en Acassuso 5268, CABA';
+        }
 
         // Prefer the data the customer typed in the checkout form (carried in
         // extra.customer) over what MercadoPago auto-fills, because MP may
@@ -354,12 +404,7 @@ module.exports = async (req, res) => {
             phone: frontCustomer.phone || paymentData.payer?.phone?.number || '',
             dni: frontCustomer.dni || paymentData.payer?.identification?.number || ''
           },
-          items: (paymentData.additional_info?.items || []).map(item => ({
-            title: item.title,
-            quantity: Number(item.quantity),
-            unit_price: Number(item.unit_price),
-            product_id: item.id || ''
-          })),
+          items: enrichedItems,
           shipping_type: shippingType,
           shipping_label: shippingLabel,
           postal_code: extra.postal_code || '',
@@ -380,9 +425,9 @@ module.exports = async (req, res) => {
         // Auto-create the E-Pick shipment for delivery orders so the admin
         // already sees a tracking code. Idempotent: if a previous webhook
         // delivery already created the shipment for this payment_id we just
-        // reuse the existing tracking code.
+        // reuse the existing tracking code. Skip entirely for digital orders.
         let trackingCode = null;
-        if (shippingType === 'delivery') {
+        if (shippingType === 'delivery' && !allVirtual) {
           try {
             const existing = await existingShipmentForPayment(orderData.payment_id);
             const ship = existing && existing.tracking_code
