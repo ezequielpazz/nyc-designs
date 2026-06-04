@@ -58,6 +58,8 @@ let currentEditingProductId = null;
 let currentWizardStep = 1;
 let productFormData = {
     nombre: '',
+    tipo: 'fisico',       // 'fisico' | 'virtual' — virtual products skip E-Pick and are delivered via download link
+    archivoUrl: '',       // only used when tipo === 'virtual'
     productType: '',
     variante: '',
     descripcion: '',
@@ -590,6 +592,9 @@ async function saveProduct() {
 
         const data = {
             nombre: productFormData.nombre,
+            // Product kind: 'virtual' = digital delivery (no shipping). 'fisico' = needs E-Pick.
+            tipo: productFormData.tipo === 'virtual' ? 'virtual' : 'fisico',
+            archivoUrl: productFormData.tipo === 'virtual' ? (productFormData.archivoUrl || '').trim() : '',
             // Variant + productType: take what Sol typed, fall back to name heuristics.
             variante: productFormData.variante || extractVariantFromName(productFormData.nombre) || '',
             productType: productFormData.productType || extractProductTypeFromName(productFormData.nombre) || '',
@@ -785,7 +790,9 @@ function openEditModal(productId) {
     
     productFormData = {
         nombre: product.nombre,
-        productType: product.productType || product.tipo || '',
+        tipo: product.tipo === 'virtual' ? 'virtual' : 'fisico',
+        archivoUrl: product.archivoUrl || '',
+        productType: product.productType || product.subtipo || '',
         variante: product.variante || product.variant || '',
         descripcion: product.descripcion,
         precio: product.precio,
@@ -825,6 +832,12 @@ function closeWizardModal() {
 
 function resetWizardForm() {
     document.getElementById('productNombre').value = '';
+    const digitalChk = document.getElementById('productEsDigital');
+    if (digitalChk) digitalChk.checked = false;
+    const digitalUrl = document.getElementById('productArchivoUrl');
+    if (digitalUrl) digitalUrl.value = '';
+    const digitalGroup = document.getElementById('productDigitalUrlGroup');
+    if (digitalGroup) digitalGroup.style.display = 'none';
     const tipoInput = document.getElementById('productTipo');
     if (tipoInput) tipoInput.value = '';
     const variantInput = document.getElementById('productVariante');
@@ -851,6 +864,12 @@ function resetWizardForm() {
 
 function populateWizardForm() {
     document.getElementById('productNombre').value = productFormData.nombre;
+    const digitalChk = document.getElementById('productEsDigital');
+    const digitalGroup = document.getElementById('productDigitalUrlGroup');
+    const digitalUrl = document.getElementById('productArchivoUrl');
+    if (digitalChk) digitalChk.checked = productFormData.tipo === 'virtual';
+    if (digitalUrl) digitalUrl.value = productFormData.archivoUrl || '';
+    if (digitalGroup) digitalGroup.style.display = productFormData.tipo === 'virtual' ? '' : 'none';
     const tipoEl = document.getElementById('productTipo');
     if (tipoEl) tipoEl.value = productFormData.productType || '';
     const variantEl = document.getElementById('productVariante');
@@ -1020,6 +1039,8 @@ function saveWizardStepData(step) {
     switch(step) {
         case 1:
             productFormData.nombre = document.getElementById('productNombre').value.trim();
+            productFormData.tipo = document.getElementById('productEsDigital')?.checked ? 'virtual' : 'fisico';
+            productFormData.archivoUrl = (document.getElementById('productArchivoUrl')?.value || '').trim();
             productFormData.productType = (document.getElementById('productTipo')?.value || '').trim();
             productFormData.variante = (document.getElementById('productVariante')?.value || '').trim();
             productFormData.descripcion = document.getElementById('productDescripcion').value.trim();
@@ -1903,7 +1924,19 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function setupEventListeners() {
-    
+
+    // ========== DIGITAL PRODUCT TOGGLE ==========
+    document.getElementById('productEsDigital')?.addEventListener('change', (e) => {
+        const grp = document.getElementById('productDigitalUrlGroup');
+        if (grp) grp.style.display = e.target.checked ? '' : 'none';
+        if (!e.target.checked) {
+            const url = document.getElementById('productArchivoUrl');
+            if (url) url.value = '';
+            productFormData.archivoUrl = '';
+        }
+        productFormData.tipo = e.target.checked ? 'virtual' : 'fisico';
+    });
+
     // ========== LOGIN ==========
     document.getElementById('googleLoginBtn')?.addEventListener('click', signInWithGoogle);
     
