@@ -73,9 +73,14 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
-    // Helper: check if user is an authorized admin
+    // Helper: check if user is an authorized admin.
+    // SECURITY: requires email_verified == true so that even if someone
+    // registers via Email/Password with one of these emails, they cannot
+    // become admin without proving control of the inbox. All current
+    // admins log in with Google OAuth (always email_verified).
     function isAdmin() {
       return request.auth != null &&
+        request.auth.token.email_verified == true &&
         request.auth.token.email in [
           'newyorkcitydesigns4@gmail.com',
           'javierituarte20@gmail.com',
