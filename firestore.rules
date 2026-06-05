@@ -26,9 +26,38 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // Messages (contact form): anyone can create, only admin can read/update/delete
+    // Messages (contact form): anyone can create — BUT only with strict caps to
+    // prevent DoW/spam. Each document must look like a real contact message:
+    //   - required string fields with hard length limits
+    //   - optional fields cannot blow up the doc size
+    //   - createdAt set by server (request.time) so attackers can't backdate
+    //   - total payload must stay under ~2KB
+    // Even with App Check enabled, these caps stay as a second line of defense.
     match /mensajes/{docId} {
-      allow create: if true;
+      allow create: if
+        // Required fields exist and are strings of reasonable size
+        request.resource.data.keys().hasAll(['nombre', 'email', 'mensaje']) &&
+        request.resource.data.nombre is string &&
+        request.resource.data.nombre.size() >= 2 &&
+        request.resource.data.nombre.size() <= 80 &&
+        request.resource.data.email is string &&
+        request.resource.data.email.size() >= 5 &&
+        request.resource.data.email.size() <= 120 &&
+        request.resource.data.email.matches('^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$') &&
+        request.resource.data.mensaje is string &&
+        request.resource.data.mensaje.size() >= 5 &&
+        request.resource.data.mensaje.size() <= 1500 &&
+        // Optional phone — if present, must be string and short
+        (!('telefono' in request.resource.data) ||
+          (request.resource.data.telefono is string && request.resource.data.telefono.size() <= 30)) &&
+        // Optional subject — if present, must be string and short
+        (!('asunto' in request.resource.data) ||
+          (request.resource.data.asunto is string && request.resource.data.asunto.size() <= 120)) &&
+        // No extra fields allowed (stops attackers from stuffing the doc)
+        request.resource.data.keys().hasOnly(['nombre', 'email', 'mensaje', 'telefono', 'asunto', 'createdAt', 'leido']) &&
+        // Server-side timestamp + leido default
+        (!('createdAt' in request.resource.data) || request.resource.data.createdAt == request.time) &&
+        (!('leido' in request.resource.data) || request.resource.data.leido == false);
       allow read, update, delete: if isAdmin();
     }
 
