@@ -13,12 +13,18 @@
 
 const crypto = require('crypto');
 const { EPICK_CONFIG, provinceCode, callEpickProxy } = require('../config/shipping');
+const { rateLimit, clientKey } = require('./_lib/rateLimit');
 
 const ALLOWED_ORIGINS = [
   'https://nycdesigns.com.ar',
   'https://www.nycdesigns.com.ar',
   'https://nyc-designs.vercel.app'
 ];
+
+// Creating a shipment costs us quota against the E-Pick / Wanderlust proxy
+// AND can spawn a real OCA pickup, so we keep this aggressively low.
+const RATE_LIMIT_WINDOW_MS = 60 * 1000;
+const RATE_LIMIT_MAX = 5;
 
 function mockTrackingCode(orderId) {
   const h = crypto.createHash('sha1').update(String(orderId || Date.now())).digest('hex');
@@ -63,6 +69,21 @@ module.exports = async (req, res) => {
 
   if (origin && !ALLOWED_ORIGINS.includes(origin)) {
     return res.status(403).json({ error: 'Origen no permitido' });
+  }
+
+  // Rate limit per IP — cap real shipment creations
+  const ip = clientKey(req);
+  const rl = await rateLimit({
+    bucket: 'epick-crear-envio',
+    key: ip,
+    max: RATE_LIMIT_MAX,
+    windowMs: RATE_LIMIT_WINDOW_MS
+  });
+  res.setHeader('X-RateLimit-Limit', String(RATE_LIMIT_MAX));
+  res.setHeader('X-RateLimit-Remaining', String(rl.remaining));
+  if (!rl.ok) {
+    res.setHeader('Retry-After', String(Math.ceil((rl.resetAt - Date.now()) / 1000)));
+    return res.status(429).json({ error: 'Demasiadas solicitudes. Intentá en un minuto.' });
   }
 
   try {

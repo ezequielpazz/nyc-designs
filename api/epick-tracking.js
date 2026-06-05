@@ -9,12 +9,16 @@
  */
 
 const { EPICK_CONFIG, callEpickProxy } = require('../config/shipping');
+const { rateLimit, clientKey } = require('./_lib/rateLimit');
 
 const ALLOWED_ORIGINS = [
   'https://nycdesigns.com.ar',
   'https://www.nycdesigns.com.ar',
   'https://nyc-designs.vercel.app'
 ];
+
+const RATE_LIMIT_WINDOW_MS = 60 * 1000;
+const RATE_LIMIT_MAX = 30; // tracking is read-only
 
 function mockHistory(trackingCode) {
   const now = Date.now();
@@ -61,6 +65,18 @@ module.exports = async (req, res) => {
 
   if (origin && !ALLOWED_ORIGINS.includes(origin)) {
     return res.status(403).json({ error: 'Origen no permitido' });
+  }
+
+  const ip = clientKey(req);
+  const rl = await rateLimit({
+    bucket: 'epick-tracking',
+    key: ip,
+    max: RATE_LIMIT_MAX,
+    windowMs: RATE_LIMIT_WINDOW_MS
+  });
+  if (!rl.ok) {
+    res.setHeader('Retry-After', String(Math.ceil((rl.resetAt - Date.now()) / 1000)));
+    return res.status(429).json({ error: 'Demasiadas solicitudes. Intentá en un minuto.' });
   }
 
   try {
