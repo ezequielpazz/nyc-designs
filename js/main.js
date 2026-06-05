@@ -286,9 +286,20 @@ async function loadProducts() {
       return false; // Usar productos estáticos del HTML
     }
     
-    // Procesar y filtrar productos
+    // Procesar y filtrar productos.
+    // BUGFIX: el stock puede venir como string ('ilimitado', 'agotado') desde
+    // los productos legacy O como number (1, 2, 99) desde el admin actual.
+    // El filter anterior hacía `p.stock.toLowerCase()` y crasheaba con números,
+    // rompiendo TODO el catálogo. Ahora normalizamos el stock a string antes.
     allProducts = products
-      .filter(p => sheetConfig.mostrar_agotados === 'si' || (p.stock && p.stock.toLowerCase() !== 'agotado'))
+      .filter(p => {
+        // Default: mostrar todos (mostrar_agotados=true en el config).
+        const showOutOfStock = sheetConfig.mostrar_agotados === 'si'
+          || sheetConfig.mostrar_agotados === true;
+        if (showOutOfStock) return true;
+        const stockStr = String(p.stock ?? '').toLowerCase();
+        return stockStr !== 'agotado' && stockStr !== '0' && stockStr !== '';
+      })
       .sort((a, b) => (a.order || 999) - (b.order || 999));
 
     return true;
