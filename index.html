@@ -922,6 +922,35 @@
     </div>
   </div>
 
+  <!-- QUICK BUY BY WHATSAPP MODAL (modo 'whatsapp') -->
+  <div class="wa-buy-modal" id="waBuyModal" aria-hidden="true">
+    <div class="wa-buy-overlay" id="waBuyOverlay"></div>
+    <div class="wa-buy-content" role="dialog" aria-modal="true" aria-labelledby="waBuyTitle">
+      <button class="wa-buy-close" id="waBuyClose" type="button" aria-label="Cerrar">&times;</button>
+      <div class="wa-buy-badge">💬 Compra por WhatsApp</div>
+      <h3 id="waBuyTitle">Cerrá tu compra con Sol</h3>
+      <p class="wa-buy-product" id="waBuyProduct"></p>
+      <form id="waBuyForm">
+        <label class="wa-buy-field">
+          <span>Cantidad</span>
+          <input type="number" id="waBuyQty" min="1" value="1" inputmode="numeric">
+        </label>
+        <label class="wa-buy-field">
+          <span>Tu nombre</span>
+          <input type="text" id="waBuyName" placeholder="Nombre y apellido" autocomplete="name" required>
+        </label>
+        <label class="wa-buy-field">
+          <span>Tu zona o código postal</span>
+          <input type="text" id="waBuyZone" placeholder="Ej: Palermo, CABA (1425)" required>
+        </label>
+        <button type="submit" class="btn primary full-width btn-whatsapp">
+          💬 Enviar pedido por WhatsApp
+        </button>
+        <p class="wa-buy-note">Se abre WhatsApp con tu pedido ya escrito. Sol te responde y coordinan pago y entrega.</p>
+      </form>
+    </div>
+  </div>
+
   <!-- PERSONALIZATION MODAL -->
   <div class="modal" id="personalizationModal">
     <div class="modal-overlay"></div>
@@ -1121,6 +1150,11 @@
             </div>
           </div>
           
+          <!-- Botón directo por WhatsApp (visible solo en modo 'whatsapp'; lo activa main.js) -->
+          <button class="btn primary full-width btn-whatsapp product-modal-buy-wa" id="modalBuyWhatsApp" type="button" style="display:none;">
+            💬 Comprar por WhatsApp
+          </button>
+
           <button class="btn primary full-width product-modal-add" id="modalAddToCart">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="9" cy="21" r="1"></circle>
