@@ -3157,3 +3157,134 @@ footer {
     background-attachment: fixed;
   }
 }
+
+/* ==========================================================================
+   MODO VENTA WHATSAPP — botones + mini-form de compra
+   ========================================================================== */
+
+/* Botón verde WhatsApp (card, modal y mini-form) */
+.btn-whatsapp,
+.btn.primary.buy-whatsapp {
+  background: #25D366;
+  border-color: #25D366;
+  color: #fff;
+}
+.btn-whatsapp:hover,
+.btn.primary.buy-whatsapp:hover {
+  background: #1DA851;
+  border-color: #1DA851;
+}
+
+/* Botón secundario "Agregar al carrito" cuando el WhatsApp es el principal */
+.btn-outline {
+  background: transparent;
+  border: 1.5px solid var(--rose);
+  color: var(--rose);
+}
+.btn-outline:hover {
+  background: var(--blush);
+  color: var(--charcoal);
+}
+
+/* Separación cuando la card tiene los dos botones apilados */
+.pbody .buy-whatsapp + .add-to-cart {
+  margin-top: 8px;
+}
+
+/* ---- Mini-form modal ---- */
+.wa-buy-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.wa-buy-modal.active {
+  display: flex;
+}
+.wa-buy-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(43, 43, 43, 0.55);
+  backdrop-filter: blur(3px);
+}
+.wa-buy-content {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 380px;
+  background: var(--offwhite);
+  border-radius: 18px;
+  padding: 26px 22px 22px;
+  box-shadow: 0 20px 60px rgba(43, 43, 43, 0.28);
+  animation: waBuyIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes waBuyIn {
+  from { opacity: 0; transform: translateY(16px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.wa-buy-close {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  background: none;
+  border: none;
+  font-size: 26px;
+  line-height: 1;
+  color: var(--taupe);
+  cursor: pointer;
+}
+.wa-buy-badge {
+  display: inline-block;
+  background: #25D366;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+  margin-bottom: 10px;
+}
+.wa-buy-content h3 {
+  margin: 0 0 4px;
+  color: var(--charcoal);
+  font-size: 20px;
+}
+.wa-buy-product {
+  margin: 0 0 16px;
+  color: var(--rose);
+  font-weight: 600;
+  font-size: 15px;
+}
+.wa-buy-field {
+  display: block;
+  margin-bottom: 14px;
+}
+.wa-buy-field span {
+  display: block;
+  font-size: 13px;
+  color: var(--taupe);
+  margin-bottom: 5px;
+  font-weight: 600;
+}
+.wa-buy-field input {
+  width: 100%;
+  padding: 11px 13px;
+  border: 1.5px solid #e6dcd9;
+  border-radius: 10px;
+  font-size: 15px;
+  background: #fff;
+  color: var(--charcoal);
+}
+.wa-buy-field input:focus {
+  outline: none;
+  border-color: var(--rose);
+}
+.wa-buy-note {
+  margin: 12px 0 0;
+  font-size: 12px;
+  color: var(--taupe);
+  text-align: center;
+  line-height: 1.4;
+}

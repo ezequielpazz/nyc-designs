@@ -56,6 +56,20 @@ const CONFIG = {
   STORE_NAME: 'NYC Designs'
 };
 
+// ========== MODO DE VENTA (interruptor) ==========
+// 'whatsapp'    → el cliente cierra la compra por WhatsApp con Sol (mientras
+//                 MercadoPago está en pausa por verificación de la cuenta).
+// 'mercadopago' → checkout automático con MercadoPago (el de siempre).
+//
+// Para volver a MercadoPago cuando la cuenta esté lista: cambiar esta única
+// línea a 'mercadopago'. NO hay que borrar ni restaurar nada — todo el código
+// de MP sigue intacto y se reactiva solo.
+const MODO_VENTA = 'whatsapp';
+
+function esModoWhatsApp() {
+  return MODO_VENTA === 'whatsapp';
+}
+
 // URL de la API de backend (cambiar en producción si usa otro host)
 const API_URL = window.location.hostname === 'localhost'
   ? 'http://localhost:3000'
@@ -499,9 +513,19 @@ function renderProductsPage(page = 1, category = 'todos', searchTerm = '') {
           </div>
           ${stockLabel ? `<span class="stock-pill ${stockClass}">${escapeHtml(stockLabel)}</span>` : ''}
         </div>
-        <button class="btn primary add-to-cart" type="button" ${(p.stock === 'agotado' || p.stock === 0 || p.stock === '0') ? 'disabled' : ''}>
-          ${(p.stock === 'agotado' || p.stock === 0 || p.stock === '0') ? 'Sin stock' : 'Agregar al carrito'}
-        </button>
+        ${(() => {
+          const outOfStock = (p.stock === 'agotado' || p.stock === 0 || p.stock === '0');
+          if (outOfStock) {
+            return `<button class="btn primary add-to-cart" type="button" disabled>Sin stock</button>`;
+          }
+          if (esModoWhatsApp()) {
+            // Modo WhatsApp: botón directo (mini-form → WhatsApp) + carrito como secundario.
+            return `
+              <button class="btn primary buy-whatsapp" type="button">💬 Comprar por WhatsApp</button>
+              <button class="btn btn-outline add-to-cart" type="button">🛒 Agregar al carrito</button>`;
+          }
+          return `<button class="btn primary add-to-cart" type="button">Agregar al carrito</button>`;
+        })()}
       </div>
     </article>`;
   }).join('');
@@ -531,6 +555,16 @@ function renderProductsPage(page = 1, category = 'todos', searchTerm = '') {
       if (id && name && price) {
         addToCart(id, name, price);
       }
+    });
+  });
+
+  // Modo WhatsApp: botón "Comprar por WhatsApp" en cada card abre el mini-form.
+  document.querySelectorAll('.buy-whatsapp').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const article = this.closest('.product');
+      const idx = Number(article?.dataset?.productIndex);
+      const product = _currentPageProducts[idx];
+      if (product) abrirCompraWhatsApp(product);
     });
   });
 }
@@ -627,6 +661,165 @@ function clearCart() {
   cart = [];
   localStorage.setItem('nycCart', JSON.stringify(cart));
   updateCartUI();
+}
+
+// ========== COMPRA POR WHATSAPP (modo 'whatsapp') ==========
+// Mini-form que captura los datos del cliente y arma un mensaje de WhatsApp
+// listo para que Sol cierre la venta. Todo esto queda inactivo cuando
+// MODO_VENTA === 'mercadopago'.
+
+let _waBuyProduct = null;
+
+function abrirCompraWhatsApp(product) {
+  _waBuyProduct = product;
+  const modal = document.getElementById('waBuyModal');
+  if (!modal) return;
+  const prodEl = document.getElementById('waBuyProduct');
+  if (prodEl) prodEl.textContent = `${product.name} — $${Number(product.price).toLocaleString('es-AR')}`;
+  const qtyEl = document.getElementById('waBuyQty');
+  if (qtyEl) qtyEl.value = 1;
+  // Prefill con datos guardados de una compra anterior (comodidad).
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem('nycBuyerInfo') || '{}'); } catch (_) {}
+  const nameEl = document.getElementById('waBuyName');
+  const zoneEl = document.getElementById('waBuyZone');
+  if (nameEl) nameEl.value = saved.name || '';
+  if (zoneEl) zoneEl.value = saved.zone || '';
+  modal.classList.add('active');
+  document.body.style.overflow = 'hidden';
+  setTimeout(() => nameEl?.focus(), 50);
+}
+
+function cerrarCompraWhatsApp() {
+  const modal = document.getElementById('waBuyModal');
+  if (modal) modal.classList.remove('active');
+  document.body.style.overflow = '';
+  _waBuyProduct = null;
+}
+
+function enviarCompraWhatsApp(e) {
+  if (e) e.preventDefault();
+  if (!_waBuyProduct) return;
+  const qty = Math.max(1, parseInt(document.getElementById('waBuyQty')?.value, 10) || 1);
+  const name = (document.getElementById('waBuyName')?.value || '').trim();
+  const zone = (document.getElementById('waBuyZone')?.value || '').trim();
+  if (!name || !zone) {
+    showToast('Completá tu nombre y tu zona para continuar', 'error');
+    return;
+  }
+  // Guardar para la próxima compra.
+  try { localStorage.setItem('nycBuyerInfo', JSON.stringify({ name, zone })); } catch (_) {}
+
+  const p = _waBuyProduct;
+  const subtotal = Number(p.price) * qty;
+  let msg = `¡Hola NYC Designs! 💗 Quiero comprar:\n\n`;
+  msg += `🛍️ *${p.name}*\n`;
+  msg += `💵 $${Number(p.price).toLocaleString('es-AR')}\n`;
+  msg += `🔢 Cantidad: ${qty}\n`;
+  if (qty > 1) msg += `💰 Subtotal: $${subtotal.toLocaleString('es-AR')}\n`;
+  msg += `\nMis datos:\n`;
+  msg += `👤 ${name}\n`;
+  msg += `📍 ${zone}\n`;
+  msg += `\n(pedido desde la web)`;
+
+  const url = `https://wa.me/${CONFIG.WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`;
+  window.open(url, '_blank');
+  if (typeof trackEvent === 'function') trackEvent('whatsapp_buy', { product: p.name, qty });
+  cerrarCompraWhatsApp();
+  showToast('¡Listo! Se abrió WhatsApp para cerrar tu compra 💬');
+}
+
+// Finalizar el carrito completo por WhatsApp (reemplaza a MercadoPago en modo 'whatsapp').
+function finalizarPorWhatsApp() {
+  if (!cart.length) {
+    showToast('Tu carrito está vacío', 'error');
+    return;
+  }
+  const name = (document.getElementById('mpName')?.value || '').trim();
+  const phone = (document.getElementById('mpPhone')?.value || '').trim();
+  if (!name) {
+    showToast('Completá tu nombre para continuar', 'error');
+    return;
+  }
+
+  const shippingType = document.querySelector('input[name="shipping"]:checked')?.value || 'pickup';
+  const { total } = calculateCartTotal();
+
+  // Agrupar por producto para no repetir líneas.
+  const grouped = {};
+  cart.forEach(item => {
+    const key = `${item.id}|${item.name}`;
+    if (!grouped[key]) grouped[key] = { name: item.name, price: Number(item.price) || 0, qty: 0 };
+    grouped[key].qty += 1;
+  });
+
+  let msg = `¡Hola NYC Designs! 💗 Quiero comprar estos productos:\n\n`;
+  Object.values(grouped).forEach(g => {
+    msg += `• ${g.name} — $${g.price.toLocaleString('es-AR')} x${g.qty}\n`;
+  });
+  msg += `\n💰 Total aprox: $${Number(total).toLocaleString('es-AR')}\n`;
+  msg += `\n📦 Entrega: ${shippingType === 'delivery' ? 'Envío a domicilio' : 'Retiro en Acassuso 5268, CABA'}\n`;
+  if (shippingType === 'delivery') {
+    const street = (document.getElementById('addressStreet')?.value || '').trim();
+    const number = (document.getElementById('addressNumber')?.value || '').trim();
+    const city = (document.getElementById('addressCity')?.value || '').trim();
+    const cp = (document.getElementById('postalCode')?.value || '').trim();
+    if (street) msg += `📍 ${street} ${number}, ${city}${cp ? ` (CP ${cp})` : ''}\n`;
+  }
+  msg += `\nMis datos:\n👤 ${name}\n`;
+  if (phone) msg += `📱 ${phone}\n`;
+  msg += `\n(pedido desde la web)`;
+
+  const url = `https://wa.me/${CONFIG.WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`;
+  window.open(url, '_blank');
+  if (typeof trackEvent === 'function') trackEvent('whatsapp_cart_checkout', { total });
+  showToast('¡Listo! Se abrió WhatsApp para cerrar tu pedido 💬');
+}
+
+// Ajusta la UI del carrito + textos según el modo de venta activo.
+function aplicarModoVenta() {
+  if (!esModoWhatsApp()) return; // en modo mercadopago la UI queda como está
+
+  // 1) Botón de finalizar: "Enviar pedido por WhatsApp"
+  const mpBtn = document.getElementById('mpOpenBtn');
+  if (mpBtn) {
+    mpBtn.innerHTML = '💬 Enviar pedido por WhatsApp';
+    mpBtn.classList.add('btn-whatsapp');
+  }
+
+  // 2) Nota del carrito
+  const cartNote = document.querySelector('.cart-note span');
+  if (cartNote) cartNote.textContent = 'Coordinás y cerrás la compra directo con Sol por WhatsApp 💬';
+
+  // 3) DNI y email no hacen falta para WhatsApp → los ocultamos.
+  const dni = document.getElementById('mpDni');
+  const email = document.getElementById('mpEmail');
+  if (dni) { dni.style.display = 'none'; dni.removeAttribute('required'); }
+  if (email) { email.style.display = 'none'; email.removeAttribute('required'); }
+  const phone = document.getElementById('mpPhone');
+  if (phone) phone.style.flex = '1'; // ocupa la fila ahora que el DNI no está
+
+  // 4) Medios de pago inferiores → mensaje WhatsApp
+  const payMethods = document.querySelector('.payment-methods');
+  if (payMethods) payMethods.innerHTML = '<span>💬 Coordinás con Sol por WhatsApp</span>';
+
+  // 5) Modal de producto: mostrar "Comprar por WhatsApp" como acción principal
+  //    y dejar "Agregar al carrito" como secundaria.
+  const modalBuy = document.getElementById('modalBuyWhatsApp');
+  const modalAdd = document.getElementById('modalAddToCart');
+  if (modalBuy) modalBuy.style.display = '';
+  if (modalAdd) { modalAdd.classList.remove('primary'); modalAdd.classList.add('btn-outline'); }
+
+  // 6) Chatbot: las respuestas sobre pagos ahora apuntan a WhatsApp.
+  if (typeof botKnowledge === 'object' && botKnowledge) {
+    const waPago = `💬 Por ahora coordinamos y cerramos la compra directo por WhatsApp con Sol. Elegí tu producto, tocá "Comprar por WhatsApp" y completá tus datos. También podés escribirnos: wa.me/${CONFIG.WHATSAPP_NUMBER}`;
+    ['pago', 'pagos', 'transferencia', 'mercadopago', 'medios de pago', 'como pago'].forEach(k => {
+      if (k in botKnowledge) botKnowledge[k] = waPago;
+    });
+    const waComprar = '🛒 Para comprar:\n\n1. Elegí tu producto\n2. Tocá "💬 Comprar por WhatsApp"\n3. Completá tu nombre y tu zona\n4. ¡Coordinás con Sol y listo!';
+    if ('comprar' in botKnowledge) botKnowledge['comprar'] = waComprar;
+    if ('como compro' in botKnowledge) botKnowledge['como compro'] = waComprar;
+  }
 }
 
 // ========== PRODUCT MODAL ==========
@@ -1423,9 +1616,30 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (mpBtn) {
     mpBtn.addEventListener('click', (e) => {
       e.preventDefault();
-      processPayment();
+      if (esModoWhatsApp()) {
+        finalizarPorWhatsApp();
+      } else {
+        processPayment();
+      }
     });
   }
+
+  // Ajustar textos/campos del carrito según el modo de venta activo.
+  aplicarModoVenta();
+
+  // Mini-form de compra por WhatsApp (modal)
+  document.getElementById('waBuyForm')?.addEventListener('submit', enviarCompraWhatsApp);
+  document.getElementById('waBuyClose')?.addEventListener('click', cerrarCompraWhatsApp);
+  document.getElementById('waBuyOverlay')?.addEventListener('click', cerrarCompraWhatsApp);
+
+  // Botón "Comprar por WhatsApp" dentro del modal de producto
+  document.getElementById('modalBuyWhatsApp')?.addEventListener('click', function(e) {
+    e.preventDefault();
+    if (currentModalProduct) {
+      closeProductModal();
+      abrirCompraWhatsApp(currentModalProduct);
+    }
+  });
 
   // ========== PRODUCT MODAL EVENT LISTENERS ==========
   const closeModalBtn = document.getElementById('closeProductModal');
