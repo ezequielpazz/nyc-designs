@@ -50,7 +50,7 @@ function debounce(fn, delay) {
 // ========== CONFIGURACIÓN ==========
 // ⚠️ CAMBIAR ESTOS VALORES POR LOS REALES
 const CONFIG = {
-  WHATSAPP_NUMBER: '5491123199122',  // ← Tu número de WhatsApp
+  WHATSAPP_NUMBER: '5491160490630',  // ← Tu número de WhatsApp
   INSTAGRAM_USER: 'newyorkcitydesigns',  // ← Tu usuario de Instagram
   EMAIL: 'newyorkcitydesigns4@gmail.com',  // ← Tu email
   STORE_NAME: 'NYC Designs'
@@ -2428,7 +2428,7 @@ async function showDigitalDeliveryIfAny(paymentId) {
   const allLinks = virtualItems.map(i => `• ${i.title}\n${i.download_url}`).join('\n\n');
   const waMessage = encodeURIComponent(`Hola NYC Designs! Acabo de comprar y este es mi pedido digital:\n\n${allLinks}`);
   actionsEl.innerHTML = `
-    <a href="https://wa.me/5491123199122?text=${waMessage}" target="_blank" rel="noopener noreferrer"
+    <a href="https://wa.me/5491160490630?text=${waMessage}" target="_blank" rel="noopener noreferrer"
        class="btn primary" style="background:#25D366;border-color:#25D366;">
       💬 Recibir por WhatsApp
     </a>

@@ -25,7 +25,7 @@ const EPICK_CONFIG = {
   SENDER: {
     name: process.env.EPICK_SENDER_NAME || 'NYC Designs',
     email: process.env.EPICK_SENDER_EMAIL || 'newyorkcitydesigns4@gmail.com',
-    phone: process.env.EPICK_SENDER_PHONE || '5491123199122',
+    phone: process.env.EPICK_SENDER_PHONE || '5491160490630',
     street: process.env.EPICK_SENDER_STREET || 'Acassuso',
     number: process.env.EPICK_SENDER_NUMBER || '5268',
     city: process.env.EPICK_SENDER_CITY || 'CABA',
