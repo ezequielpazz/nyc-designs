@@ -132,6 +132,10 @@ async function sendResendEmail({ to, subject, html, text }) {
     return { sent: false, reason: 'no_api_key' };
   }
   const from = process.env.ORDER_NOTIFY_FROM || NOTIFY_FROM_DEFAULT;
+  // pedidos@nycdesigns.com.ar is a send-only identity (no inbox). Replies
+  // must land somewhere real — Sol's Gmail — or customers hitting "Reply"
+  // would bounce.
+  const replyTo = process.env.ORDER_REPLY_TO || NOTIFY_TO_DEFAULT;
   try {
     const resp = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -139,7 +143,7 @@ async function sendResendEmail({ to, subject, html, text }) {
         Authorization: `Bearer ${key}`,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ from, to: Array.isArray(to) ? to : [to], subject, html, text })
+      body: JSON.stringify({ from, to: Array.isArray(to) ? to : [to], reply_to: replyTo, subject, html, text })
     });
     if (!resp.ok) {
       const body = await resp.text();
