@@ -33,65 +33,140 @@ function fmtAr(n) {
   return v.toLocaleString('es-AR');
 }
 
+// ---------- Comprobante (receipt) shared pieces ----------
+
+const LOGO_URL = 'https://nycdesigns.com.ar/assets/img/logo.jpg';
+
+/** Branded header band: logo + store name + document label. */
+function receiptHeader(label) {
+  return `
+  <div style="background:#F6D6D8;padding:26px 24px 20px;text-align:center;">
+    <img src="${LOGO_URL}" alt="NYC Designs" width="64" height="64" style="border-radius:50%;border:3px solid #ffffff;display:inline-block;">
+    <div style="font-size:20px;font-weight:bold;color:#2B2B2B;margin-top:10px;">New York City Designs</div>
+    <div style="font-size:11px;letter-spacing:3px;color:#B8777F;font-weight:700;margin-top:4px;">${label}</div>
+  </div>`;
+}
+
+/** Meta strip: order number, date, MP operation id. */
+function receiptMeta(order) {
+  const nro = String(order.payment_id || (order.id || '').split('_').pop() || '');
+  const fecha = new Date().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  const hora = new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+  return `
+  <table style="width:100%;border-collapse:collapse;background:#ffffff;">
+    <tr>
+      <td style="padding:14px 24px;border-bottom:2px solid #F6D6D8;font-size:12px;color:#8A6F6A;">
+        PEDIDO<br><strong style="font-size:14px;color:#2B2B2B;">#${escapeHtml(nro)}</strong>
+      </td>
+      <td style="padding:14px 24px;border-bottom:2px solid #F6D6D8;font-size:12px;color:#8A6F6A;text-align:center;">
+        FECHA<br><strong style="font-size:14px;color:#2B2B2B;">${fecha} ${hora}</strong>
+      </td>
+      <td style="padding:14px 24px;border-bottom:2px solid #F6D6D8;font-size:12px;color:#8A6F6A;text-align:right;">
+        PAGO<br><strong style="font-size:14px;color:#2B2B2B;">MercadoPago</strong>
+      </td>
+    </tr>
+  </table>`;
+}
+
+/** Items table with per-line subtotal + big rose total. */
+function receiptItems(order) {
+  const items = Array.isArray(order.items) ? order.items : [];
+  const rows = items.map(i => {
+    const qty = Number(i.quantity || 1);
+    const unit = Number(i.unit_price || 0);
+    return `
+    <tr>
+      <td style="padding:10px 12px;border-bottom:1px solid #F6D6D8;font-size:13px;">${escapeHtml(i.title || 'Producto')}${i.kind === 'virtual' ? ' <span style="color:#B8777F;font-size:11px;">(digital)</span>' : ''}</td>
+      <td style="padding:10px 8px;border-bottom:1px solid #F6D6D8;text-align:center;font-size:13px;">${qty}</td>
+      <td style="padding:10px 12px;border-bottom:1px solid #F6D6D8;text-align:right;font-size:13px;">$${fmtAr(unit)}</td>
+      <td style="padding:10px 12px;border-bottom:1px solid #F6D6D8;text-align:right;font-size:13px;"><strong>$${fmtAr(unit * qty)}</strong></td>
+    </tr>`;
+  }).join('');
+
+  return `
+  <table style="width:100%;border-collapse:collapse;margin:0;background:#ffffff;">
+    <thead>
+      <tr>
+        <th style="padding:10px 12px;text-align:left;font-size:11px;letter-spacing:1px;color:#B8777F;border-bottom:2px solid #F6D6D8;">PRODUCTO</th>
+        <th style="padding:10px 8px;text-align:center;font-size:11px;letter-spacing:1px;color:#B8777F;border-bottom:2px solid #F6D6D8;">CANT.</th>
+        <th style="padding:10px 12px;text-align:right;font-size:11px;letter-spacing:1px;color:#B8777F;border-bottom:2px solid #F6D6D8;">PRECIO</th>
+        <th style="padding:10px 12px;text-align:right;font-size:11px;letter-spacing:1px;color:#B8777F;border-bottom:2px solid #F6D6D8;">SUBTOTAL</th>
+      </tr>
+    </thead>
+    <tbody>${rows || `<tr><td colspan="4" style="padding:12px;text-align:center;color:#999;">Sin detalle de items</td></tr>`}</tbody>
+    <tfoot>
+      <tr>
+        <td colspan="3" style="padding:14px 12px;text-align:right;font-size:14px;color:#8A6F6A;">TOTAL</td>
+        <td style="padding:14px 12px;text-align:right;font-size:20px;color:#B8777F;"><strong>$${fmtAr(order.total)}</strong></td>
+      </tr>
+    </tfoot>
+  </table>`;
+}
+
+/** Footer with brand + contact. */
+function receiptFooter() {
+  return `
+  <div style="background:#F6D6D8;padding:14px 24px;text-align:center;font-size:11px;color:#8A6F6A;">
+    NYC Designs · Acassuso 5268, CABA · <a href="https://nycdesigns.com.ar" style="color:#B8777F;text-decoration:none;">nycdesigns.com.ar</a> · IG <a href="https://www.instagram.com/newyorkcitydesigns" style="color:#B8777F;text-decoration:none;">@newyorkcitydesigns</a>
+  </div>`;
+}
+
+function receiptWrap(inner) {
+  return `<!doctype html>
+<html><body style="margin:0;padding:0;background:#FAF7F5;">
+  <div style="padding:24px 12px;background:#FAF7F5;font-family:Arial,Helvetica,sans-serif;color:#2B2B2B;">
+    <div style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #F6D6D8;box-shadow:0 4px 20px rgba(184,119,127,0.12);">
+      ${inner}
+    </div>
+  </div>
+</body></html>`;
+}
+
+/** Email to SOL — branded sale receipt with full operational detail. */
 function buildHtml(order) {
   const customer = order.payer || {};
-  const items = Array.isArray(order.items) ? order.items : [];
   const addr = order.address || {};
   const shippingLabel = order.shipping_label
     || (order.shipping_type === 'delivery' ? 'Envío a domicilio (E-Pick)' : 'Retiro en Acassuso 5268, CABA');
 
-  const itemsRows = items.map(i => `
-    <tr>
-      <td style="padding:6px 12px;border-bottom:1px solid #eee;">${escapeHtml(i.title || 'Producto')}</td>
-      <td style="padding:6px 12px;border-bottom:1px solid #eee;text-align:center;">${i.quantity || 1}</td>
-      <td style="padding:6px 12px;border-bottom:1px solid #eee;text-align:right;">$${fmtAr(i.unit_price)}</td>
-    </tr>`).join('');
-
   const fullStreet = [addr.street, addr.number].filter(Boolean).join(' ');
   const addrBlock = order.shipping_type === 'delivery'
-    ? `<p style="margin:6px 0;"><strong>Dirección:</strong> ${escapeHtml(fullStreet)}${addr.extra ? ` (${escapeHtml(addr.extra)})` : ''}, ${escapeHtml(addr.city || '')}, ${escapeHtml(addr.province || '')}${order.postal_code ? ` — CP ${escapeHtml(order.postal_code)}` : ''}</p>
-       ${addr.notes ? `<p style="margin:6px 0;color:#666;"><em>📝 ${escapeHtml(addr.notes)}</em></p>` : ''}`
+    ? `<p style="margin:6px 0;font-size:13px;"><strong>Dirección:</strong> ${escapeHtml(fullStreet)}${addr.extra ? ` (${escapeHtml(addr.extra)})` : ''}, ${escapeHtml(addr.city || '')}, ${escapeHtml(addr.province || '')}${order.postal_code ? ` — CP ${escapeHtml(order.postal_code)}` : ''}</p>
+       ${addr.notes ? `<p style="margin:6px 0;color:#8A6F6A;font-size:13px;"><em>📝 ${escapeHtml(addr.notes)}</em></p>` : ''}`
     : '';
 
-  return `<!doctype html>
-<html><body style="font-family:Arial,Helvetica,sans-serif;color:#2B2B2B;max-width:600px;margin:0 auto;padding:20px;">
-  <h2 style="color:#B8777F;margin:0 0 8px;">¡Nuevo pedido!</h2>
-  <p style="margin:0 0 16px;color:#666;">Pedido <strong>${escapeHtml(order.id || '')}</strong> · ${new Date().toLocaleString('es-AR')}</p>
+  const waPhone = String(customer.phone || '').replace(/\D/g, '');
 
-  <div style="background:#FAF7F5;padding:16px;border-radius:8px;margin-bottom:16px;">
-    <h3 style="margin:0 0 8px;font-size:16px;">Cliente</h3>
-    <p style="margin:4px 0;"><strong>${escapeHtml(customer.name || 'Sin nombre')}</strong></p>
-    ${customer.dni ? `<p style="margin:4px 0;">DNI: ${escapeHtml(customer.dni)}</p>` : ''}
-    <p style="margin:4px 0;">${escapeHtml(customer.email || '')}</p>
-    ${customer.phone ? `<p style="margin:4px 0;">Tel: <a href="https://wa.me/${String(customer.phone).replace(/\D/g,'')}">${escapeHtml(customer.phone)}</a></p>` : ''}
-  </div>
+  return receiptWrap(`
+    ${receiptHeader('COMPROBANTE DE VENTA')}
+    ${receiptMeta(order)}
 
-  <h3 style="margin:0 0 8px;font-size:16px;">Productos</h3>
-  <table style="width:100%;border-collapse:collapse;margin-bottom:16px;">
-    <thead>
-      <tr style="background:#F6D6D8;">
-        <th style="padding:8px 12px;text-align:left;font-size:13px;">Producto</th>
-        <th style="padding:8px 12px;text-align:center;font-size:13px;">Cantidad</th>
-        <th style="padding:8px 12px;text-align:right;font-size:13px;">Precio unitario</th>
-      </tr>
-    </thead>
-    <tbody>${itemsRows || `<tr><td colspan="3" style="padding:12px;text-align:center;color:#999;">Sin detalle de items</td></tr>`}</tbody>
-  </table>
+    <div style="padding:18px 24px 6px;">
+      <div style="font-size:11px;letter-spacing:2px;color:#B8777F;font-weight:700;margin-bottom:8px;">CLIENTE</div>
+      <p style="margin:3px 0;font-size:14px;"><strong>${escapeHtml(customer.name || 'Sin nombre')}</strong></p>
+      ${customer.dni ? `<p style="margin:3px 0;font-size:13px;color:#555;">DNI: ${escapeHtml(customer.dni)}</p>` : ''}
+      ${customer.email ? `<p style="margin:3px 0;font-size:13px;color:#555;">${escapeHtml(customer.email)}</p>` : ''}
+      ${customer.phone ? `<p style="margin:3px 0;font-size:13px;">📱 <a href="https://wa.me/${waPhone}" style="color:#B8777F;">${escapeHtml(customer.phone)}</a> (tocar para abrir WhatsApp)</p>` : ''}
+    </div>
 
-  <p style="margin:8px 0;font-size:18px;"><strong>Total: $${fmtAr(order.total)}</strong></p>
+    <div style="padding:12px 24px 0;">
+      <div style="font-size:11px;letter-spacing:2px;color:#B8777F;font-weight:700;margin-bottom:4px;">DETALLE</div>
+    </div>
+    <div style="padding:0 24px;">${receiptItems(order)}</div>
 
-  <div style="background:#FAF7F5;padding:16px;border-radius:8px;margin-top:16px;">
-    <h3 style="margin:0 0 8px;font-size:16px;">Entrega</h3>
-    <p style="margin:6px 0;"><strong>Modalidad:</strong> ${escapeHtml(shippingLabel)}</p>
-    ${addrBlock}
-    ${order.tracking_code ? `<p style="margin:6px 0;"><strong>Seguimiento E-Pick:</strong> ${escapeHtml(order.tracking_code)}</p>` : ''}
-  </div>
+    <div style="margin:16px 24px;background:#FAF7F5;border-radius:10px;padding:14px 16px;">
+      <div style="font-size:11px;letter-spacing:2px;color:#B8777F;font-weight:700;margin-bottom:6px;">ENTREGA</div>
+      <p style="margin:4px 0;font-size:13px;"><strong>${escapeHtml(shippingLabel)}</strong></p>
+      ${addrBlock}
+      ${order.tracking_code ? `<p style="margin:6px 0;font-size:13px;"><strong>Seguimiento E-Pick:</strong> <span style="font-family:monospace;">${escapeHtml(order.tracking_code)}</span></p>` : ''}
+    </div>
 
-  <p style="margin-top:24px;font-size:12px;color:#999;">
-    Mirá el pedido completo en
-    <a href="https://nycdesigns.com.ar/admin/" style="color:#B8777F;">el panel admin</a>.
-  </p>
-</body></html>`;
+    <p style="text-align:center;margin:8px 0 20px;">
+      <a href="https://nycdesigns.com.ar/admin/" style="display:inline-block;background:#B8777F;color:#ffffff;text-decoration:none;padding:11px 26px;border-radius:999px;font-weight:600;font-size:14px;">Ver en el panel admin</a>
+    </p>
+
+    ${receiptFooter()}
+  `);
 }
 
 function buildText(order) {
@@ -187,87 +262,73 @@ function buildCustomerHtml(order) {
         : order.shipping_type === 'delivery' ? 'Envío a domicilio (E-Pick)'
         : 'Retiro en Acassuso 5268, CABA');
 
-  const itemsRows = items.map(i => `
-    <tr>
-      <td style="padding:6px 12px;border-bottom:1px solid #eee;">${escapeHtml(i.title || 'Producto')}${i.kind === 'virtual' ? ' <em style="color:#B8777F;font-size:11px;">(digital)</em>' : ''}</td>
-      <td style="padding:6px 12px;border-bottom:1px solid #eee;text-align:center;">${i.quantity || 1}</td>
-      <td style="padding:6px 12px;border-bottom:1px solid #eee;text-align:right;">$${fmtAr(i.unit_price)}</td>
-    </tr>`).join('');
-
   // Build "Tu descarga" section if any virtual items exist with a download URL
   const virtualItems = items.filter(i => i.kind === 'virtual' && i.download_url);
   const digitalBlock = virtualItems.length > 0
-    ? `<div style="background:#fff3f4;border:2px solid #B8777F;border-radius:12px;padding:20px;margin:16px 0;">
-        <h3 style="margin:0 0 12px;color:#B8777F;font-size:18px;">🪄 Tu descarga</h3>
+    ? `<div style="margin:16px 24px;background:#fff3f4;border:2px solid #B8777F;border-radius:12px;padding:18px 20px;">
+        <div style="font-size:11px;letter-spacing:2px;color:#B8777F;font-weight:700;margin-bottom:10px;">🪄 TU DESCARGA</div>
         ${virtualItems.map(i => `
           <p style="margin:8px 0;">
-            <strong>${escapeHtml(i.title)}</strong><br>
-            <a href="${escapeHtml(i.download_url)}" style="display:inline-block;background:#B8777F;color:white;text-decoration:none;padding:10px 20px;border-radius:999px;margin-top:6px;font-weight:600;">⬇ Descargar / Abrir</a>
+            <strong style="font-size:14px;">${escapeHtml(i.title)}</strong><br>
+            <a href="${escapeHtml(i.download_url)}" style="display:inline-block;background:#B8777F;color:#ffffff;text-decoration:none;padding:10px 22px;border-radius:999px;margin-top:8px;font-weight:600;font-size:13px;">⬇ Descargar / Abrir</a>
           </p>`).join('')}
-        <p style="margin:12px 0 0;font-size:13px;color:#666;">Si el link no abre, copiá y pegá la URL en tu navegador.</p>
+        <p style="margin:12px 0 0;font-size:12px;color:#8A6F6A;">Si el botón no abre, copiá y pegá el link en tu navegador. Guardá este mail: tu descarga queda siempre acá.</p>
       </div>`
     : '';
 
   // WhatsApp deep-link with prefilled message — works on any device
   const orderShort = (order.id || '').split('_').pop()?.substring(0, 10).toUpperCase();
   const waText = encodeURIComponent(`Hola! Acabo de comprar el pedido ${orderShort} y quería confirmar la recepción.${virtualItems.length ? ' (Producto digital)' : ''}`);
-  const waBlock = `<p style="margin:16px 0;text-align:center;">
-    <a href="https://wa.me/5491160490630?text=${waText}" style="display:inline-block;background:#25D366;color:white;text-decoration:none;padding:12px 28px;border-radius:999px;font-weight:600;">💬 Escribir por WhatsApp</a>
+  const waBlock = `<p style="margin:6px 0 20px;text-align:center;">
+    <a href="https://wa.me/5491160490630?text=${waText}" style="display:inline-block;background:#25D366;color:#ffffff;text-decoration:none;padding:12px 28px;border-radius:999px;font-weight:600;font-size:14px;">💬 Escribir por WhatsApp</a><br>
+    <span style="font-size:12px;color:#8A6F6A;">o respondé este mail y te contestamos</span>
   </p>`;
 
   const fullStreet = [addr.street, addr.number].filter(Boolean).join(' ');
   let addrBlock;
   if (isDigital) {
-    addrBlock = `<p style="margin:6px 0;">Producto digital — todo lo importante está arriba 👆 o consultanos por WhatsApp.</p>`;
+    addrBlock = `<p style="margin:4px 0;font-size:13px;">Producto digital — tu link de descarga está arriba 👆</p>`;
   } else if (order.shipping_type === 'delivery') {
-    addrBlock = `<p style="margin:6px 0;"><strong>Dirección de envío:</strong> ${escapeHtml(fullStreet)}${addr.extra ? ` (${escapeHtml(addr.extra)})` : ''}, ${escapeHtml(addr.city || '')}, ${escapeHtml(addr.province || '')}${order.postal_code ? ` — CP ${escapeHtml(order.postal_code)}` : ''}</p>`;
+    addrBlock = `<p style="margin:4px 0;font-size:13px;"><strong>Dirección de envío:</strong> ${escapeHtml(fullStreet)}${addr.extra ? ` (${escapeHtml(addr.extra)})` : ''}, ${escapeHtml(addr.city || '')}, ${escapeHtml(addr.province || '')}${order.postal_code ? ` — CP ${escapeHtml(order.postal_code)}` : ''}</p>`;
   } else {
-    addrBlock = `<p style="margin:6px 0;">Coordinamos retiro por WhatsApp en Acassuso 5268, CABA.</p>`;
+    addrBlock = `<p style="margin:4px 0;font-size:13px;">Coordinamos el retiro por WhatsApp — Acassuso 5268, CABA.</p>`;
   }
 
   const trackingBlock = !isDigital && order.tracking_code
-    ? `<p style="margin:6px 0;"><strong>Código de seguimiento:</strong> ${escapeHtml(order.tracking_code)}<br>
+    ? `<p style="margin:6px 0;font-size:13px;"><strong>Seguimiento:</strong> <span style="font-family:monospace;">${escapeHtml(order.tracking_code)}</span><br>
        <a href="https://www.e-pick.com.ar/tracking?code=${encodeURIComponent(order.tracking_code)}" style="color:#B8777F;">Ver estado del envío →</a></p>`
     : (!isDigital && order.shipping_type === 'delivery'
-        ? `<p style="margin:6px 0;color:#666;">Te vamos a mandar el código de seguimiento por email cuando se despache.</p>`
+        ? `<p style="margin:6px 0;color:#8A6F6A;font-size:12px;">Te mandamos el código de seguimiento por email cuando se despache.</p>`
         : '');
 
-  return `<!doctype html>
-<html><body style="font-family:Arial,Helvetica,sans-serif;color:#2B2B2B;max-width:600px;margin:0 auto;padding:20px;">
-  <h2 style="color:#B8777F;margin:0 0 8px;">¡Gracias por tu compra, ${escapeHtml(customer.name?.split(' ')[0] || '')}!</h2>
-  <p style="margin:0 0 16px;color:#666;">Confirmamos tu pedido <strong>${escapeHtml(order.id || '')}</strong>.</p>
+  return receiptWrap(`
+    ${receiptHeader('COMPROBANTE DE COMPRA')}
+    ${receiptMeta(order)}
 
-  ${digitalBlock}
+    <div style="padding:20px 24px 4px;text-align:center;">
+      <h2 style="color:#B8777F;margin:0 0 4px;font-size:20px;">¡Gracias por tu compra${customer.name ? ', ' + escapeHtml(customer.name.split(' ')[0]) : ''}! 💗</h2>
+      <p style="margin:0;color:#8A6F6A;font-size:13px;">Tu pago fue aprobado y tu pedido quedó confirmado.</p>
+    </div>
 
-  <h3 style="margin:16px 0 8px;font-size:16px;">Tu pedido</h3>
-  <table style="width:100%;border-collapse:collapse;margin-bottom:16px;">
-    <thead>
-      <tr style="background:#F6D6D8;">
-        <th style="padding:8px 12px;text-align:left;font-size:13px;">Producto</th>
-        <th style="padding:8px 12px;text-align:center;font-size:13px;">Cant.</th>
-        <th style="padding:8px 12px;text-align:right;font-size:13px;">Precio</th>
-      </tr>
-    </thead>
-    <tbody>${itemsRows}</tbody>
-  </table>
+    ${digitalBlock}
 
-  <p style="margin:8px 0;font-size:18px;"><strong>Total: $${fmtAr(order.total)}</strong></p>
+    <div style="padding:8px 24px 0;">
+      <div style="font-size:11px;letter-spacing:2px;color:#B8777F;font-weight:700;margin-bottom:4px;">TU PEDIDO</div>
+    </div>
+    <div style="padding:0 24px;">${receiptItems(order)}</div>
 
-  <div style="background:#FAF7F5;padding:16px;border-radius:8px;margin-top:16px;">
-    <h3 style="margin:0 0 8px;font-size:16px;">Entrega</h3>
-    <p style="margin:6px 0;"><strong>Modalidad:</strong> ${escapeHtml(shippingLabel)}</p>
-    ${addrBlock}
-    ${trackingBlock}
-    ${isDigital ? '' : '<p style="margin:6px 0;color:#666;font-size:13px;">Producción estimada según el producto.</p>'}
-  </div>
+    <div style="margin:16px 24px;background:#FAF7F5;border-radius:10px;padding:14px 16px;">
+      <div style="font-size:11px;letter-spacing:2px;color:#B8777F;font-weight:700;margin-bottom:6px;">ENTREGA</div>
+      <p style="margin:4px 0;font-size:13px;"><strong>${escapeHtml(shippingLabel)}</strong></p>
+      ${addrBlock}
+      ${trackingBlock}
+      ${isDigital ? '' : '<p style="margin:6px 0;color:#8A6F6A;font-size:12px;">Producción estimada: 3-7 días hábiles según el producto.</p>'}
+    </div>
 
-  ${waBlock}
+    ${waBlock}
 
-  <p style="margin-top:8px;font-size:13px;color:#666;text-align:center;">
-    O respondé este mail si preferís.
-  </p>
-  <p style="margin-top:24px;font-size:11px;color:#999;">— NYC Designs · Acassuso 5268, CABA · <a href="https://nycdesigns.com.ar" style="color:#999;">nycdesigns.com.ar</a></p>
-</body></html>`;
+    ${receiptFooter()}
+  `);
 }
 
 function buildCustomerText(order) {

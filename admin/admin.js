@@ -1316,7 +1316,9 @@ async function loadOrders(filter = 'todos') {
                 const itemsHtml = items.map(item =>
                     `<div class="order-item-line">${escapeHtml(item.title || 'Producto')} x${item.quantity || 1} — $${(item.unit_price || 0).toLocaleString('es-AR')}</div>`
                 ).join('');
-                const orderNumber = `#${order.id.slice(0, 8).toUpperCase()}`;
+                // Mismo número que figura en los comprobantes por email:
+                // el payment_id de MercadoPago (order.id viene como "order_<paymentId>").
+                const orderNumber = `#${String(order.payment_id || order.id || '').replace(/^order_/, '')}`;
                 const whatsappMsg = encodeURIComponent(`Hola ${customer.name || ''}, tu pedido ${orderNumber} de NYC Designs está siendo procesado. ¿Tenés alguna consulta?`);
                 const trackingCode = order.tracking_code || '';
                 const customerDni = escapeHtml(customer.dni || '');

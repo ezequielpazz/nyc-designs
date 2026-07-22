@@ -224,6 +224,157 @@ async function saveOrderToFirestore(orderData) {
   return { name: `projects/${FIREBASE_PROJECT}/databases/(default)/documents/${ref.path}` };
 }
 
+/**
+ * Idempotency: has this payment already produced an order?
+ * Used by both the webhook (MP retries deliveries) and the daily
+ * reconciliation cron (so it never double-processes).
+ */
+async function orderExistsForPayment(paymentId) {
+  if (!paymentId) return false;
+  try {
+    const snap = await getDb().collection('pedidos')
+      .where('payment_id', '==', String(paymentId))
+      .limit(1)
+      .get();
+    return !snap.empty;
+  } catch (err) {
+    console.error('orderExistsForPayment failed:', err.message);
+    return false; // prefer a rare duplicate over silently dropping a sale
+  }
+}
+
+/**
+ * Full post-payment pipeline for an APPROVED MercadoPago payment:
+ * enrich items → save order → decrement stock → E-Pick shipment → emails.
+ *
+ * Shared by the webhook handler and /api/cron/reconcile-payments so a sale
+ * can never be lost: if the webhook missed it, the cron recovers it with
+ * exactly the same logic.
+ *
+ * Returns { skipped } when an order already exists for this payment.
+ */
+async function processApprovedPayment(paymentData) {
+  const paymentId = paymentData.id;
+
+  if (await orderExistsForPayment(paymentId)) {
+    return { skipped: true, reason: 'order_exists', payment_id: paymentId };
+  }
+
+  // external_reference is JSON-encoded from front: { timestamp, shipping_type, postal_code, address }
+  let extra = {};
+  try {
+    if (paymentData.external_reference) {
+      extra = JSON.parse(paymentData.external_reference);
+    }
+  } catch (_) {
+    extra = {};
+  }
+
+  // Enrich each item with its delivery kind (virtual/fisico) + download URL
+  // by reading Firestore. If the cart is 100% virtual we mark the order
+  // as 'digital' and skip E-Pick entirely.
+  const rawItems = paymentData.additional_info?.items || [];
+  const enrichedItems = await Promise.all(rawItems.map(async (item) => {
+    const meta = await getProductMeta(item.id || '');
+    return {
+      title: item.title,
+      quantity: Number(item.quantity),
+      unit_price: Number(item.unit_price),
+      product_id: item.id || '',
+      kind: meta.kind,
+      download_url: meta.downloadUrl
+    };
+  }));
+
+  const allVirtual = enrichedItems.length > 0
+    && enrichedItems.every(i => i.kind === 'virtual');
+
+  let shippingType = extra.shipping_type === 'delivery' ? 'delivery' : 'pickup';
+  let shippingLabel;
+  if (allVirtual) {
+    shippingType = 'digital';
+    shippingLabel = 'Producto digital — entrega por link / WhatsApp';
+  } else {
+    shippingLabel = shippingType === 'delivery'
+      ? 'Envío a domicilio (E-Pick)'
+      : 'Retiro en Acassuso 5268, CABA';
+  }
+
+  // Prefer the data the customer typed in the checkout form (carried in
+  // extra.customer) over what MercadoPago auto-fills, because MP may
+  // strip names / sanitize phones.
+  const frontCustomer = extra.customer || {};
+
+  const orderData = {
+    id: `order_${paymentId}`,
+    payment_id: paymentId,
+    status: 'approved',
+    total: paymentData.transaction_amount,
+    payer: {
+      email: frontCustomer.email || paymentData.payer?.email || '',
+      name: frontCustomer.name
+        || `${paymentData.payer?.first_name || ''} ${paymentData.payer?.last_name || ''}`.trim(),
+      phone: frontCustomer.phone || paymentData.payer?.phone?.number || '',
+      dni: frontCustomer.dni || paymentData.payer?.identification?.number || ''
+    },
+    items: enrichedItems,
+    shipping_type: shippingType,
+    shipping_label: shippingLabel,
+    postal_code: extra.postal_code || '',
+    address: extra.address || null,
+    packages: Array.isArray(extra.packages) ? extra.packages : null,
+    external_reference: paymentData.external_reference || ''
+  };
+
+  const saved = await saveOrderToFirestore(orderData);
+
+  // Decrement stock for purchased items
+  for (const item of orderData.items) {
+    if (item.product_id) {
+      await decrementStock(item.product_id, item.quantity);
+    }
+  }
+
+  // Auto-create the E-Pick shipment for delivery orders so the admin
+  // already sees a tracking code. Idempotent: if a previous webhook
+  // delivery already created the shipment for this payment_id we just
+  // reuse the existing tracking code. Skip entirely for digital orders.
+  let trackingCode = null;
+  if (shippingType === 'delivery' && !allVirtual) {
+    try {
+      const existing = await existingShipmentForPayment(orderData.payment_id);
+      const ship = existing && existing.tracking_code
+        ? existing
+        : await createEpickShipment(orderData);
+      if (ship?.tracking_code && saved?.name) {
+        await updateOrderTracking(saved.name, ship.tracking_code, ship.label_url);
+        trackingCode = ship.tracking_code;
+      }
+    } catch (shipErr) {
+      console.error('E-Pick shipment skipped:', shipErr.message);
+    }
+  }
+
+  // Fire-and-forget emails:
+  //   - Sol (shop owner) gets the operational summary
+  //   - Customer gets a friendly confirmation + tracking link
+  // Both share the same Resend key (env: RESEND_API_KEY). Failures are
+  // logged but never block the caller.
+  const orderForEmail = { ...orderData, tracking_code: trackingCode };
+  try {
+    await notifyOrderEmail(orderForEmail);
+  } catch (mailErr) {
+    console.error('shop notification email failed:', mailErr.message);
+  }
+  try {
+    await notifyCustomerEmail(orderForEmail);
+  } catch (mailErr) {
+    console.error('customer confirmation email failed:', mailErr.message);
+  }
+
+  return { skipped: false, order_id: orderData.id, payment_id: paymentId, tracking_code: trackingCode };
+}
+
 // Validate MercadoPago webhook signature.
 // In production the secret MUST be configured — otherwise every webhook is
 // rejected so nobody can forge approved orders and drain stock.
@@ -295,117 +446,7 @@ module.exports = async (req, res) => {
       const paymentData = await payment.get({ id: data.id });
 
       if (paymentData.status === 'approved') {
-        // external_reference is JSON-encoded from front: { timestamp, shipping_type, postal_code, address }
-        let extra = {};
-        try {
-          if (paymentData.external_reference) {
-            extra = JSON.parse(paymentData.external_reference);
-          }
-        } catch (_) {
-          extra = {};
-        }
-
-        // Enrich each item with its delivery kind (virtual/fisico) + download URL
-        // by reading Firestore. If the cart is 100% virtual we mark the order
-        // as 'digital' and skip E-Pick entirely.
-        const rawItems = paymentData.additional_info?.items || [];
-        const enrichedItems = await Promise.all(rawItems.map(async (item) => {
-          const meta = await getProductMeta(item.id || '');
-          return {
-            title: item.title,
-            quantity: Number(item.quantity),
-            unit_price: Number(item.unit_price),
-            product_id: item.id || '',
-            kind: meta.kind,
-            download_url: meta.downloadUrl
-          };
-        }));
-
-        const allVirtual = enrichedItems.length > 0
-          && enrichedItems.every(i => i.kind === 'virtual');
-
-        let shippingType = extra.shipping_type === 'delivery' ? 'delivery' : 'pickup';
-        let shippingLabel;
-        if (allVirtual) {
-          shippingType = 'digital';
-          shippingLabel = 'Producto digital — entrega por link / WhatsApp';
-        } else {
-          shippingLabel = shippingType === 'delivery'
-            ? 'Envío a domicilio (E-Pick)'
-            : 'Retiro en Acassuso 5268, CABA';
-        }
-
-        // Prefer the data the customer typed in the checkout form (carried in
-        // extra.customer) over what MercadoPago auto-fills, because MP may
-        // strip names / sanitize phones.
-        const frontCustomer = extra.customer || {};
-
-        const orderData = {
-          id: `order_${data.id}`,
-          payment_id: data.id,
-          status: 'approved',
-          total: paymentData.transaction_amount,
-          payer: {
-            email: frontCustomer.email || paymentData.payer?.email || '',
-            name: frontCustomer.name
-              || `${paymentData.payer?.first_name || ''} ${paymentData.payer?.last_name || ''}`.trim(),
-            phone: frontCustomer.phone || paymentData.payer?.phone?.number || '',
-            dni: frontCustomer.dni || paymentData.payer?.identification?.number || ''
-          },
-          items: enrichedItems,
-          shipping_type: shippingType,
-          shipping_label: shippingLabel,
-          postal_code: extra.postal_code || '',
-          address: extra.address || null,
-          packages: Array.isArray(extra.packages) ? extra.packages : null,
-          external_reference: paymentData.external_reference || ''
-        };
-
-        const saved = await saveOrderToFirestore(orderData);
-
-        // Decrement stock for purchased items
-        for (const item of orderData.items) {
-          if (item.product_id) {
-            await decrementStock(item.product_id, item.quantity);
-          }
-        }
-
-        // Auto-create the E-Pick shipment for delivery orders so the admin
-        // already sees a tracking code. Idempotent: if a previous webhook
-        // delivery already created the shipment for this payment_id we just
-        // reuse the existing tracking code. Skip entirely for digital orders.
-        let trackingCode = null;
-        if (shippingType === 'delivery' && !allVirtual) {
-          try {
-            const existing = await existingShipmentForPayment(orderData.payment_id);
-            const ship = existing && existing.tracking_code
-              ? existing
-              : await createEpickShipment(orderData);
-            if (ship?.tracking_code && saved?.name) {
-              await updateOrderTracking(saved.name, ship.tracking_code, ship.label_url);
-              trackingCode = ship.tracking_code;
-            }
-          } catch (shipErr) {
-            console.error('E-Pick shipment skipped:', shipErr.message);
-          }
-        }
-
-        // Fire-and-forget emails:
-        //   - Sol (shop owner) gets the operational summary
-        //   - Customer gets a friendly confirmation + tracking link
-        // Both share the same Resend key (env: RESEND_API_KEY). Failures are
-        // logged but never block the webhook response.
-        const orderForEmail = { ...orderData, tracking_code: trackingCode };
-        try {
-          await notifyOrderEmail(orderForEmail);
-        } catch (mailErr) {
-          console.error('shop notification email failed:', mailErr.message);
-        }
-        try {
-          await notifyCustomerEmail(orderForEmail);
-        } catch (mailErr) {
-          console.error('customer confirmation email failed:', mailErr.message);
-        }
+        await processApprovedPayment(paymentData);
       }
     }
 
@@ -417,3 +458,7 @@ module.exports = async (req, res) => {
     return res.status(200).json({ received: true });
   }
 };
+
+// Shared with /api/cron/reconcile-payments (daily safety net against lost sales).
+module.exports.processApprovedPayment = processApprovedPayment;
+module.exports.orderExistsForPayment = orderExistsForPayment;

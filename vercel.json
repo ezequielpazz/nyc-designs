@@ -10,6 +10,10 @@
     {
       "path": "/api/cron/refresh-shipments",
       "schedule": "0 13 * * *"
+    },
+    {
+      "path": "/api/cron/reconcile-payments",
+      "schedule": "30 13 * * *"
     }
   ],
   "headers": [
