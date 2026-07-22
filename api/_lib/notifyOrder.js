@@ -208,7 +208,7 @@ function buildCustomerHtml(order) {
   const orderShort = (order.id || '').split('_').pop()?.substring(0, 10).toUpperCase();
   const waText = encodeURIComponent(`Hola! Acabo de comprar el pedido ${orderShort} y quería confirmar la recepción.${virtualItems.length ? ' (Producto digital)' : ''}`);
   const waBlock = `<p style="margin:16px 0;text-align:center;">
-    <a href="https://wa.me/5491123199122?text=${waText}" style="display:inline-block;background:#25D366;color:white;text-decoration:none;padding:12px 28px;border-radius:999px;font-weight:600;">💬 Escribir por WhatsApp</a>
+    <a href="https://wa.me/5491160490630?text=${waText}" style="display:inline-block;background:#25D366;color:white;text-decoration:none;padding:12px 28px;border-radius:999px;font-weight:600;">💬 Escribir por WhatsApp</a>
   </p>`;
 
   const fullStreet = [addr.street, addr.number].filter(Boolean).join(' ');
@@ -410,7 +410,7 @@ function buildShipmentUpdateHtml(order, status) {
 
   <p style="margin-top:24px;font-size:13px;color:#666;">
     ¿Necesitás ayuda? Escribinos por
-    <a href="https://wa.me/5491123199122" style="color:#B8777F;">WhatsApp</a>.
+    <a href="https://wa.me/5491160490630" style="color:#B8777F;">WhatsApp</a>.
   </p>
   <p style="margin-top:24px;font-size:11px;color:#999;">— NYC Designs · Acassuso 5268, CABA · <a href="https://nycdesigns.com.ar" style="color:#999;">nycdesigns.com.ar</a></p>
 </body></html>`;
