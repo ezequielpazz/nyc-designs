@@ -156,6 +156,11 @@ module.exports = async (req, res) => {
         pending: 'https://nycdesigns.com.ar/?status=pending'
       },
       auto_return: 'approved',
+      // Webhook por preferencia: MP notifica cada evento de pago directo a
+      // nuestra API. No depende de la config del panel de MP (que apuntaba a
+      // la home del sitio en vez de /api/webhook y con eventos equivocados —
+      // por eso el pago test 169185372103 nunca generó el pedido).
+      notification_url: 'https://nycdesigns.com.ar/api/webhook',
       external_reference: external_reference || `order_${Date.now()}`,
       statement_descriptor: 'NYC DESIGNS'
     };

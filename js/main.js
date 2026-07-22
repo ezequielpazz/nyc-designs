@@ -64,7 +64,7 @@ const CONFIG = {
 // Para volver a MercadoPago cuando la cuenta esté lista: cambiar esta única
 // línea a 'mercadopago'. NO hay que borrar ni restaurar nada — todo el código
 // de MP sigue intacto y se reactiva solo.
-const MODO_VENTA = 'whatsapp';
+const MODO_VENTA = 'mercadopago';
 
 function esModoWhatsApp() {
   return MODO_VENTA === 'whatsapp';
