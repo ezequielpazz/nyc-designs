@@ -2650,7 +2650,12 @@ async function processPayment() {
     const { total } = calculateCartTotal();
     const shippingType = document.querySelector('input[name="shipping"]:checked')?.value || 'pickup';
 
-    const external_reference = JSON.stringify({
+    // Datos del checkout que el webhook necesita después del pago.
+    // Van como objeto en `checkout_data` → el backend los manda en el campo
+    // `metadata` de la preferencia. NO se meten en external_reference porque
+    // ese campo tiene un tope de 256 caracteres en MercadoPago y al pasarlo
+    // el checkout fallaba con CPT01 al momento de pagar.
+    const checkout_data = {
       timestamp: Date.now(),
       shipping_type: shippingType,
       postal_code: document.getElementById('postalCode')?.value || '',
@@ -2665,7 +2670,7 @@ async function processPayment() {
       } : null,
       // Real package list — webhook reuses it when calling get_etiquetas
       packages: buildCartPackages()
-    });
+    };
 
     const response = await fetch('/api/create-preference', {
       method: 'POST',
@@ -2673,7 +2678,7 @@ async function processPayment() {
       body: JSON.stringify({
         items,
         payer: { name: name || 'Cliente', email, phone },
-        external_reference
+        checkout_data
       })
     });
 
