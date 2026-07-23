@@ -534,7 +534,7 @@ async function loadRecentOrders() {
             return `
                 <div class="recent-order-item">
                     <div class="recent-order-info">
-                        <span class="recent-order-id">#${order.id.slice(0, 8).toUpperCase()}</span>
+                        <span class="recent-order-id">#${escapeHtml(String(order.payment_id || order.id || '').replace(/^order_/, ''))}</span>
                         <span class="recent-order-name">${escapeHtml(name)}</span>
                     </div>
                     <div class="recent-order-meta">
@@ -1199,6 +1199,7 @@ function switchSection(section) {
         'dashboard': 'Inicio',
         'products': 'Productos',
         'orders': 'Pedidos',
+        'earnings': 'Ganancias',
         'testimonials': 'Testimonios',
         'coupons': 'Cupones',
         'messages': 'Mensajes',
@@ -1233,6 +1234,12 @@ function switchSection(section) {
             loadOrders('todos');
             break;
         }
+        case 'earnings': {
+            const earningsSection = document.getElementById('earningsSection');
+            if (earningsSection) earningsSection.classList.add('active');
+            loadEarnings();
+            break;
+        }
         case 'testimonials': {
             const testimonialsSection = document.getElementById('testimonialsSection');
             if (testimonialsSection) testimonialsSection.classList.add('active');
@@ -1263,6 +1270,150 @@ function switchSection(section) {
 /* ============================================
    ÓRDENES / PEDIDOS
    ============================================ */
+
+/* ============================================
+   GANANCIAS
+   ============================================ */
+
+function fmtMoney(n) {
+    return '$' + Math.round(Number(n) || 0).toLocaleString('es-AR');
+}
+
+/** Fecha del pedido, tolerando Timestamp de Firestore, string ISO o Date. */
+function orderDate(order) {
+    const raw = order.createdAt || order.created_at;
+    if (!raw) return null;
+    if (raw.toDate) return raw.toDate();
+    const d = new Date(raw);
+    return isNaN(d.getTime()) ? null : d;
+}
+
+/** Barra simple para las listas de ganancias (sin librerías). */
+function earnBar(label, amount, extra, maxAmount) {
+    const pct = maxAmount > 0 ? Math.max(3, Math.round((amount / maxAmount) * 100)) : 0;
+    return `
+    <div class="earn-row">
+        <div class="earn-row-head">
+            <span class="earn-row-label">${escapeHtml(label)}</span>
+            <span class="earn-row-amount">${fmtMoney(amount)}</span>
+        </div>
+        <div class="earn-bar"><div class="earn-bar-fill" style="width:${pct}%"></div></div>
+        ${extra ? `<div class="earn-row-extra">${escapeHtml(extra)}</div>` : ''}
+    </div>`;
+}
+
+async function loadEarnings() {
+    const elTotal = document.getElementById('earnTotal');
+    const elCount = document.getElementById('earnCount');
+    const elAvg = document.getElementById('earnAvg');
+    const elMonth = document.getElementById('earnMonth');
+    const elByMonth = document.getElementById('earnByMonth');
+    const elTop = document.getElementById('earnTopProducts');
+    const elDelivery = document.getElementById('earnByDelivery');
+
+    if (elByMonth) elByMonth.innerHTML = '<div class="earn-empty">Cargando…</div>';
+
+    try {
+        const snapshot = await db.collection('pedidos').get();
+
+        const orders = [];
+        snapshot.forEach(doc => orders.push({ id: doc.id, ...doc.data() }));
+
+        // Solo ventas efectivamente cobradas.
+        const paid = orders.filter(o => {
+            const s = String(o.status || '').toLowerCase();
+            return s === 'approved' || s === 'aprobado' || s === 'pagado';
+        });
+
+        const total = paid.reduce((sum, o) => sum + (Number(o.total) || 0), 0);
+        const count = paid.length;
+        const avg = count ? total / count : 0;
+
+        // Mes en curso
+        const now = new Date();
+        const thisMonthTotal = paid.reduce((sum, o) => {
+            const d = orderDate(o);
+            if (d && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()) {
+                return sum + (Number(o.total) || 0);
+            }
+            return sum;
+        }, 0);
+
+        if (elTotal) elTotal.textContent = fmtMoney(total);
+        if (elCount) elCount.textContent = String(count);
+        if (elAvg) elAvg.textContent = fmtMoney(avg);
+        if (elMonth) elMonth.textContent = fmtMoney(thisMonthTotal);
+
+        // ---- Ventas por mes ----
+        const byMonth = {};
+        paid.forEach(o => {
+            const d = orderDate(o);
+            const key = d ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` : 'sin-fecha';
+            if (!byMonth[key]) byMonth[key] = { total: 0, count: 0 };
+            byMonth[key].total += Number(o.total) || 0;
+            byMonth[key].count += 1;
+        });
+        const monthKeys = Object.keys(byMonth).sort().reverse();
+        const maxMonth = Math.max(0, ...monthKeys.map(k => byMonth[k].total));
+        const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+        if (elByMonth) {
+            elByMonth.innerHTML = monthKeys.length
+                ? monthKeys.map(k => {
+                    let label = k;
+                    if (k !== 'sin-fecha') {
+                        const [y, m] = k.split('-');
+                        label = `${MESES[Number(m) - 1]} ${y}`;
+                    }
+                    const info = byMonth[k];
+                    return earnBar(label, info.total, `${info.count} ${info.count === 1 ? 'pedido' : 'pedidos'}`, maxMonth);
+                }).join('')
+                : '<div class="earn-empty">Todavía no hay ventas registradas.</div>';
+        }
+
+        // ---- Productos más vendidos ----
+        const byProduct = {};
+        paid.forEach(o => {
+            (o.items || []).forEach(it => {
+                const name = it.title || 'Producto';
+                if (name.toLowerCase().includes('envío') || name.toLowerCase().includes('envio')) return;
+                const qty = Number(it.quantity) || 1;
+                const amount = (Number(it.unit_price) || 0) * qty;
+                if (!byProduct[name]) byProduct[name] = { total: 0, qty: 0 };
+                byProduct[name].total += amount;
+                byProduct[name].qty += qty;
+            });
+        });
+        const prodKeys = Object.keys(byProduct).sort((a, b) => byProduct[b].total - byProduct[a].total).slice(0, 8);
+        const maxProd = Math.max(0, ...prodKeys.map(k => byProduct[k].total));
+        if (elTop) {
+            elTop.innerHTML = prodKeys.length
+                ? prodKeys.map(k => earnBar(k, byProduct[k].total, `${byProduct[k].qty} ${byProduct[k].qty === 1 ? 'unidad' : 'unidades'}`, maxProd)).join('')
+                : '<div class="earn-empty">Sin productos vendidos todavía.</div>';
+        }
+
+        // ---- Modalidad de entrega ----
+        const LABELS = { delivery: 'Envío a domicilio', pickup: 'Retiro en el punto', digital: 'Producto digital' };
+        const byDelivery = {};
+        paid.forEach(o => {
+            const k = o.shipping_type || 'pickup';
+            if (!byDelivery[k]) byDelivery[k] = { total: 0, count: 0 };
+            byDelivery[k].total += Number(o.total) || 0;
+            byDelivery[k].count += 1;
+        });
+        const delKeys = Object.keys(byDelivery).sort((a, b) => byDelivery[b].total - byDelivery[a].total);
+        const maxDel = Math.max(0, ...delKeys.map(k => byDelivery[k].total));
+        if (elDelivery) {
+            elDelivery.innerHTML = delKeys.length
+                ? delKeys.map(k => earnBar(LABELS[k] || k, byDelivery[k].total, `${byDelivery[k].count} ${byDelivery[k].count === 1 ? 'pedido' : 'pedidos'}`, maxDel)).join('')
+                : '<div class="earn-empty">Sin datos de entrega.</div>';
+        }
+
+    } catch (error) {
+        console.error('Error cargando ganancias:', error);
+        if (elByMonth) elByMonth.innerHTML = '<div class="earn-empty">No se pudieron cargar las ganancias. Recargá la página.</div>';
+        showToast('Error al cargar las ganancias', 'error');
+    }
+}
 
 async function loadOrders(filter = 'todos') {
     try {
@@ -1299,7 +1450,11 @@ async function loadOrders(filter = 'todos') {
         
         const orders = [];
         snapshot.forEach(doc => {
-            orders.push({ id: doc.id, ...doc.data() });
+            // docId = id real del documento en Firestore. Va DESPUÉS del spread
+            // porque los pedidos guardados por el webhook traen su propio campo
+            // `id` ("order_<paymentId>") que si no pisaría al de Firestore y
+            // rompería los updates de estado / seguimiento.
+            orders.push({ ...doc.data(), docId: doc.id });
         });
         
         if (ordersGrid) {
@@ -1362,7 +1517,7 @@ async function loadOrders(filter = 'todos') {
                         ${trackingCode ? `<div class="order-tracking">Seguimiento: <strong>${escapeHtml(trackingCode)}</strong></div>` : ''}
                     </div>
                     <div class="order-footer">
-                        <select onchange="updateOrderStatus('${order.id}', this.value)" class="order-status-select">
+                        <select onchange="updateOrderStatus('${order.docId}', this.value)" class="order-status-select">
                             <option value="pendiente" ${order.status === 'pendiente' ? 'selected' : ''}>Pendiente</option>
                             <option value="approved" ${order.status === 'approved' ? 'selected' : ''}>Aprobado</option>
                             <option value="pagado" ${order.status === 'pagado' ? 'selected' : ''}>Pagado</option>
@@ -1370,8 +1525,8 @@ async function loadOrders(filter = 'todos') {
                             <option value="entregado" ${order.status === 'entregado' ? 'selected' : ''}>Entregado</option>
                         </select>
                         <input type="text" placeholder="Código de seguimiento" value="${escapeHtml(trackingCode)}"
-                            onchange="updateOrderTracking('${order.id}', this.value)" class="tracking-input">
-                        ${shippingType === 'delivery' && !trackingCode ? `<button class="btn btn-secondary" onclick="createEpickShipment('${order.id}')" title="Crear envío E-Pick">
+                            onchange="updateOrderTracking('${order.docId}', this.value)" class="tracking-input">
+                        ${shippingType === 'delivery' && !trackingCode ? `<button class="btn btn-secondary" onclick="createEpickShipment('${order.docId}')" title="Crear envío E-Pick">
                             📦 Crear envío
                         </button>` : ''}
                         ${trackingCode ? `<a href="https://www.e-pick.com.ar/tracking?code=${encodeURIComponent(trackingCode)}" target="_blank" rel="noopener" class="btn btn-secondary" title="Ver seguimiento E-Pick">

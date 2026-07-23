@@ -3610,3 +3610,70 @@ select:focus {
   border-radius: 999px;
   padding: 2px 10px;
 }
+
+/* ==========================================================================
+   GANANCIAS
+   ========================================================================== */
+
+.earn-list {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.earn-row-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 6px;
+}
+
+.earn-row-label {
+    font-size: 14px;
+    color: #2B2B2B;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.earn-row-amount {
+    font-size: 15px;
+    font-weight: 700;
+    color: #B8777F;
+    white-space: nowrap;
+}
+
+.earn-bar {
+    height: 8px;
+    background: #F1E9E7;
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.earn-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #D9A1A7, #B8777F);
+    border-radius: 999px;
+}
+
+.earn-row-extra {
+    margin-top: 5px;
+    font-size: 12px;
+    color: #8A6F6A;
+}
+
+.earn-empty {
+    padding: 20px;
+    text-align: center;
+    color: #8A6F6A;
+    font-size: 14px;
+}
+
+.earn-note {
+    margin-top: 22px;
+    font-size: 12px;
+    color: #8A6F6A;
+    line-height: 1.6;
+}
