@@ -57,17 +57,22 @@ const CONFIG = {
 };
 
 // ========== MODO DE VENTA (interruptor) ==========
-// 'whatsapp'    → el cliente cierra la compra por WhatsApp con Sol (mientras
-//                 MercadoPago está en pausa por verificación de la cuenta).
+// 'whatsapp'    → todo se cierra por WhatsApp con Sol (MP en pausa total).
 // 'mercadopago' → checkout automático con MercadoPago (el de siempre).
+// 'hibrido'     → botón "Comprar por WhatsApp" en cada producto (nunca falla)
+//                 Y el carrito sigue cobrando por MercadoPago. Ideal mientras
+//                 la cuenta de MP solo acepta saldo/dinero en cuenta
+//                 (address_pending bloquea tarjetas).
 //
-// Para volver a MercadoPago cuando la cuenta esté lista: cambiar esta única
-// línea a 'mercadopago'. NO hay que borrar ni restaurar nada — todo el código
-// de MP sigue intacto y se reactiva solo.
-const MODO_VENTA = 'mercadopago';
+// Cambiar SOLO esta línea para alternar. Nada se borra ni se restaura.
+const MODO_VENTA = 'hibrido';
 
 function esModoWhatsApp() {
   return MODO_VENTA === 'whatsapp';
+}
+
+function esModoHibrido() {
+  return MODO_VENTA === 'hibrido';
 }
 
 // URL de la API de backend (cambiar en producción si usa otro host)
@@ -518,8 +523,8 @@ function renderProductsPage(page = 1, category = 'todos', searchTerm = '') {
           if (outOfStock) {
             return `<button class="btn primary add-to-cart" type="button" disabled>Sin stock</button>`;
           }
-          if (esModoWhatsApp()) {
-            // Modo WhatsApp: botón directo (mini-form → WhatsApp) + carrito como secundario.
+          if (esModoWhatsApp() || esModoHibrido()) {
+            // WhatsApp/híbrido: botón directo (mini-form → WhatsApp) + carrito como secundario.
             return `
               <button class="btn primary buy-whatsapp" type="button">💬 Comprar por WhatsApp</button>
               <button class="btn btn-outline add-to-cart" type="button">🛒 Agregar al carrito</button>`;
@@ -778,6 +783,25 @@ function finalizarPorWhatsApp() {
 
 // Ajusta la UI del carrito + textos según el modo de venta activo.
 function aplicarModoVenta() {
+  if (esModoHibrido()) {
+    // Híbrido: WhatsApp como botón principal en producto/modal, pero el
+    // carrito sigue cobrando con MercadoPago (sirve para saldo MP).
+    const modalBuyH = document.getElementById('modalBuyWhatsApp');
+    const modalAddH = document.getElementById('modalAddToCart');
+    if (modalBuyH) modalBuyH.style.display = '';
+    if (modalAddH) { modalAddH.classList.remove('primary'); modalAddH.classList.add('btn-outline'); }
+
+    const cartNoteH = document.querySelector('.cart-note span');
+    if (cartNoteH) cartNoteH.textContent = 'Pagás online con MercadoPago. ¿Preferís coordinar con Sol? Usá el botón verde "Comprar por WhatsApp" de cada producto.';
+
+    if (typeof botKnowledge === 'object' && botKnowledge) {
+      const dual = `🛍️ Tenés dos formas de comprar:\n\n1. 💬 Tocá "Comprar por WhatsApp" en el producto y cerrás con Sol (recomendado)\n2. 🛒 Carrito + MercadoPago (pago online)\n\nCualquier duda: wa.me/${CONFIG.WHATSAPP_NUMBER}`;
+      if ('comprar' in botKnowledge) botKnowledge['comprar'] = dual;
+      if ('como compro' in botKnowledge) botKnowledge['como compro'] = dual;
+    }
+    return;
+  }
+
   if (!esModoWhatsApp()) return; // en modo mercadopago la UI queda como está
 
   // 1) Botón de finalizar: "Enviar pedido por WhatsApp"
