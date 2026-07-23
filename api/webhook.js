@@ -260,14 +260,15 @@ async function processApprovedPayment(paymentData) {
     return { skipped: true, reason: 'order_exists', payment_id: paymentId };
   }
 
-  // external_reference is JSON-encoded from front: { timestamp, shipping_type, postal_code, address }
+  // Checkout data (cliente, dirección, paquetes) viaja en `metadata`.
+  // Fallback a external_reference para los pagos viejos, cuando el front
+  // todavía embebía el JSON ahí (antes del fix del límite de 256 chars).
   let extra = {};
-  try {
-    if (paymentData.external_reference) {
-      extra = JSON.parse(paymentData.external_reference);
-    }
-  } catch (_) {
-    extra = {};
+  if (paymentData.metadata && typeof paymentData.metadata === 'object'
+      && Object.keys(paymentData.metadata).length > 0) {
+    extra = paymentData.metadata;
+  } else if (paymentData.external_reference) {
+    try { extra = JSON.parse(paymentData.external_reference); } catch (_) { extra = {}; }
   }
 
   // Enrich each item with its delivery kind (virtual/fisico) + download URL

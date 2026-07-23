@@ -81,7 +81,7 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const { items, payer, external_reference } = req.body;
+    const { items, payer, external_reference, checkout_data } = req.body;
 
     if (!items || !Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ error: 'Items inválidos' });
@@ -143,12 +143,31 @@ module.exports = async (req, res) => {
       }
     }
 
+    // ---- Checkout data → metadata (NO external_reference) ----
+    // external_reference tiene un límite de 256 caracteres en MercadoPago.
+    // Antes metíamos ahí todo el JSON (cliente + dirección + paquetes), que
+    // llegaba a ~380 chars: la preferencia se creaba igual pero el checkout
+    // fallaba con CPT01 al momento de pagar. `metadata` es el campo que MP
+    // provee justamente para datos propios del comercio y admite objetos.
+    let checkoutMeta = checkout_data && typeof checkout_data === 'object'
+      ? checkout_data
+      : null;
+    if (!checkoutMeta && external_reference) {
+      // Compatibilidad con el front viejo, que mandaba el JSON embebido.
+      try { checkoutMeta = JSON.parse(external_reference); } catch (_) { checkoutMeta = null; }
+    }
+
+    // Referencia corta y segura (siempre bajo el límite de MP).
+    const shortRef = `order_${Date.now()}`;
+
     const preferenceData = {
       items: validatedItems,
+      // Solo nombre + email. El teléfono se omite a propósito: MP lo espera
+      // como { area_code, number } y mandarlo como { number: "1160490630" }
+      // hacía fallar el checkout. El teléfono viaja en metadata para nosotros.
       payer: payer ? {
         name: payer.name,
-        email: payer.email,
-        phone: payer.phone ? { number: payer.phone } : undefined
+        email: payer.email
       } : undefined,
       back_urls: {
         success: 'https://nycdesigns.com.ar/?status=approved',
@@ -157,11 +176,10 @@ module.exports = async (req, res) => {
       },
       auto_return: 'approved',
       // Webhook por preferencia: MP notifica cada evento de pago directo a
-      // nuestra API. No depende de la config del panel de MP (que apuntaba a
-      // la home del sitio en vez de /api/webhook y con eventos equivocados —
-      // por eso el pago test 169185372103 nunca generó el pedido).
+      // nuestra API, sin depender de la config del panel de MP.
       notification_url: 'https://nycdesigns.com.ar/api/webhook',
-      external_reference: external_reference || `order_${Date.now()}`,
+      external_reference: shortRef,
+      metadata: checkoutMeta || undefined,
       statement_descriptor: 'NYC DESIGNS'
     };
 
