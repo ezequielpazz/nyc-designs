@@ -65,7 +65,7 @@ const CONFIG = {
 //                 (address_pending bloquea tarjetas).
 //
 // Cambiar SOLO esta línea para alternar. Nada se borra ni se restaura.
-const MODO_VENTA = 'hibrido';
+const MODO_VENTA = 'mercadopago';
 
 function esModoWhatsApp() {
   return MODO_VENTA === 'whatsapp';
