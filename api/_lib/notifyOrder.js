@@ -37,88 +37,105 @@ function fmtAr(n) {
 
 const LOGO_URL = 'https://nycdesigns.com.ar/assets/img/logo.jpg';
 
+// Email HTML rules used below (Gmail/Outlook safe):
+//  - layout with <table> + width/cellpadding attributes, never flexbox
+//  - modest paddings (16px) so nothing overflows a 320px phone
+//  - the items grid is 2 columns only; qty and unit price ride inside the
+//    product cell. Four columns was what made the receipt look "desfasada"
+//    on mobile.
+
 /** Branded header band: logo + store name + document label. */
 function receiptHeader(label) {
   return `
-  <div style="background:#F6D6D8;padding:26px 24px 20px;text-align:center;">
-    <img src="${LOGO_URL}" alt="NYC Designs" width="64" height="64" style="border-radius:50%;border:3px solid #ffffff;display:inline-block;">
-    <div style="font-size:20px;font-weight:bold;color:#2B2B2B;margin-top:10px;">New York City Designs</div>
-    <div style="font-size:11px;letter-spacing:3px;color:#B8777F;font-weight:700;margin-top:4px;">${label}</div>
-  </div>`;
+  <tr><td align="center" bgcolor="#F6D6D8" style="padding:24px 16px 18px;">
+    <img src="${LOGO_URL}" alt="NYC Designs" width="60" height="60" style="display:block;margin:0 auto 10px;border-radius:30px;border:3px solid #ffffff;">
+    <div style="font-family:Arial,Helvetica,sans-serif;font-size:18px;font-weight:bold;color:#2B2B2B;line-height:1.2;">New York City Designs</div>
+    <div style="font-family:Arial,Helvetica,sans-serif;font-size:10px;letter-spacing:2px;color:#B8777F;font-weight:bold;padding-top:5px;">${label}</div>
+  </td></tr>`;
 }
 
-/** Meta strip: order number, date, MP operation id. */
+/** Meta strip: order number + date, two columns (safe on mobile). */
 function receiptMeta(order) {
   const nro = String(order.payment_id || (order.id || '').split('_').pop() || '');
   const fecha = new Date().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
   const hora = new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+  const cell = 'font-family:Arial,Helvetica,sans-serif;font-size:10px;letter-spacing:1px;color:#8A6F6A;padding:0 0 3px;';
+  const val = 'font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#2B2B2B;font-weight:bold;';
   return `
-  <table style="width:100%;border-collapse:collapse;background:#ffffff;">
-    <tr>
-      <td style="padding:14px 24px;border-bottom:2px solid #F6D6D8;font-size:12px;color:#8A6F6A;">
-        PEDIDO<br><strong style="font-size:14px;color:#2B2B2B;">#${escapeHtml(nro)}</strong>
-      </td>
-      <td style="padding:14px 24px;border-bottom:2px solid #F6D6D8;font-size:12px;color:#8A6F6A;text-align:center;">
-        FECHA<br><strong style="font-size:14px;color:#2B2B2B;">${fecha} ${hora}</strong>
-      </td>
-      <td style="padding:14px 24px;border-bottom:2px solid #F6D6D8;font-size:12px;color:#8A6F6A;text-align:right;">
-        PAGO<br><strong style="font-size:14px;color:#2B2B2B;">MercadoPago</strong>
-      </td>
-    </tr>
-  </table>`;
+  <tr><td style="padding:14px 16px;border-bottom:2px solid #F6D6D8;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+      <tr>
+        <td align="left" width="55%" style="${cell}">PEDIDO</td>
+        <td align="right" width="45%" style="${cell}">FECHA</td>
+      </tr>
+      <tr>
+        <td align="left" style="${val}">#${escapeHtml(nro)}</td>
+        <td align="right" style="${val}">${fecha} · ${hora}</td>
+      </tr>
+    </table>
+  </td></tr>`;
 }
 
-/** Items table with per-line subtotal + big rose total. */
+/** Items list: 2 columns (producto+cantidad | importe) + total. */
 function receiptItems(order) {
   const items = Array.isArray(order.items) ? order.items : [];
   const rows = items.map(i => {
     const qty = Number(i.quantity || 1);
     const unit = Number(i.unit_price || 0);
     return `
-    <tr>
-      <td style="padding:10px 12px;border-bottom:1px solid #F6D6D8;font-size:13px;">${escapeHtml(i.title || 'Producto')}${i.kind === 'virtual' ? ' <span style="color:#B8777F;font-size:11px;">(digital)</span>' : ''}</td>
-      <td style="padding:10px 8px;border-bottom:1px solid #F6D6D8;text-align:center;font-size:13px;">${qty}</td>
-      <td style="padding:10px 12px;border-bottom:1px solid #F6D6D8;text-align:right;font-size:13px;">$${fmtAr(unit)}</td>
-      <td style="padding:10px 12px;border-bottom:1px solid #F6D6D8;text-align:right;font-size:13px;"><strong>$${fmtAr(unit * qty)}</strong></td>
-    </tr>`;
+      <tr>
+        <td align="left" style="padding:9px 0;border-bottom:1px solid #F6D6D8;font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#2B2B2B;line-height:1.35;">
+          ${escapeHtml(i.title || 'Producto')}${i.kind === 'virtual' ? ' <span style="color:#B8777F;font-size:11px;">(digital)</span>' : ''}
+          <div style="font-size:11px;color:#8A6F6A;padding-top:2px;">${qty} x $${fmtAr(unit)}</div>
+        </td>
+        <td align="right" valign="top" style="padding:9px 0 9px 10px;border-bottom:1px solid #F6D6D8;font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#2B2B2B;font-weight:bold;white-space:nowrap;">
+          $${fmtAr(unit * qty)}
+        </td>
+      </tr>`;
   }).join('');
 
   return `
-  <table style="width:100%;border-collapse:collapse;margin:0;background:#ffffff;">
-    <thead>
+  <tr><td style="padding:4px 16px 0;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
       <tr>
-        <th style="padding:10px 12px;text-align:left;font-size:11px;letter-spacing:1px;color:#B8777F;border-bottom:2px solid #F6D6D8;">PRODUCTO</th>
-        <th style="padding:10px 8px;text-align:center;font-size:11px;letter-spacing:1px;color:#B8777F;border-bottom:2px solid #F6D6D8;">CANT.</th>
-        <th style="padding:10px 12px;text-align:right;font-size:11px;letter-spacing:1px;color:#B8777F;border-bottom:2px solid #F6D6D8;">PRECIO</th>
-        <th style="padding:10px 12px;text-align:right;font-size:11px;letter-spacing:1px;color:#B8777F;border-bottom:2px solid #F6D6D8;">SUBTOTAL</th>
+        <td align="left" style="padding:0 0 6px;border-bottom:2px solid #F6D6D8;font-family:Arial,Helvetica,sans-serif;font-size:10px;letter-spacing:1px;color:#B8777F;font-weight:bold;">PRODUCTO</td>
+        <td align="right" style="padding:0 0 6px;border-bottom:2px solid #F6D6D8;font-family:Arial,Helvetica,sans-serif;font-size:10px;letter-spacing:1px;color:#B8777F;font-weight:bold;">IMPORTE</td>
       </tr>
-    </thead>
-    <tbody>${rows || `<tr><td colspan="4" style="padding:12px;text-align:center;color:#999;">Sin detalle de items</td></tr>`}</tbody>
-    <tfoot>
+      ${rows || `<tr><td colspan="2" style="padding:12px 0;text-align:center;font-family:Arial,Helvetica,sans-serif;color:#999;font-size:13px;">Sin detalle de items</td></tr>`}
       <tr>
-        <td colspan="3" style="padding:14px 12px;text-align:right;font-size:14px;color:#8A6F6A;">TOTAL</td>
-        <td style="padding:14px 12px;text-align:right;font-size:20px;color:#B8777F;"><strong>$${fmtAr(order.total)}</strong></td>
+        <td align="left" style="padding:13px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#8A6F6A;letter-spacing:1px;">TOTAL</td>
+        <td align="right" style="padding:13px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:19px;color:#B8777F;font-weight:bold;white-space:nowrap;">$${fmtAr(order.total)}</td>
       </tr>
-    </tfoot>
-  </table>`;
+    </table>
+  </td></tr>`;
 }
 
 /** Footer with brand + contact. */
 function receiptFooter() {
   return `
-  <div style="background:#F6D6D8;padding:14px 24px;text-align:center;font-size:11px;color:#8A6F6A;">
-    NYC Designs · Acassuso 5268, CABA · <a href="https://nycdesigns.com.ar" style="color:#B8777F;text-decoration:none;">nycdesigns.com.ar</a> · IG <a href="https://www.instagram.com/newyorkcitydesigns" style="color:#B8777F;text-decoration:none;">@newyorkcitydesigns</a>
-  </div>`;
+  <tr><td align="center" bgcolor="#F6D6D8" style="padding:14px 16px;font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#8A6F6A;line-height:1.6;">
+    NYC Designs · Acassuso 5268, CABA<br>
+    <a href="https://nycdesigns.com.ar" style="color:#B8777F;text-decoration:none;">nycdesigns.com.ar</a> ·
+    <a href="https://www.instagram.com/newyorkcitydesigns" style="color:#B8777F;text-decoration:none;">@newyorkcitydesigns</a>
+  </td></tr>`;
+}
+
+/** Generic full-width row for free-form blocks inside the receipt card. */
+function receiptRow(inner, padding = '16px') {
+  return `<tr><td style="padding:${padding};font-family:Arial,Helvetica,sans-serif;color:#2B2B2B;">${inner}</td></tr>`;
 }
 
 function receiptWrap(inner) {
   return `<!doctype html>
-<html><body style="margin:0;padding:0;background:#FAF7F5;">
-  <div style="padding:24px 12px;background:#FAF7F5;font-family:Arial,Helvetica,sans-serif;color:#2B2B2B;">
-    <div style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #F6D6D8;box-shadow:0 4px 20px rgba(184,119,127,0.12);">
-      ${inner}
-    </div>
-  </div>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#FAF7F5;-webkit-text-size-adjust:100%;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#FAF7F5">
+    <tr><td align="center" style="padding:20px 10px;">
+      <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;background:#ffffff;border:1px solid #F6D6D8;border-radius:14px;overflow:hidden;">
+        ${inner}
+      </table>
+    </td></tr>
+  </table>
 </body></html>`;
 }
 
@@ -137,33 +154,39 @@ function buildHtml(order) {
 
   const waPhone = String(customer.phone || '').replace(/\D/g, '');
 
+  const label = 'font-size:10px;letter-spacing:2px;color:#B8777F;font-weight:bold;padding-bottom:7px;';
+
   return receiptWrap(`
     ${receiptHeader('COMPROBANTE DE VENTA')}
     ${receiptMeta(order)}
 
-    <div style="padding:18px 24px 6px;">
-      <div style="font-size:11px;letter-spacing:2px;color:#B8777F;font-weight:700;margin-bottom:8px;">CLIENTE</div>
-      <p style="margin:3px 0;font-size:14px;"><strong>${escapeHtml(customer.name || 'Sin nombre')}</strong></p>
-      ${customer.dni ? `<p style="margin:3px 0;font-size:13px;color:#555;">DNI: ${escapeHtml(customer.dni)}</p>` : ''}
-      ${customer.email ? `<p style="margin:3px 0;font-size:13px;color:#555;">${escapeHtml(customer.email)}</p>` : ''}
-      ${customer.phone ? `<p style="margin:3px 0;font-size:13px;">📱 <a href="https://wa.me/${waPhone}" style="color:#B8777F;">${escapeHtml(customer.phone)}</a> (tocar para abrir WhatsApp)</p>` : ''}
-    </div>
+    ${receiptRow(`
+      <div style="${label}">CLIENTE</div>
+      <div style="font-size:14px;font-weight:bold;line-height:1.5;">${escapeHtml(customer.name || 'Sin nombre')}</div>
+      ${customer.dni ? `<div style="font-size:13px;color:#555;line-height:1.5;">DNI: ${escapeHtml(customer.dni)}</div>` : ''}
+      ${customer.email ? `<div style="font-size:13px;color:#555;line-height:1.5;word-break:break-all;">${escapeHtml(customer.email)}</div>` : ''}
+      ${customer.phone ? `<div style="font-size:13px;line-height:1.5;padding-top:2px;">📱 <a href="https://wa.me/${waPhone}" style="color:#B8777F;text-decoration:none;">${escapeHtml(customer.phone)}</a></div>` : ''}
+    `, '16px 16px 6px')}
 
-    <div style="padding:12px 24px 0;">
-      <div style="font-size:11px;letter-spacing:2px;color:#B8777F;font-weight:700;margin-bottom:4px;">DETALLE</div>
-    </div>
-    <div style="padding:0 24px;">${receiptItems(order)}</div>
+    ${receiptRow(`<div style="${label}">DETALLE</div>`, '10px 16px 0')}
+    ${receiptItems(order)}
 
-    <div style="margin:16px 24px;background:#FAF7F5;border-radius:10px;padding:14px 16px;">
-      <div style="font-size:11px;letter-spacing:2px;color:#B8777F;font-weight:700;margin-bottom:6px;">ENTREGA</div>
-      <p style="margin:4px 0;font-size:13px;"><strong>${escapeHtml(shippingLabel)}</strong></p>
-      ${addrBlock}
-      ${order.tracking_code ? `<p style="margin:6px 0;font-size:13px;"><strong>Seguimiento E-Pick:</strong> <span style="font-family:monospace;">${escapeHtml(order.tracking_code)}</span></p>` : ''}
-    </div>
+    ${receiptRow(`
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#FAF7F5" style="border-radius:8px;">
+        <tr><td style="padding:13px 14px;font-family:Arial,Helvetica,sans-serif;">
+          <div style="${label}">ENTREGA</div>
+          <div style="font-size:13px;font-weight:bold;line-height:1.5;">${escapeHtml(shippingLabel)}</div>
+          ${addrBlock}
+          ${order.tracking_code ? `<div style="font-size:13px;line-height:1.6;padding-top:4px;">Seguimiento E-Pick: <strong>${escapeHtml(order.tracking_code)}</strong></div>` : ''}
+        </td></tr>
+      </table>
+    `, '16px')}
 
-    <p style="text-align:center;margin:8px 0 20px;">
-      <a href="https://nycdesigns.com.ar/admin/" style="display:inline-block;background:#B8777F;color:#ffffff;text-decoration:none;padding:11px 26px;border-radius:999px;font-weight:600;font-size:14px;">Ver en el panel admin</a>
-    </p>
+    ${receiptRow(`
+      <div style="text-align:center;">
+        <a href="https://nycdesigns.com.ar/admin/" style="display:inline-block;background:#B8777F;color:#ffffff;text-decoration:none;padding:12px 26px;border-radius:999px;font-weight:bold;font-size:14px;">Ver en el panel admin</a>
+      </div>
+    `, '0 16px 20px')}
 
     ${receiptFooter()}
   `);
@@ -264,66 +287,78 @@ function buildCustomerHtml(order) {
 
   // Build "Tu descarga" section if any virtual items exist with a download URL
   const virtualItems = items.filter(i => i.kind === 'virtual' && i.download_url);
+  const label = 'font-size:10px;letter-spacing:2px;color:#B8777F;font-weight:bold;padding-bottom:7px;';
+
   const digitalBlock = virtualItems.length > 0
-    ? `<div style="margin:16px 24px;background:#fff3f4;border:2px solid #B8777F;border-radius:12px;padding:18px 20px;">
-        <div style="font-size:11px;letter-spacing:2px;color:#B8777F;font-weight:700;margin-bottom:10px;">🪄 TU DESCARGA</div>
-        ${virtualItems.map(i => `
-          <p style="margin:8px 0;">
-            <strong style="font-size:14px;">${escapeHtml(i.title)}</strong><br>
-            <a href="${escapeHtml(i.download_url)}" style="display:inline-block;background:#B8777F;color:#ffffff;text-decoration:none;padding:10px 22px;border-radius:999px;margin-top:8px;font-weight:600;font-size:13px;">⬇ Descargar / Abrir</a>
-          </p>`).join('')}
-        <p style="margin:12px 0 0;font-size:12px;color:#8A6F6A;">Si el botón no abre, copiá y pegá el link en tu navegador. Guardá este mail: tu descarga queda siempre acá.</p>
-      </div>`
+    ? receiptRow(`
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#FFF3F4" style="border:2px solid #B8777F;border-radius:10px;">
+          <tr><td style="padding:16px 14px;font-family:Arial,Helvetica,sans-serif;">
+            <div style="${label}">🪄 TU DESCARGA</div>
+            ${virtualItems.map(i => `
+              <div style="padding:4px 0 10px;">
+                <div style="font-size:14px;font-weight:bold;line-height:1.4;padding-bottom:8px;">${escapeHtml(i.title)}</div>
+                <a href="${escapeHtml(i.download_url)}" style="display:inline-block;background:#B8777F;color:#ffffff;text-decoration:none;padding:11px 22px;border-radius:999px;font-weight:bold;font-size:13px;">⬇ Descargar / Abrir</a>
+              </div>`).join('')}
+            <div style="font-size:12px;color:#8A6F6A;line-height:1.5;padding-top:4px;">Si el botón no abre, copiá y pegá el link en tu navegador. Guardá este mail: tu descarga queda siempre acá.</div>
+          </td></tr>
+        </table>
+      `, '14px 16px 0')
     : '';
 
   // WhatsApp deep-link with prefilled message — works on any device
   const orderShort = (order.id || '').split('_').pop()?.substring(0, 10).toUpperCase();
   const waText = encodeURIComponent(`Hola! Acabo de comprar el pedido ${orderShort} y quería confirmar la recepción.${virtualItems.length ? ' (Producto digital)' : ''}`);
-  const waBlock = `<p style="margin:6px 0 20px;text-align:center;">
-    <a href="https://wa.me/5491160490630?text=${waText}" style="display:inline-block;background:#25D366;color:#ffffff;text-decoration:none;padding:12px 28px;border-radius:999px;font-weight:600;font-size:14px;">💬 Escribir por WhatsApp</a><br>
-    <span style="font-size:12px;color:#8A6F6A;">o respondé este mail y te contestamos</span>
-  </p>`;
+  const waBlock = receiptRow(`
+    <div style="text-align:center;">
+      <a href="https://wa.me/5491160490630?text=${waText}" style="display:inline-block;background:#25D366;color:#ffffff;text-decoration:none;padding:12px 26px;border-radius:999px;font-weight:bold;font-size:14px;">💬 Escribir por WhatsApp</a>
+      <div style="font-size:12px;color:#8A6F6A;padding-top:8px;">o respondé este mail y te contestamos</div>
+    </div>
+  `, '4px 16px 20px');
 
   const fullStreet = [addr.street, addr.number].filter(Boolean).join(' ');
   let addrBlock;
   if (isDigital) {
-    addrBlock = `<p style="margin:4px 0;font-size:13px;">Producto digital — tu link de descarga está arriba 👆</p>`;
+    addrBlock = `<div style="font-size:13px;line-height:1.5;">Producto digital — tu link de descarga está arriba 👆</div>`;
   } else if (order.shipping_type === 'delivery') {
-    addrBlock = `<p style="margin:4px 0;font-size:13px;"><strong>Dirección de envío:</strong> ${escapeHtml(fullStreet)}${addr.extra ? ` (${escapeHtml(addr.extra)})` : ''}, ${escapeHtml(addr.city || '')}, ${escapeHtml(addr.province || '')}${order.postal_code ? ` — CP ${escapeHtml(order.postal_code)}` : ''}</p>`;
+    addrBlock = `<div style="font-size:13px;line-height:1.5;padding-top:3px;">Dirección: ${escapeHtml(fullStreet)}${addr.extra ? ` (${escapeHtml(addr.extra)})` : ''}, ${escapeHtml(addr.city || '')}, ${escapeHtml(addr.province || '')}${order.postal_code ? ` — CP ${escapeHtml(order.postal_code)}` : ''}</div>`;
   } else {
-    addrBlock = `<p style="margin:4px 0;font-size:13px;">Coordinamos el retiro por WhatsApp — Acassuso 5268, CABA.</p>`;
+    addrBlock = `<div style="font-size:13px;line-height:1.5;padding-top:3px;">Coordinamos el retiro por WhatsApp — Acassuso 5268, CABA.</div>`;
   }
 
   const trackingBlock = !isDigital && order.tracking_code
-    ? `<p style="margin:6px 0;font-size:13px;"><strong>Seguimiento:</strong> <span style="font-family:monospace;">${escapeHtml(order.tracking_code)}</span><br>
-       <a href="https://www.e-pick.com.ar/tracking?code=${encodeURIComponent(order.tracking_code)}" style="color:#B8777F;">Ver estado del envío →</a></p>`
+    ? `<div style="font-size:13px;line-height:1.6;padding-top:4px;">Seguimiento: <strong>${escapeHtml(order.tracking_code)}</strong><br>
+       <a href="https://www.e-pick.com.ar/tracking?code=${encodeURIComponent(order.tracking_code)}" style="color:#B8777F;">Ver estado del envío →</a></div>`
     : (!isDigital && order.shipping_type === 'delivery'
-        ? `<p style="margin:6px 0;color:#8A6F6A;font-size:12px;">Te mandamos el código de seguimiento por email cuando se despache.</p>`
+        ? `<div style="color:#8A6F6A;font-size:12px;line-height:1.5;padding-top:4px;">Te mandamos el código de seguimiento por email cuando se despache.</div>`
         : '');
 
   return receiptWrap(`
     ${receiptHeader('COMPROBANTE DE COMPRA')}
     ${receiptMeta(order)}
 
-    <div style="padding:20px 24px 4px;text-align:center;">
-      <h2 style="color:#B8777F;margin:0 0 4px;font-size:20px;">¡Gracias por tu compra${customer.name ? ', ' + escapeHtml(customer.name.split(' ')[0]) : ''}! 💗</h2>
-      <p style="margin:0;color:#8A6F6A;font-size:13px;">Tu pago fue aprobado y tu pedido quedó confirmado.</p>
-    </div>
+    ${receiptRow(`
+      <div style="text-align:center;">
+        <div style="color:#B8777F;font-size:19px;font-weight:bold;line-height:1.3;">¡Gracias por tu compra${customer.name ? ', ' + escapeHtml(customer.name.split(' ')[0]) : ''}! 💗</div>
+        <div style="color:#8A6F6A;font-size:13px;line-height:1.5;padding-top:6px;">Tu pago fue aprobado y tu pedido quedó confirmado.</div>
+      </div>
+    `, '18px 16px 2px')}
 
     ${digitalBlock}
 
-    <div style="padding:8px 24px 0;">
-      <div style="font-size:11px;letter-spacing:2px;color:#B8777F;font-weight:700;margin-bottom:4px;">TU PEDIDO</div>
-    </div>
-    <div style="padding:0 24px;">${receiptItems(order)}</div>
+    ${receiptRow(`<div style="${label}">TU PEDIDO</div>`, '14px 16px 0')}
+    ${receiptItems(order)}
 
-    <div style="margin:16px 24px;background:#FAF7F5;border-radius:10px;padding:14px 16px;">
-      <div style="font-size:11px;letter-spacing:2px;color:#B8777F;font-weight:700;margin-bottom:6px;">ENTREGA</div>
-      <p style="margin:4px 0;font-size:13px;"><strong>${escapeHtml(shippingLabel)}</strong></p>
-      ${addrBlock}
-      ${trackingBlock}
-      ${isDigital ? '' : '<p style="margin:6px 0;color:#8A6F6A;font-size:12px;">Producción estimada: 3-7 días hábiles según el producto.</p>'}
-    </div>
+    ${receiptRow(`
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#FAF7F5" style="border-radius:8px;">
+        <tr><td style="padding:13px 14px;font-family:Arial,Helvetica,sans-serif;">
+          <div style="${label}">ENTREGA</div>
+          <div style="font-size:13px;font-weight:bold;line-height:1.5;">${escapeHtml(shippingLabel)}</div>
+          ${addrBlock}
+          ${trackingBlock}
+          ${isDigital ? '' : '<div style="color:#8A6F6A;font-size:12px;line-height:1.5;padding-top:4px;">Producción estimada: 3-7 días hábiles según el producto.</div>'}
+        </td></tr>
+      </table>
+    `, '16px')}
 
     ${waBlock}
 
