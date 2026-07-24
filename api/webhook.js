@@ -306,11 +306,25 @@ async function processApprovedPayment(paymentData) {
   // strip names / sanitize phones.
   const frontCustomer = extra.customer || {};
 
+  // Comisión real que cobró MercadoPago sobre esta venta (así el admin
+  // muestra la ganancia neta exacta, no una estimación). fee_details trae
+  // uno o más cargos; los sumamos. net_received_amount es lo que realmente
+  // se acredita en la cuenta de Sol.
+  const mpFee = Array.isArray(paymentData.fee_details)
+    ? paymentData.fee_details.reduce((sum, f) => sum + (Number(f.amount) || 0), 0)
+    : 0;
+  const mpNet = Number(paymentData.transaction_details?.net_received_amount)
+    || (Number(paymentData.transaction_amount) - mpFee);
+
   const orderData = {
     id: `order_${paymentId}`,
     payment_id: paymentId,
     status: 'approved',
     total: paymentData.transaction_amount,
+    // Datos económicos para la sección Ganancias del admin.
+    mp_fee: Number(mpFee.toFixed(2)),
+    mp_net_amount: Number(mpNet.toFixed(2)),
+    currency: paymentData.currency_id || 'ARS',
     payer: {
       email: frontCustomer.email || paymentData.payer?.email || '',
       name: frontCustomer.name

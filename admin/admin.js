@@ -1344,6 +1344,46 @@ async function loadEarnings() {
         if (elAvg) elAvg.textContent = fmtMoney(avg);
         if (elMonth) elMonth.textContent = fmtMoney(thisMonthTotal);
 
+        // ---- Balance: comisiones MP + neto + dólares ----
+        // Usa la comisión REAL guardada por el webhook (mp_fee). Para pedidos
+        // viejos sin ese dato, estima al 4,1% (lo que MP cobró en la práctica).
+        const EST_FEE_RATE = 0.041;
+        let totalFee = 0;
+        let feeIsEstimated = false;
+        paid.forEach(o => {
+            if (o.mp_fee != null && !isNaN(Number(o.mp_fee))) {
+                totalFee += Number(o.mp_fee);
+            } else {
+                totalFee += (Number(o.total) || 0) * EST_FEE_RATE;
+                feeIsEstimated = true;
+            }
+        });
+        const net = total - totalFee;
+        const feePct = total > 0 ? (totalFee / total * 100) : 0;
+
+        const setTxt = (id, txt) => { const e = document.getElementById(id); if (e) e.textContent = txt; };
+        setTxt('balGross', fmtMoney(total));
+        setTxt('balFee', '-' + fmtMoney(totalFee));
+        setTxt('balFeePct', `(${feePct.toFixed(1)}%${feeIsEstimated ? ' aprox.' : ''})`);
+        setTxt('balNet', fmtMoney(net));
+
+        // Cotización del dólar (blue) para convertir. Si falla, ocultamos USD.
+        try {
+            const resp = await fetch('https://dolarapi.com/v1/dolares/blue');
+            if (resp.ok) {
+                const dolar = await resp.json();
+                const rate = Number(dolar.venta) || Number(dolar.compra) || 0;
+                if (rate > 0) {
+                    const usd = n => 'US$' + (n / rate).toLocaleString('es-AR', { maximumFractionDigits: 0 });
+                    setTxt('balUsdGross', usd(total));
+                    setTxt('balUsdNet', usd(net));
+                    setTxt('balRate', `Cotización: dólar blue $${rate.toLocaleString('es-AR')} · ${new Date().toLocaleDateString('es-AR')}`);
+                }
+            }
+        } catch (e) {
+            setTxt('balRate', 'No se pudo obtener la cotización del dólar');
+        }
+
         // ---- Ventas por mes ----
         const byMonth = {};
         paid.forEach(o => {
