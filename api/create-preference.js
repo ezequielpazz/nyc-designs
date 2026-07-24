@@ -214,7 +214,8 @@ module.exports = async (req, res) => {
 
     return res.status(200).json({
       id: response.id,
-      init_point: response.init_point
+      init_point: response.init_point,
+      external_reference: shortRef
     });
 
   } catch (error) {
