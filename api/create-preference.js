@@ -1,5 +1,6 @@
 const mercadopago = require('mercadopago');
 const { rateLimit, clientKey } = require('./_lib/rateLimit');
+const { getDb, admin } = require('./_lib/firestoreAdmin');
 
 const client = new mercadopago.MercadoPagoConfig({
   accessToken: process.env.MP_ACCESS_TOKEN
@@ -184,6 +185,32 @@ module.exports = async (req, res) => {
     };
 
     const response = await preference.create({ body: preferenceData });
+
+    // Resiliencia: guardamos el checkout en Firestore ANTES de pagar, indexado
+    // por external_reference. Así, si MercadoPago nos bloquea la LECTURA del
+    // pago (payment.get), igual podemos armar el pedido y mandar los emails a
+    // partir de estos datos (los toma /api/confirm-order al volver el cliente).
+    // Los precios ya vienen validados contra Firestore, así que no se pueden
+    // manipular. Fire-and-forget: si falla, el flujo normal por webhook sigue.
+    try {
+      const total = validatedItems.reduce(
+        (sum, it) => sum + (Number(it.unit_price) || 0) * (Number(it.quantity) || 1), 0
+      );
+      await getDb().collection('checkouts_pendientes').doc(shortRef).set({
+        external_reference: shortRef,
+        preference_id: response.id,
+        items: validatedItems,
+        total,
+        customer: checkoutMeta?.customer || (payer ? { name: payer.name, email: payer.email } : {}),
+        shipping_type: checkoutMeta?.shipping_type || 'pickup',
+        postal_code: checkoutMeta?.postal_code || '',
+        address: checkoutMeta?.address || null,
+        packages: Array.isArray(checkoutMeta?.packages) ? checkoutMeta.packages : null,
+        created_at: admin.firestore.FieldValue.serverTimestamp()
+      });
+    } catch (persistErr) {
+      console.error('checkout persist skipped:', persistErr.message);
+    }
 
     return res.status(200).json({
       id: response.id,
