@@ -3677,3 +3677,41 @@ select:focus {
     color: #8A6F6A;
     line-height: 1.6;
 }
+
+/* Balance (pesos + comisiones + dólares) */
+.earn-balance {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.earn-bal-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    padding: 10px 0;
+    font-size: 14px;
+    color: #2B2B2B;
+    border-bottom: 1px solid #F1E9E7;
+}
+.earn-bal-row strong { font-weight: 700; white-space: nowrap; }
+.earn-bal-row small { color: #8A6F6A; font-weight: 400; }
+.earn-bal-neg strong { color: #C0605F; }
+.earn-bal-total {
+    border-bottom: none;
+    font-size: 16px;
+}
+.earn-bal-total strong { color: #B8777F; font-size: 18px; }
+.earn-bal-usd {
+    margin-top: 12px;
+    padding: 12px 14px;
+    background: #FAF7F5;
+    border-radius: 10px;
+}
+.earn-bal-usd .earn-bal-row { border-bottom: none; padding: 5px 0; font-size: 13px; }
+.earn-bal-usd .earn-bal-row strong { color: #4a7c59; }
+.earn-bal-rate {
+    margin-top: 6px;
+    font-size: 11px;
+    color: #8A6F6A;
+}
