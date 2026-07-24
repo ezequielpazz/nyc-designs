@@ -2474,6 +2474,18 @@ function checkPaymentReturn() {
     const ref = urlParams.get('external_reference');
     const paymentId = urlParams.get('payment_id') || urlParams.get('collection_id');
 
+    // Resiliencia: avisamos al backend con los datos del redirect para que
+    // arme el pedido + mande los comprobantes AUNQUE MercadoPago nos bloquee
+    // la lectura del pago. Es idempotente: si el webhook ya lo creó, no
+    // duplica. Fire-and-forget: no bloquea la UI.
+    if (ref && paymentId) {
+      fetch('/api/confirm-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ external_reference: ref, payment_id: paymentId, status: 'approved' })
+      }).catch(() => {});
+    }
+
     // Show the digital-delivery section if the order qualifies. If not, the
     // legacy personalización section is shown so the customer can send fotos.
     if (paymentId) {

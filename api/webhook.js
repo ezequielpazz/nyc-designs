@@ -390,6 +390,112 @@ async function processApprovedPayment(paymentData) {
   return { skipped: false, order_id: orderData.id, payment_id: paymentId, tracking_code: trackingCode };
 }
 
+/**
+ * Build an order from the checkout we saved at create-preference time.
+ * Used by /api/confirm-order as a resilient fallback for when MercadoPago
+ * blocks payment.get ("Unauthorized use of live credentials"): we already
+ * have the (server-validated) cart + customer, so we don't need to read the
+ * payment from MP to generate the order and send the receipts.
+ *
+ * `paymentData` is optional: when payment.get works we pass it to record the
+ * exact total + MP fee; otherwise we fall back to the stored total.
+ * Idempotent via orderExistsForPayment.
+ */
+async function processCheckoutOrder({ paymentId, checkout, paymentData }) {
+  if (!paymentId || !checkout) {
+    return { skipped: true, reason: 'missing_data' };
+  }
+  if (await orderExistsForPayment(paymentId)) {
+    return { skipped: true, reason: 'order_exists', payment_id: paymentId };
+  }
+
+  // Enrich each stored item with its delivery kind + download URL (Firestore,
+  // no MercadoPago needed). Skip the shipping line — it's not a real product.
+  const rawItems = (checkout.items || []).filter(it => String(it.id) !== 'shipping');
+  const enrichedItems = await Promise.all(rawItems.map(async (item) => {
+    const meta = await getProductMeta(item.id || '');
+    return {
+      title: item.title,
+      quantity: Number(item.quantity) || 1,
+      unit_price: Number(item.unit_price) || 0,
+      product_id: item.id || '',
+      kind: meta.kind,
+      download_url: meta.downloadUrl
+    };
+  }));
+
+  const allVirtual = enrichedItems.length > 0 && enrichedItems.every(i => i.kind === 'virtual');
+  let shippingType = checkout.shipping_type === 'delivery' ? 'delivery' : 'pickup';
+  let shippingLabel;
+  if (allVirtual) {
+    shippingType = 'digital';
+    shippingLabel = 'Producto digital — entrega por link / WhatsApp';
+  } else {
+    shippingLabel = shippingType === 'delivery'
+      ? 'Envío a domicilio (E-Pick)'
+      : 'Retiro en Acassuso 5268, CABA';
+  }
+
+  const customer = checkout.customer || {};
+
+  // Exact economics if MP let us read the payment; otherwise stored total.
+  const total = paymentData ? Number(paymentData.transaction_amount) : Number(checkout.total) || 0;
+  const mpFee = paymentData && Array.isArray(paymentData.fee_details)
+    ? paymentData.fee_details.reduce((s, f) => s + (Number(f.amount) || 0), 0)
+    : null;
+
+  const orderData = {
+    id: `order_${paymentId}`,
+    payment_id: String(paymentId),
+    status: 'approved',
+    total,
+    ...(mpFee != null ? { mp_fee: Number(mpFee.toFixed(2)), mp_net_amount: Number((total - mpFee).toFixed(2)) } : {}),
+    currency: 'ARS',
+    // Marca de trazabilidad: si no pudimos verificar contra MP, queda registrado.
+    verified_with_mp: !!paymentData,
+    source: 'confirm-order',
+    payer: {
+      email: customer.email || '',
+      name: customer.name || '',
+      phone: customer.phone || '',
+      dni: customer.dni || ''
+    },
+    items: enrichedItems,
+    shipping_type: shippingType,
+    shipping_label: shippingLabel,
+    postal_code: checkout.postal_code || '',
+    address: checkout.address || null,
+    packages: Array.isArray(checkout.packages) ? checkout.packages : null,
+    external_reference: checkout.external_reference || ''
+  };
+
+  const saved = await saveOrderToFirestore(orderData);
+
+  for (const item of orderData.items) {
+    if (item.product_id) await decrementStock(item.product_id, item.quantity);
+  }
+
+  let trackingCode = null;
+  if (shippingType === 'delivery' && !allVirtual) {
+    try {
+      const existing = await existingShipmentForPayment(orderData.payment_id);
+      const ship = existing && existing.tracking_code ? existing : await createEpickShipment(orderData);
+      if (ship?.tracking_code && saved?.name) {
+        await updateOrderTracking(saved.name, ship.tracking_code, ship.label_url);
+        trackingCode = ship.tracking_code;
+      }
+    } catch (shipErr) {
+      console.error('E-Pick shipment skipped (confirm-order):', shipErr.message);
+    }
+  }
+
+  const orderForEmail = { ...orderData, tracking_code: trackingCode };
+  try { await notifyOrderEmail(orderForEmail); } catch (e) { console.error('shop email failed:', e.message); }
+  try { await notifyCustomerEmail(orderForEmail); } catch (e) { console.error('customer email failed:', e.message); }
+
+  return { skipped: false, order_id: orderData.id, payment_id: paymentId, tracking_code: trackingCode, verified_with_mp: !!paymentData };
+}
+
 // Validate MercadoPago webhook signature.
 // In production the secret MUST be configured — otherwise every webhook is
 // rejected so nobody can forge approved orders and drain stock.
@@ -477,3 +583,5 @@ module.exports = async (req, res) => {
 // Shared with /api/cron/reconcile-payments (daily safety net against lost sales).
 module.exports.processApprovedPayment = processApprovedPayment;
 module.exports.orderExistsForPayment = orderExistsForPayment;
+// Shared with /api/confirm-order (resilient path when MP blocks payment.get).
+module.exports.processCheckoutOrder = processCheckoutOrder;
