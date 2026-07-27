@@ -190,12 +190,30 @@ let sheetConfig = {
 let firebaseDb;
 let firebaseInitialized = false;
 
+// ===== Firebase App Check (anti-bot) =====
+// Se activa SOLO cuando RECAPTCHA_V3_SITE_KEY tenga la clave real de
+// reCAPTCHA v3. Con el placeholder queda inactivo y no rompe nada.
+// Para activarlo: crear la key en google.com/recaptcha/admin, registrarla en
+// Firebase Console → App Check (proveedor reCAPTCHA v3) y pegarla acá.
+const RECAPTCHA_V3_SITE_KEY = 'TU_RECAPTCHA_V3_SITE_KEY';
+
+function activateAppCheck() {
+  try {
+    if (!RECAPTCHA_V3_SITE_KEY || RECAPTCHA_V3_SITE_KEY.indexOf('TU_') === 0) return;
+    if (typeof firebase === 'undefined' || !firebase.appCheck) return;
+    firebase.appCheck().activate(RECAPTCHA_V3_SITE_KEY, true);
+  } catch (e) {
+    console.warn('App Check no activado:', e.message);
+  }
+}
+
 function initializeFirebase() {
   if (firebaseInitialized) return;
-  
+
   try {
     // Firebase COMPAT API (global firebase object)
     firebase.initializeApp(firebaseConfig);
+    activateAppCheck();
     firebaseDb = firebase.firestore();
     firebaseInitialized = true;
   } catch (error) {
