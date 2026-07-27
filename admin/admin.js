@@ -39,6 +39,18 @@ function checkAuthorization(email) {
 
 // Inicializar Firebase COMPAT
 firebase.initializeApp(firebaseConfig);
+
+// App Check (anti-bot). Se activa solo con la clave real de reCAPTCHA v3;
+// con el placeholder queda inactivo y no rompe el panel.
+const RECAPTCHA_V3_SITE_KEY = 'TU_RECAPTCHA_V3_SITE_KEY';
+try {
+    if (RECAPTCHA_V3_SITE_KEY.indexOf('TU_') !== 0 && firebase.appCheck) {
+        firebase.appCheck().activate(RECAPTCHA_V3_SITE_KEY, true);
+    }
+} catch (e) {
+    console.warn('App Check no activado:', e.message);
+}
+
 const auth = firebase.auth();
 const db = firebase.firestore();
 
