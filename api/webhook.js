@@ -1,7 +1,7 @@
 const crypto = require('crypto');
 const mercadopago = require('mercadopago');
 const { EPICK_CONFIG, provinceCode, callEpickProxy } = require('../config/shipping');
-const { notifyOrderEmail, notifyCustomerEmail } = require('./_lib/notifyOrder');
+const { notifyOrderEmail, notifyCustomerEmail, notifyUnprocessedPaymentEmail } = require('./_lib/notifyOrder');
 const { getDb, admin } = require('./_lib/firestoreAdmin');
 
 const client = new mercadopago.MercadoPagoConfig({
@@ -496,6 +496,53 @@ async function processCheckoutOrder({ paymentId, checkout, paymentData }) {
   return { skipped: false, order_id: orderData.id, payment_id: paymentId, tracking_code: trackingCode, verified_with_mp: !!paymentData };
 }
 
+/**
+ * Recover an order from a MercadoPago merchant_order WITHOUT payment.get.
+ * The merchant_order holds external_reference + the payment ids/status, so we
+ * map the approved payment to the checkout we stored at create-preference and
+ * build the order. This is the path that keeps working even while MP blocks
+ * live-credential payment reads.
+ */
+async function recoverFromMerchantOrder(merchantOrderId) {
+  const resp = await fetch(`https://api.mercadopago.com/merchant_orders/${merchantOrderId}`, {
+    headers: { Authorization: `Bearer ${process.env.MP_ACCESS_TOKEN}` }
+  });
+  if (!resp.ok) {
+    throw new Error(`merchant_orders/${merchantOrderId} → ${resp.status}`);
+  }
+  const mo = await resp.json();
+  const externalRef = mo.external_reference || '';
+  const approved = (mo.payments || []).find(p => p.status === 'approved');
+  if (!externalRef || !approved) return { skipped: true, reason: 'no_approved_payment' };
+
+  if (await orderExistsForPayment(approved.id)) {
+    return { skipped: true, reason: 'order_exists' };
+  }
+
+  const snap = await getDb().collection('checkouts_pendientes').doc(externalRef).get();
+  if (!snap.exists) return { skipped: true, reason: 'no_checkout' };
+
+  return processCheckoutOrder({ paymentId: approved.id, checkout: snap.data(), paymentData: null });
+}
+
+/**
+ * Alert Sol when a payment couldn't be processed automatically. Deduped by
+ * payment id (MP retries the webhook) so she gets exactly one heads-up.
+ */
+async function alertUnprocessedPayment(paymentId, reason) {
+  try {
+    // Skip if we already turned this into an order (e.g. via merchant_order).
+    if (await orderExistsForPayment(paymentId)) return;
+    const ref = getDb().collection('pagos_alertados').doc(String(paymentId));
+    const already = await ref.get();
+    if (already.exists) return; // already alerted
+    await ref.set({ payment_id: String(paymentId), reason: reason || '', at: admin.firestore.FieldValue.serverTimestamp() });
+    await notifyUnprocessedPaymentEmail({ paymentId, reason });
+  } catch (e) {
+    console.error('alertUnprocessedPayment failed:', e.message);
+  }
+}
+
 // Validate MercadoPago webhook signature.
 // In production the secret MUST be configured — otherwise every webhook is
 // rejected so nobody can forge approved orders and drain stock.
@@ -561,13 +608,36 @@ module.exports = async (req, res) => {
     }
 
     const { type, data } = req.body;
+    // MP can send the topic in body.type, query ?topic=, or query ?type=.
+    const topic = type || req.query?.topic || req.query?.type || '';
+    const resourceId = data?.id || req.query?.id || req.query?.['data.id'] || '';
 
-    // Only process payment notifications
-    if (type === 'payment' && data?.id) {
-      const paymentData = await payment.get({ id: data.id });
+    // --- merchant_order: recover WITHOUT reading the payment ---------------
+    // The merchant_order carries external_reference + the payment ids, so we
+    // can map the payment to the checkout we stored and build the order even
+    // when MP blocks payment.get. This is the 4th safety net.
+    if (topic === 'merchant_order' && resourceId) {
+      try {
+        await recoverFromMerchantOrder(resourceId);
+      } catch (moErr) {
+        console.error('merchant_order recovery failed:', moErr.message);
+      }
+      return res.status(200).json({ received: true });
+    }
 
-      if (paymentData.status === 'approved') {
-        await processApprovedPayment(paymentData);
+    // --- payment: normal instant flow -------------------------------------
+    if (topic === 'payment' && resourceId) {
+      try {
+        const paymentData = await payment.get({ id: resourceId });
+        if (paymentData.status === 'approved') {
+          await processApprovedPayment(paymentData);
+        }
+      } catch (readErr) {
+        // Can't read the payment (MP blocking live-credential reads). Don't
+        // fail silently — alert Sol so the sale is recovered fast, and try
+        // the merchant_order path can still catch it later.
+        console.error('payment.get blocked:', readErr.message);
+        await alertUnprocessedPayment(resourceId, readErr.message);
       }
     }
 

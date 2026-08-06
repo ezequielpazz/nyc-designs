@@ -555,8 +555,57 @@ async function notifyShipmentUpdateEmail(order) {
   });
 }
 
+/**
+ * Instant alert to Sol when a payment came in but the order could NOT be
+ * created automatically (MercadoPago blocking payment reads while the account
+ * is unverified). Turns a silent multi-day failure into a same-second heads-up
+ * so the sale is recovered fast.
+ */
+async function notifyUnprocessedPaymentEmail({ paymentId, reason }) {
+  const to = process.env.ORDER_NOTIFY_TO || NOTIFY_TO_DEFAULT;
+  const fecha = new Date().toLocaleString('es-AR');
+  const html = receiptWrap(`
+    ${receiptHeader('ATENCIÓN — PAGO SIN PROCESAR')}
+    ${receiptRow(`
+      <div style="text-align:center;">
+        <div style="font-size:40px;line-height:1;margin-bottom:8px;">⚠️</div>
+        <div style="color:#B8777F;font-size:18px;font-weight:bold;line-height:1.3;">Entró un pago que no se procesó solo</div>
+        <div style="color:#8A6F6A;font-size:13px;line-height:1.5;padding-top:8px;">
+          MercadoPago no nos dejó leer el pago (la cuenta está pendiente de verificación),
+          así que el pedido no se generó automáticamente. <b>La plata sí entró en tu cuenta.</b>
+        </div>
+      </div>
+    `, '18px 16px 6px')}
+    ${receiptRow(`
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#FAF7F5" style="border-radius:8px;">
+        <tr><td style="padding:13px 14px;font-family:Arial,Helvetica,sans-serif;">
+          <div style="font-size:10px;letter-spacing:2px;color:#B8777F;font-weight:bold;padding-bottom:7px;">DATOS DEL PAGO</div>
+          <div style="font-size:13px;line-height:1.7;">Operación: <strong>${escapeHtml(String(paymentId))}</strong></div>
+          <div style="font-size:13px;line-height:1.7;">Detectado: ${escapeHtml(fecha)}</div>
+        </td></tr>
+      </table>
+    `, '10px 16px')}
+    ${receiptRow(`
+      <div style="font-size:13px;color:#2B2B2B;line-height:1.6;">
+        <b>Qué hacer:</b> reenviá esta operación por WhatsApp a Ezequiel para recuperarla,
+        o buscala en tu MercadoPago (Actividad → operación ${escapeHtml(String(paymentId))}) para
+        ver el detalle. En cuanto verifiques la cuenta con MercadoPago, esto deja de pasar.
+      </div>
+    `, '4px 16px 18px')}
+    ${receiptFooter()}
+  `);
+  const text = `ATENCIÓN: entró un pago (operación ${paymentId}, ${fecha}) que no se procesó automáticamente porque MercadoPago no nos deja leer el pago (cuenta pendiente de verificación). La plata sí entró. Reenviá esta operación para recuperar el pedido. Motivo técnico: ${reason || ''}`;
+  return sendResendEmail({
+    to,
+    subject: `⚠️ Pago sin procesar en NYC Designs — operación ${paymentId}`,
+    html,
+    text
+  });
+}
+
 module.exports = {
   notifyOrderEmail,
   notifyCustomerEmail,
-  notifyShipmentUpdateEmail
+  notifyShipmentUpdateEmail,
+  notifyUnprocessedPaymentEmail
 };
