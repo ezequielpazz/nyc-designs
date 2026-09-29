@@ -463,6 +463,7 @@
                             <h1>Pedidos</h1>
                             <p>Gestiona los pedidos de tu tienda</p>
                         </div>
+                        <button type="button" class="btn btn-primary" onclick="openManualSaleModal()">+ Cargar venta manual</button>
                     </div>
 
                     <div class="filter-tabs">
@@ -755,6 +756,89 @@
     </div>
 
     <!-- Coupon Modal -->
+    <div id="manualSaleModal" class="wizard-modal" style="display: none;">
+        <div class="wizard-overlay"></div>
+        <div class="wizard-container" style="max-width: 560px;">
+            <div class="wizard-header">
+                <h2>Cargar venta manual</h2>
+                <button type="button" class="wizard-close" onclick="closeManualSaleModal()" aria-label="Cerrar">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <form id="manualSaleForm" class="wizard-form">
+                <p class="mv-help">Para ventas cerradas por WhatsApp, transferencia o en persona. Queda en Pedidos y suma en Ganancias.</p>
+
+                <div class="form-group">
+                    <label for="mvName">Nombre del cliente</label>
+                    <input type="text" id="mvName" required placeholder="Nombre y apellido">
+                </div>
+                <div class="mv-two">
+                    <div class="form-group">
+                        <label for="mvPhone">WhatsApp (opcional)</label>
+                        <input type="tel" id="mvPhone" placeholder="11 2345 6789">
+                    </div>
+                    <div class="form-group">
+                        <label for="mvEmail">Email (opcional)</label>
+                        <input type="email" id="mvEmail" placeholder="cliente@mail.com">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Productos</label>
+                    <div id="mvItems"></div>
+                    <button type="button" class="btn btn-secondary" onclick="addManualSaleRow()">+ Agregar producto</button>
+                </div>
+
+                <div class="mv-two">
+                    <div class="form-group">
+                        <label for="mvShipCost">Envío cobrado (opcional)</label>
+                        <input type="number" id="mvShipCost" min="0" step="1" placeholder="0" oninput="updateManualSaleTotal()">
+                    </div>
+                    <div class="form-group">
+                        <label for="mvPayMethod">Medio de pago</label>
+                        <select id="mvPayMethod">
+                            <option value="transferencia">Transferencia</option>
+                            <option value="efectivo">Efectivo</option>
+                            <option value="mercadopago">MercadoPago</option>
+                            <option value="otro">Otro</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="mvDelivery">Entrega</label>
+                    <select id="mvDelivery">
+                        <option value="pickup">Retiro en el punto</option>
+                        <option value="delivery">Envío a domicilio</option>
+                        <option value="digital">Producto digital</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="mvNotes">Notas (opcional)</label>
+                    <input type="text" id="mvNotes" placeholder="Dirección, aclaraciones, número de seguimiento…">
+                </div>
+
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="mvDiscountStock" checked>
+                        <span>Descontar del stock</span>
+                    </label>
+                </div>
+
+                <div class="mv-total"><span>Total</span><strong id="mvTotal">$0</strong></div>
+
+                <div class="wizard-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeManualSaleModal()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" id="mvSaveBtn">Guardar venta</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <div id="couponModal" class="wizard-modal" style="display: none;">
         <div class="wizard-overlay"></div>
         <div class="wizard-container" style="max-width: 500px;">

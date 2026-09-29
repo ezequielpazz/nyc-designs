@@ -3715,3 +3715,43 @@ select:focus {
     font-size: 11px;
     color: #8A6F6A;
 }
+
+/* ==========================================================================
+   VENTA MANUAL
+   ========================================================================== */
+.mv-help { margin: 0 0 14px; font-size: 13px; color: #8A6F6A; line-height: 1.5; }
+.mv-two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.mv-row {
+    display: grid;
+    grid-template-columns: 1fr 64px 96px 32px;
+    gap: 8px;
+    margin-bottom: 8px;
+    align-items: center;
+}
+.mv-row .mv-product { grid-column: 1 / -1; }
+.mv-row .mv-custom { grid-column: 1 / -1; }
+.mv-row .mv-qty { grid-column: 1; width: 100%; }
+.mv-row .mv-price { grid-column: 2 / 4; width: 100%; }
+.mv-row .mv-remove {
+    grid-column: 4;
+    height: 32px;
+    border: 1px solid #ECDFDC;
+    background: #fff;
+    border-radius: 8px;
+    font-size: 18px;
+    line-height: 1;
+    color: #A6423E;
+    cursor: pointer;
+}
+.mv-total {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 12px 14px;
+    margin: 6px 0 14px;
+    background: #FAF7F5;
+    border-radius: 10px;
+    font-size: 14px;
+}
+.mv-total strong { font-size: 20px; color: #B8777F; }
+@media (max-width: 560px) { .mv-two { grid-template-columns: 1fr; } }
