@@ -1284,6 +1284,188 @@ function switchSection(section) {
    ============================================ */
 
 /* ============================================
+   VENTA MANUAL (WhatsApp / transferencia / en persona)
+   ============================================ */
+
+const MV_OTHER = '__otro__';
+
+function openManualSaleModal() {
+    const modal = document.getElementById('manualSaleModal');
+    if (!modal) return;
+    document.getElementById('manualSaleForm').reset();
+    document.getElementById('mvItems').innerHTML = '';
+    addManualSaleRow();
+    updateManualSaleTotal();
+    modal.style.display = 'flex';
+}
+
+function closeManualSaleModal() {
+    const modal = document.getElementById('manualSaleModal');
+    if (modal) modal.style.display = 'none';
+}
+
+function addManualSaleRow() {
+    const wrap = document.getElementById('mvItems');
+    if (!wrap) return;
+    const options = allProducts
+        .slice()
+        .sort((a, b) => String(a.nombre || '').localeCompare(String(b.nombre || '')))
+        .map(p => `<option value="${escapeHtml(p.id)}">${escapeHtml(p.nombre || 'Sin nombre')} — $${Number(p.precio || 0).toLocaleString('es-AR')}</option>`)
+        .join('');
+    const row = document.createElement('div');
+    row.className = 'mv-row';
+    row.innerHTML = `
+        <select class="mv-product">
+            <option value="">Elegí un producto…</option>
+            ${options}
+            <option value="${MV_OTHER}">Otro (escribir a mano)</option>
+        </select>
+        <input type="text" class="mv-custom" placeholder="Nombre del producto" style="display:none;">
+        <input type="number" class="mv-qty" min="1" step="1" value="1" aria-label="Cantidad">
+        <input type="number" class="mv-price" min="0" step="1" placeholder="Precio" aria-label="Precio unitario">
+        <button type="button" class="mv-remove" aria-label="Quitar producto">&times;</button>`;
+    wrap.appendChild(row);
+
+    const select = row.querySelector('.mv-product');
+    const custom = row.querySelector('.mv-custom');
+    const price = row.querySelector('.mv-price');
+    select.addEventListener('change', () => {
+        const isOther = select.value === MV_OTHER;
+        custom.style.display = isOther ? '' : 'none';
+        if (!isOther) {
+            const p = allProducts.find(x => x.id === select.value);
+            price.value = p ? Number(p.precio || 0) : '';
+        }
+        updateManualSaleTotal();
+    });
+    row.querySelectorAll('input').forEach(i => i.addEventListener('input', updateManualSaleTotal));
+    row.querySelector('.mv-remove').addEventListener('click', () => {
+        if (wrap.children.length > 1) { row.remove(); updateManualSaleTotal(); }
+    });
+}
+
+function readManualSaleItems() {
+    const items = [];
+    document.querySelectorAll('#mvItems .mv-row').forEach(row => {
+        const sel = row.querySelector('.mv-product').value;
+        const qty = Math.max(1, parseInt(row.querySelector('.mv-qty').value, 10) || 1);
+        const price = Number(row.querySelector('.mv-price').value) || 0;
+        if (!sel) return;
+        if (sel === MV_OTHER) {
+            const title = row.querySelector('.mv-custom').value.trim();
+            if (!title) return;
+            items.push({ title, quantity: qty, unit_price: price, product_id: '', kind: 'fisico', download_url: '' });
+        } else {
+            const p = allProducts.find(x => x.id === sel);
+            if (!p) return;
+            items.push({
+                title: p.nombre || 'Producto',
+                quantity: qty,
+                unit_price: price,
+                product_id: p.id,
+                kind: p.tipo === 'virtual' ? 'virtual' : 'fisico',
+                download_url: p.tipo === 'virtual' ? (p.archivoUrl || '') : ''
+            });
+        }
+    });
+    return items;
+}
+
+function updateManualSaleTotal() {
+    const items = readManualSaleItems();
+    const ship = Number(document.getElementById('mvShipCost')?.value) || 0;
+    const total = items.reduce((s, i) => s + i.unit_price * i.quantity, 0) + ship;
+    const el = document.getElementById('mvTotal');
+    if (el) el.textContent = fmtMoney(total);
+}
+
+async function saveManualSale(e) {
+    e.preventDefault();
+    const items = readManualSaleItems();
+    if (items.length === 0) {
+        showToast('Agregá al menos un producto', 'error');
+        return;
+    }
+    if (items.some(i => i.unit_price <= 0)) {
+        showToast('Completá el precio de cada producto', 'error');
+        return;
+    }
+
+    const saveBtn = document.getElementById('mvSaveBtn');
+    saveBtn.disabled = true;
+
+    const ship = Number(document.getElementById('mvShipCost').value) || 0;
+    const total = items.reduce((s, i) => s + i.unit_price * i.quantity, 0) + ship;
+    const method = document.getElementById('mvPayMethod').value;
+    const delivery = document.getElementById('mvDelivery').value;
+    const stamp = Date.now();
+    const DELIVERY_LABELS = {
+        pickup: 'Retiro en Acassuso 5268, CABA',
+        delivery: 'Envío a domicilio',
+        digital: 'Producto digital — entrega por link / WhatsApp'
+    };
+
+    const order = {
+        id: `manual_${stamp}`,
+        payment_id: `manual-${stamp}`,
+        status: 'approved',
+        source: 'manual',
+        payment_method: method,
+        total,
+        currency: 'ARS',
+        payer: {
+            name: document.getElementById('mvName').value.trim(),
+            phone: document.getElementById('mvPhone').value.trim(),
+            email: document.getElementById('mvEmail').value.trim(),
+            dni: ''
+        },
+        items: ship > 0
+            ? [...items, { title: 'Envío', quantity: 1, unit_price: ship, product_id: '', kind: 'fisico', download_url: '' }]
+            : items,
+        shipping_type: delivery,
+        shipping_label: DELIVERY_LABELS[delivery] || '',
+        notes: document.getElementById('mvNotes').value.trim(),
+        created_at: firebase.firestore.FieldValue.serverTimestamp(),
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
+    // Sin comisión de MP salvo que el cobro haya sido por MercadoPago
+    // (ahí Ganancias la estima). Efectivo / transferencia = comisión 0.
+    if (method !== 'mercadopago') {
+        order.mp_fee = 0;
+        order.mp_net_amount = total;
+    }
+
+    try {
+        await db.collection('pedidos').add(order);
+
+        if (document.getElementById('mvDiscountStock').checked) {
+            for (const item of items) {
+                if (!item.product_id) continue;
+                const ref = db.collection('productos').doc(item.product_id);
+                await db.runTransaction(async (tx) => {
+                    const snap = await tx.get(ref);
+                    if (!snap.exists) return;
+                    const stock = snap.data().stock;
+                    const n = parseInt(stock, 10);
+                    if (stock === 'ilimitado' || Number.isNaN(n)) return;
+                    tx.update(ref, { stock: Math.max(0, n - item.quantity) });
+                });
+            }
+        }
+
+        closeManualSaleModal();
+        showToast('Venta cargada', 'success');
+        await loadProducts();
+        loadOrders(document.querySelector('.filter-tab.active')?.dataset.filter || 'todos');
+    } catch (error) {
+        console.error('❌ Error guardando venta manual:', error);
+        showToast('No se pudo guardar la venta. Probá de nuevo.', 'error');
+    } finally {
+        saveBtn.disabled = false;
+    }
+}
+
+/* ============================================
    GANANCIAS
    ============================================ */
 
@@ -2426,6 +2608,7 @@ function setupEventListeners() {
     // ========== COUPONS ==========
     document.getElementById('addCouponBtn')?.addEventListener('click', openCouponModal);
     document.getElementById('couponForm')?.addEventListener('submit', saveCoupon);
+    document.getElementById('manualSaleForm')?.addEventListener('submit', saveManualSale);
     document.getElementById('couponType')?.addEventListener('change', updateCouponPreview);
     document.getElementById('couponValue')?.addEventListener('input', updateCouponPreview);
     document.getElementById('couponModal')?.addEventListener('click', (e) => {
