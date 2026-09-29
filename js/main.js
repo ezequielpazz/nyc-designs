@@ -692,6 +692,7 @@ function clearCart() {
 // MODO_VENTA === 'mercadopago'.
 
 let _waBuyProduct = null;
+let _waBuyCart = false; // true cuando el mini-form cierra el CARRITO completo
 
 function abrirCompraWhatsApp(product) {
   _waBuyProduct = product;
@@ -718,10 +719,14 @@ function cerrarCompraWhatsApp() {
   if (modal) modal.classList.remove('active');
   document.body.style.overflow = '';
   _waBuyProduct = null;
+  _waBuyCart = false;
+  const qtyField = document.getElementById('waBuyQty')?.closest('.wa-buy-field');
+  if (qtyField) qtyField.style.display = '';
 }
 
 function enviarCompraWhatsApp(e) {
   if (e) e.preventDefault();
+  if (_waBuyCart) return enviarCarritoWhatsApp();
   if (!_waBuyProduct) return;
   const qty = Math.max(1, parseInt(document.getElementById('waBuyQty')?.value, 10) || 1);
   const name = (document.getElementById('waBuyName')?.value || '').trim();
@@ -752,19 +757,9 @@ function enviarCompraWhatsApp(e) {
   showToast('¡Listo! Se abrió WhatsApp para cerrar tu compra 💬');
 }
 
-// Finalizar el carrito completo por WhatsApp (reemplaza a MercadoPago en modo 'whatsapp').
-function finalizarPorWhatsApp() {
-  if (!cart.length) {
-    showToast('Tu carrito está vacío', 'error');
-    return;
-  }
-  const name = (document.getElementById('mpName')?.value || '').trim();
-  const phone = (document.getElementById('mpPhone')?.value || '').trim();
-  if (!name) {
-    showToast('Completá tu nombre para continuar', 'error');
-    return;
-  }
-
+// Mensaje de WhatsApp con TODO el carrito (lo usan el modo 'whatsapp' y el
+// botón "Finalizar por WhatsApp" del carrito en modo híbrido).
+function armarMensajeCarritoWhatsApp({ name, zone, phone }) {
   const shippingType = document.querySelector('input[name="shipping"]:checked')?.value || 'pickup';
   const { total } = calculateCartTotal();
 
@@ -790,12 +785,74 @@ function finalizarPorWhatsApp() {
     if (street) msg += `📍 ${street} ${number}, ${city}${cp ? ` (CP ${cp})` : ''}\n`;
   }
   msg += `\nMis datos:\n👤 ${name}\n`;
+  if (zone) msg += `📍 ${zone}\n`;
   if (phone) msg += `📱 ${phone}\n`;
   msg += `\n(pedido desde la web)`;
+  return { msg, total };
+}
 
-  const url = `https://wa.me/${CONFIG.WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`;
-  window.open(url, '_blank');
+function abrirWhatsAppConMensaje(msg) {
+  window.open(`https://wa.me/${CONFIG.WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`, '_blank');
+}
+
+// Finalizar el carrito completo por WhatsApp (reemplaza a MercadoPago en modo 'whatsapp').
+function finalizarPorWhatsApp() {
+  if (!cart.length) {
+    showToast('Tu carrito está vacío', 'error');
+    return;
+  }
+  const name = (document.getElementById('mpName')?.value || '').trim();
+  const phone = (document.getElementById('mpPhone')?.value || '').trim();
+  if (!name) {
+    showToast('Completá tu nombre para continuar', 'error');
+    return;
+  }
+  const { msg, total } = armarMensajeCarritoWhatsApp({ name, phone });
+  abrirWhatsAppConMensaje(msg);
   if (typeof trackEvent === 'function') trackEvent('whatsapp_cart_checkout', { total });
+  showToast('¡Listo! Se abrió WhatsApp para cerrar tu pedido 💬');
+}
+
+// Modo híbrido: el botón del carrito abre el mismo mini-form corto (nombre +
+// zona) que el de un solo producto, y manda el carrito completo.
+function abrirCarritoWhatsApp() {
+  if (!cart.length) {
+    showToast('Tu carrito está vacío', 'error');
+    return;
+  }
+  const modal = document.getElementById('waBuyModal');
+  if (!modal) return;
+  _waBuyProduct = null;
+  _waBuyCart = true;
+  const { total } = calculateCartTotal();
+  const prodEl = document.getElementById('waBuyProduct');
+  if (prodEl) prodEl.textContent = `Tu carrito: ${cart.length} ${cart.length === 1 ? 'producto' : 'productos'} — $${Number(total).toLocaleString('es-AR')}`;
+  const qtyField = document.getElementById('waBuyQty')?.closest('.wa-buy-field');
+  if (qtyField) qtyField.style.display = 'none';
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem('nycBuyerInfo') || '{}'); } catch (_) {}
+  const nameEl = document.getElementById('waBuyName');
+  const zoneEl = document.getElementById('waBuyZone');
+  if (nameEl) nameEl.value = (document.getElementById('mpName')?.value || '').trim() || saved.name || '';
+  if (zoneEl) zoneEl.value = saved.zone || '';
+  modal.classList.add('active');
+  document.body.style.overflow = 'hidden';
+  setTimeout(() => nameEl?.focus(), 50);
+}
+
+function enviarCarritoWhatsApp() {
+  const name = (document.getElementById('waBuyName')?.value || '').trim();
+  const zone = (document.getElementById('waBuyZone')?.value || '').trim();
+  if (!name || !zone) {
+    showToast('Completá tu nombre y tu zona para continuar', 'error');
+    return;
+  }
+  try { localStorage.setItem('nycBuyerInfo', JSON.stringify({ name, zone })); } catch (_) {}
+  const phone = (document.getElementById('mpPhone')?.value || '').trim();
+  const { msg, total } = armarMensajeCarritoWhatsApp({ name, zone, phone });
+  abrirWhatsAppConMensaje(msg);
+  if (typeof trackEvent === 'function') trackEvent('whatsapp_cart_checkout', { total });
+  cerrarCompraWhatsApp();
   showToast('¡Listo! Se abrió WhatsApp para cerrar tu pedido 💬');
 }
 
@@ -810,7 +867,26 @@ function aplicarModoVenta() {
     if (modalAddH) { modalAddH.classList.remove('primary'); modalAddH.classList.add('btn-outline'); }
 
     const cartNoteH = document.querySelector('.cart-note span');
-    if (cartNoteH) cartNoteH.textContent = 'Pagás online con MercadoPago. ¿Preferís coordinar con Sol? Usá el botón verde "Comprar por WhatsApp" de cada producto.';
+    if (cartNoteH) cartNoteH.textContent = 'Elegí cómo cerrar tu compra: pagás online con MercadoPago o la coordinás con Sol por WhatsApp.';
+
+    // Carrito: dos formas de finalizar. MP (con el formulario de datos) y
+    // WhatsApp (con el mismo mini-form corto que un solo producto).
+    const mpBtnH = document.getElementById('mpOpenBtn');
+    if (mpBtnH) {
+      Array.from(mpBtnH.childNodes)
+        .filter(n => n.nodeType === 3 && n.textContent.trim())
+        .forEach(n => { n.textContent = ' Finalizar compra con MercadoPago '; });
+      if (!document.getElementById('cartWaBtn')) {
+        const waBtn = document.createElement('button');
+        waBtn.type = 'button';
+        waBtn.id = 'cartWaBtn';
+        waBtn.className = 'btn primary full-width btn-whatsapp';
+        waBtn.textContent = '💬 Finalizar por WhatsApp';
+        waBtn.style.marginTop = '8px';
+        waBtn.addEventListener('click', abrirCarritoWhatsApp);
+        mpBtnH.insertAdjacentElement('afterend', waBtn);
+      }
+    }
 
     if (typeof botKnowledge === 'object' && botKnowledge) {
       const dual = `🛍️ Tenés dos formas de comprar:\n\n1. 💬 Tocá "Comprar por WhatsApp" en el producto y cerrás con Sol (recomendado)\n2. 🛒 Carrito + MercadoPago (pago online)\n\nCualquier duda: wa.me/${CONFIG.WHATSAPP_NUMBER}`;
